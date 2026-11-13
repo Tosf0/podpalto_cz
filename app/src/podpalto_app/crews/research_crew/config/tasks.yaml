@@ -1,0 +1,19 @@
+research_task:
+  description: >
+    Read the website {competitor_url} (homepage and the most relevant linked
+    pages such as products, pricing, about). Extract the competitor's
+    offering, prices, target customers, unique selling points and tone of voice.
+  expected_output: >
+    A structured list of facts grouped by topic, each with its source URL.
+  agent: web_researcher
+
+analysis_task:
+  description: >
+    Using the research results, write a competitor profile and compare it
+    with podpalto.cz. Identify strengths, weaknesses, opportunities and threats.
+  expected_output: >
+    A Markdown report with sections: Summary, Offering & Pricing, Positioning,
+    SWOT, Recommendations for podpalto.cz.
+  agent: market_analyst
+  context:
+    - research_task

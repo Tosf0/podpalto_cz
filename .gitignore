@@ -41,3 +41,7 @@ desktop.ini
 # data/
 # *.csv
 # *.xlsx
+
+# Generated reports
+outputs/*
+!outputs/.gitkeep
