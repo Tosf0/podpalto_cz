@@ -1,10 +1,12 @@
 [project]
 name = "podpalto-tools"
 version = "0.1.0"
-description = "Custom CrewAI tools shared by the podpalto.cz agents"
+description = "Tools service (FastAPI): data sources used by the podpalto.cz agents"
 requires-python = ">=3.10,<3.14"
 dependencies = [
-    "crewai>=1.15,<2",
+    "fastapi>=0.115",
+    "pydantic>=2.11",
+    "uvicorn>=0.30",
 ]
 
 [build-system]

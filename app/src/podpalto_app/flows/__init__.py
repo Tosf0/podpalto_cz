@@ -1,5 +1,9 @@
 """Flows orchestrate crews (and plain Python steps) into end-to-end pipelines."""
 
-from podpalto_app.flows.competitor_analysis import CompetitorAnalysisFlow, CompetitorAnalysisState
+from podpalto_app.flows.market_research import (
+    MarketResearchFlow,
+    MarketResearchState,
+    run_market_research,
+)
 
-__all__ = ["CompetitorAnalysisFlow", "CompetitorAnalysisState"]
+__all__ = ["MarketResearchFlow", "MarketResearchState", "run_market_research"]

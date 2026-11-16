@@ -1,0 +1,59 @@
+# Inputs: {fuel_types} (comma-separated), {region}, {focus}.
+# Tasks have no `agent:` on purpose: the manager picks the specialist.
+# Adding `agent: <name>` restricts the manager to delegating to that agent.
+
+pricing_research:
+  description: >
+    Collect current competitor offers for these fuel types: {fuel_types}
+    (region: {region}). For each fuel type report the market price level
+    (min, average, max unit price) and compare sellers on unit price,
+    delivery fee, assortment and stock availability.
+  expected_output: >
+    Per fuel type: a table of offers (seller, product, unit price, delivery
+    fee, in stock) and 3-5 bullet findings. State the unit of every price
+    and name the data source.
+
+market_trends_research:
+  description: >
+    Analyse multi-year trends for these fuel types: {fuel_types} (region:
+    {region}). Cover both average retail price and household consumption.
+  expected_output: >
+    Per fuel type: the yearly values with units, the overall change in
+    percent, and a short interpretation of where demand and prices are heading.
+    Name the data source.
+
+regulation_research:
+  description: >
+    Find recent regulation, subsidy, price and supply news relevant to these
+    fuel types: {fuel_types} (region: {region}).
+  expected_output: >
+    A list of events, each with date, source, affected fuel types, a
+    one-sentence summary and expected impact on a fuel retailer
+    (positive / negative / neutral, with reason).
+
+customer_sentiment_research:
+  description: >
+    Analyse customer reviews of competing sellers of these fuel types:
+    {fuel_types}. Identify recurring strengths, weaknesses and unmet needs.
+  expected_output: >
+    Per seller: average rating, review count, main positive and negative
+    themes with a supporting quote. Then 3-5 opportunities for a competing
+    retailer. Name the data source.
+
+final_report:
+  description: >
+    Write the final market intelligence report for podpalto.cz on these fuel
+    types: {fuel_types} (region: {region}). Base it only on the findings of
+    the previous tasks. Special focus requested by the user (may be empty):
+    {focus}
+  expected_output: >
+    A Markdown report with sections: Executive Summary, Prices and
+    Competitors, Market Trends, Regulation and News, Customer Sentiment,
+    Recommendations for podpalto.cz (prioritised, each tied to a finding),
+    Data Sources and Limitations. In the last section state clearly which
+    data was mock/synthetic (tool responses carry a `mock` flag).
+  context:
+    - pricing_research
+    - market_trends_research
+    - regulation_research
+    - customer_sentiment_research

@@ -11,6 +11,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "httpx>=0.28",  # needed by FastAPI TestClient
     "pytest>=8.0",
     "ruff>=0.6",
 ]
