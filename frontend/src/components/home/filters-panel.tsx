@@ -184,8 +184,9 @@ function ResultRow({
 }) {
   const { seller, product } = match;
   const tierColor = PRICE_TIER_META[match.tier].color;
-  const price =
-    mode === "kwh" ? formatKwhPrice(match.pricePerKwh) : `${formatNumber(product.price)}${NBSP}Kč/${product.unit}`;
+  const unitPrice = `${formatNumber(product.price)}${NBSP}Kč/${product.unit}`;
+  const kwhPrice = formatKwhPrice(match.pricePerKwh);
+  const [price, secondary] = mode === "kwh" ? [kwhPrice, unitPrice] : [unitPrice, kwhPrice];
   return (
     <li>
       <button
@@ -197,22 +198,26 @@ function ResultRow({
         onBlur={() => onHover(null)}
         onClick={() => onSelect(seller.id)}
         className={cn(
-          "grid w-full grid-cols-[2.25rem_1fr_auto] items-center gap-3 rounded-xl border px-2.5 py-2 text-left transition-colors",
+          "grid w-full grid-cols-[2.25rem_1fr] items-start gap-3 rounded-xl border px-2.5 py-2 text-left transition-colors",
           hovered ? "border-moss/50 bg-accent" : "border-transparent hover:bg-muted",
         )}
       >
-        <span className="flex size-9 items-center justify-center rounded-lg bg-secondary text-wood-strong [&_svg]:size-4">
+        <span className="mt-0.5 flex size-9 items-center justify-center rounded-lg bg-secondary text-wood-strong [&_svg]:size-4">
           <FuelIcon category={product.category} />
         </span>
-        <span className="min-w-0">
+        <span className="min-w-0 space-y-0.5">
+          {/* 1) celý název, 2) obě ceny (hlavní podle přepínače), 3) místo a vzdálenost */}
           <span className="block truncate text-sm font-semibold text-foreground">{seller.name}</span>
+          <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <span className="flex items-center gap-1.5 whitespace-nowrap">
+              <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ background: tierColor }} />
+              <span className="num text-xs font-bold text-foreground">{price}</span>
+            </span>
+            <span className="num pl-3.5 text-[11px] whitespace-nowrap text-muted-foreground">{secondary}</span>
+          </span>
           <span className="block truncate text-xs text-muted-foreground">
             {seller.address.city} · {formatKm(match.distanceKm)}
           </span>
-        </span>
-        <span className="flex flex-col items-end gap-1">
-          <span className="num text-xs font-bold whitespace-nowrap text-foreground">{price}</span>
-          <span aria-hidden className="h-1 w-6 rounded-full" style={{ background: tierColor }} />
         </span>
       </button>
     </li>

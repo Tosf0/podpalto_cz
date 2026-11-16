@@ -80,9 +80,9 @@ export function HomeView() {
   const matches = useMemo(
     () =>
       sellers.length
-        ? computeMatches({ sellers, filters: deferredFilters, location, regionStats, priceMode })
+        ? computeMatches({ sellers, filters: deferredFilters, location, regionStats })
         : [],
-    [sellers, deferredFilters, location, regionStats, priceMode],
+    [sellers, deferredFilters, location, regionStats],
   );
   const bestId = useMemo(() => findBestValueId(matches, deferredFilters.category === "all"), [matches, deferredFilters.category]);
   const selected = matches.find((m) => m.seller.id === selectedId) ?? null;

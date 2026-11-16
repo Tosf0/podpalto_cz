@@ -239,6 +239,11 @@ function SellerMapInner({
   const dark = resolvedTheme === "dark";
   const markers = useRef(new Map<string, L.Marker>());
   const clusterRef = useRef<ClusterGroupLike | null>(null);
+  // aktuální režim ceny pro ikony clusterů (iconCreateFunction se volá mimo render)
+  const modeRef = useRef(priceMode);
+  useEffect(() => {
+    modeRef.current = priceMode;
+  });
 
   const register = useCallback((id: string, m: L.Marker | null) => {
     if (m) markers.current.set(id, m);
@@ -322,7 +327,7 @@ function SellerMapInner({
           // cenovky jsou ~120 px široké → menší poloměr by nechal špendlíky překrývat
           maxClusterRadius={(zoom: number) => (zoom >= 14 ? 60 : 140)}
           iconCreateFunction={(c: ClusterLike) =>
-            clusterIcon(c.getChildCount(), clusterFromLabel(c.getAllChildMarkers().map((m) => pinMeta.get(m))))
+            clusterIcon(c.getChildCount(), clusterFromLabel(c.getAllChildMarkers().map((m) => pinMeta.get(m)), modeRef.current))
           }
         >
           {matches.map((m) => (

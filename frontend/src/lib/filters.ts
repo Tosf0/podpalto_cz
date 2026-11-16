@@ -11,7 +11,6 @@ import type {
   LogLengthCm,
   Moisture,
   PelletCertification,
-  PriceMode,
   RegionCode,
   RegionStats,
   Seller,
@@ -234,14 +233,14 @@ export interface ComputeArgs {
   filters: FilterState;
   location: GeoPoint;
   regionStats: RegionStats[];
-  priceMode: PriceMode;
 }
 
-export function computeMatches({ sellers, filters, location, regionStats, priceMode }: ComputeArgs): SellerMatch[] {
+export function computeMatches({ sellers, filters, location, regionStats }: ComputeArgs): SellerMatch[] {
   const statsByRegion = new Map<RegionCode, RegionStats>(regionStats.map((r) => [r.region, r]));
   const hasQuery = filters.query.trim().length > 0;
   const mixed = filters.category === "all";
-  const byKwh = filters.sort === "kwh" || priceMode === "kwh";
+  // přepínač Kč/jednotka ↔ Kč/kWh mění jen zobrazení ceny, ne vybraný produkt (ten určuje řazení)
+  const byKwh = filters.sort === "kwh";
   const out: SellerMatch[] = [];
 
   for (const seller of sellers) {

@@ -62,18 +62,25 @@ export function pinMetaFor(match: SellerMatch, mode: PriceMode): PinMeta {
   return { unit: match.product.unit, value: match.product.price, label: pinLabel(match, mode), kwhValue, kwhLabel };
 }
 
+/** Pořadí jednotek při shodném počtu (nejběžnější prodejní jednotky první). */
+const UNIT_ORDER = ["PRMS", "t", "PRM", "paleta", "pytel", "PLM"];
+
 /**
- * Nejnižší cena v clusteru: při shodné jednotce „od 1 280 Kč/PRMS“,
- * při mixu jednotek (PRMS × t) srovnatelně „od 1,05 Kč/kWh“.
+ * Nejnižší cena v clusteru – vždy v aktuálním režimu přepínače:
+ * - Kč/kWh: nejnižší cena za kWh,
+ * - Kč/jednotka: jednotky se mezi sebou porovnat nedají (PRMS × t), proto se vezme nejčastější
+ *   jednotka v clusteru a z ní nejnižší cena („od 1 190 Kč/PRMS“).
  */
-export function clusterFromLabel(metas: (PinMeta | undefined)[]): string | undefined {
+export function clusterFromLabel(metas: (PinMeta | undefined)[], mode: PriceMode): string | undefined {
   const known = metas.filter((m): m is PinMeta => !!m);
   if (known.length === 0 || known.length !== metas.length) return undefined;
-  const sameUnit = new Set(known.map((m) => m.unit)).size === 1;
-  const best = known.reduce((a, b) =>
-    (sameUnit ? a.value <= b.value : a.kwhValue <= b.kwhValue) ? a : b,
-  );
-  return sameUnit ? best.label : best.kwhLabel;
+  if (mode === "kwh") return known.reduce((a, b) => (a.kwhValue <= b.kwhValue ? a : b)).kwhLabel;
+  const groups = new Map<string, PinMeta[]>();
+  for (const m of known) groups.set(m.unit, [...(groups.get(m.unit) ?? []), m]);
+  const [, members] = [...groups.entries()].sort(
+    ([ua, a], [ub, b]) => b.length - a.length || UNIT_ORDER.indexOf(ua) - UNIT_ORDER.indexOf(ub),
+  )[0];
+  return members.reduce((a, b) => (a.value <= b.value ? a : b)).label;
 }
 
 const clusterCache = new Map<string, L.DivIcon>();
