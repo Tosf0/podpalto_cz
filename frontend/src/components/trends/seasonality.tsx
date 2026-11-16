@@ -32,9 +32,10 @@ export function Seasonality({ trends }: { trends: PriceTrendPoint[] }) {
       title="Sezónnost"
       description={
         best.diffPct < 0
-          ? `Na jaře bývá nakupování výhodnější. Nejvíc se to projevuje u položky ${COMMODITY_META[best.key].label.toLowerCase()} (${formatPct(best.diffPct)} oproti zimě).`
-          : "V posledních měsících jsme zatím nezaznamenali výraznější jarní pokles cen."
+          ? `Na jaře bývá levněji, nejvíc ${COMMODITY_META[best.key].label.toLowerCase()} (${formatPct(best.diffPct)} oproti zimě)`
+          : "Výraznější jarní pokles cen zatím nevidíme"
       }
+      info="Průměr za prosinec–únor vs. březen–květen v období zobrazeném v grafu. Orientační údaj, ne předpověď."
     >
       <ul className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {rows.map((r) => {
@@ -67,9 +68,6 @@ export function Seasonality({ trends }: { trends: PriceTrendPoint[] }) {
           );
         })}
       </ul>
-      <p className="text-xs text-muted-foreground">
-        Průměr za prosinec–únor vs. březen–květen v období, které graf zobrazuje. Orientační údaj, ne předpověď.
-      </p>
     </Section>
   );
 }

@@ -60,3 +60,15 @@ export function deliverySummary(s: Seller): string {
 export function priceOrDash(value: number | undefined): string {
   return value === undefined ? "–" : formatCzk(value);
 }
+
+/** Krátký popisek dopravy pro tabulku a karty, např. „Vlastní · do 60 km“. */
+export function deliveryShort(s: Seller): string {
+  const d = s.delivery;
+  if (d.ownDelivery) {
+    return d.freeRadiusKm > 0
+      ? `Zdarma do${NBSP}${formatKm(d.freeRadiusKm)}`
+      : `Vlastní · do${NBSP}${formatKm(d.maxRadiusKm)}`;
+  }
+  if (d.pickupAvailable) return "Osobní odběr";
+  return "Neuvedeno";
+}

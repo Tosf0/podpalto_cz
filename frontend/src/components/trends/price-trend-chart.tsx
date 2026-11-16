@@ -26,6 +26,13 @@ import {
 } from "./chart-parts";
 
 const KEYS: CommodityKey[] = ["hardWoodPrms", "softWoodPrms", "pelletsT", "briquettesT", "coalT"];
+const CHIP_LABEL: Record<CommodityKey, string> = {
+  hardWoodPrms: "Tvrdé dřevo",
+  softWoodPrms: "Měkké dřevo",
+  pelletsT: "Pelety",
+  briquettesT: "Brikety",
+  coalT: "Uhlí",
+};
 const WOOD: CommodityKey[] = ["hardWoodPrms", "softWoodPrms"];
 
 type Mode = "index" | "abs";
@@ -97,15 +104,21 @@ export function PriceTrendChart({ trends }: { trends: PriceTrendPoint[] }) {
     <Section
       id="vyvoj"
       title="Vývoj cen v čase"
-      description={`Průměrné ceny v ČR za posledních ${trends.length} měsíců. V režimu indexu jsou všechna paliva přepočtena na společnou osu (${baseLabel} = 100).`}
+      description={`Průměr ČR, posledních ${trends.length} měsíců`}
+      info={
+        <>
+          Index převádí všechna paliva na společnou osu ({baseLabel} = 100), takže je vidět, co zdražilo nejvíc. Zvýrazněná
+          oblast je topná sezóna (říjen–březen). Řady skryjete kliknutím na štítek.
+        </>
+      }
       actions={
         <Segmented<Mode>
           label="Režim grafu"
           value={mode}
           onChange={setMode}
           options={[
-            { value: "index", label: `Index (${baseLabel} = 100)` },
-            { value: "abs", label: "Absolutní ceny" },
+            { value: "index", label: "Index" },
+            { value: "abs", label: "Ceny v Kč" },
           ]}
         />
       }
@@ -121,10 +134,10 @@ export function PriceTrendChart({ trends }: { trends: PriceTrendPoint[] }) {
               aria-pressed={on}
               onClick={() => toggle(k)}
               className={cn(
-                "inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                "inline-flex items-center gap-2 rounded-xl border px-3 py-1.5 text-sm whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                 on
-                  ? "border-border bg-card text-foreground"
-                  : "border-dashed border-border bg-transparent text-muted-foreground line-through",
+                  ? "border-border bg-card text-foreground hover:bg-secondary"
+                  : "border-dashed border-border bg-transparent text-muted-foreground line-through hover:bg-secondary",
               )}
             >
               <span
@@ -132,7 +145,7 @@ export function PriceTrendChart({ trends }: { trends: PriceTrendPoint[] }) {
                 className="size-2.5 rounded-full"
                 style={{ backgroundColor: on ? color : "transparent", boxShadow: `inset 0 0 0 1.5px ${color}` }}
               />
-              {COMMODITY_META[k].label}
+              {CHIP_LABEL[k]}
             </button>
           );
         })}
@@ -153,7 +166,7 @@ export function PriceTrendChart({ trends }: { trends: PriceTrendPoint[] }) {
                 fillOpacity={0.1}
                 stroke="none"
                 ifOverflow="visible"
-                label={{ value: "Topná sezóna", position: "insideTop", fill: "var(--wood-strong)", fontSize: 12, fontWeight: 600 }}
+                label={{ value: "Sezóna", position: "insideTop", fill: "var(--wood-strong)", fontSize: 12, fontWeight: 600 }}
               />
             ))}
             {offRuns
@@ -168,7 +181,7 @@ export function PriceTrendChart({ trends }: { trends: PriceTrendPoint[] }) {
                   fillOpacity={0.08}
                   stroke="none"
                   ifOverflow="visible"
-                  label={{ value: "Letní propad cen", position: "insideTop", fill: "var(--moss-strong)", fontSize: 12 }}
+                  label={{ value: "Léto", position: "insideTop", fill: "var(--moss-strong)", fontSize: 12 }}
                 />
               ))}
 
@@ -264,9 +277,6 @@ export function PriceTrendChart({ trends }: { trends: PriceTrendPoint[] }) {
           </LineChart>
         </ResponsiveContainer>
       </div>
-      <p className="text-xs text-muted-foreground">
-        Zvýrazněná oblast = topná sezóna (říjen–březen), kdy poptávka a ceny obvykle rostou. Řady lze skrýt kliknutím na štítek.
-      </p>
     </Section>
   );
 }

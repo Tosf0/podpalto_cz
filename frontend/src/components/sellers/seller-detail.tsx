@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { CommodityKey, FuelProduct, PriceTrendPoint, RegionStats, Seller } from "@/types";
-import { COMMODITY_META, FUEL_META, REGIONS, WOOD_FORMS, WOOD_SPECIES } from "@/lib/constants";
+import { FUEL_META, REGIONS, WOOD_FORMS, WOOD_SPECIES } from "@/lib/constants";
 import {
   formatCzk,
   formatCzkPerUnit,
@@ -167,7 +167,7 @@ function Hero({ seller }: { seller: Seller }) {
           </Button>
           <Link href="/" className={buttonVariants({ variant: "outline" })}>
             <MapPin />
-            Zobrazit na mapě
+            Na mapě
           </Link>
         </div>
       </div>
@@ -186,7 +186,7 @@ function Hero({ seller }: { seller: Seller }) {
             <span className="num">{seller.ico}</span>
           </Fact>
         )}
-        <Fact label="Velikost">{SIZE_LABEL[seller.size]} prodejce</Fact>
+        <Fact label="Velikost">{SIZE_LABEL[seller.size]}</Fact>
         {seller.foundedYear && (
           <Fact label="Založeno">
             <span className="num">{seller.foundedYear}</span>
@@ -253,12 +253,12 @@ function PriceHistoryChart({
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
         <div>
           <h3 className="font-medium">{product.name}</h3>
-          <p className="text-xs text-muted-foreground">Vývoj ceny za posledních 12 měsíců, Kč/{product.unit}</p>
+          <p className="text-xs text-muted-foreground">Posledních 12 měsíců · Kč/{product.unit}</p>
         </div>
         {czAvg && (
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
             <span aria-hidden="true" className="h-0 w-5 border-t-2 border-dashed border-muted-foreground" />
-            Průměr ČR ({COMMODITY_META[key].label}): <span className="num">{formatCzk(czAvg)}</span>
+            Ø ČR: <span className="num">{formatCzk(czAvg)}</span>
           </span>
         )}
       </div>
@@ -309,7 +309,7 @@ function PriceList({ seller }: { seller: Seller }) {
 
   if (seller.products.length === 0) {
     return (
-      <Section title="Kompletní ceník" icon={<Store />}>
+      <Section title="Ceník" icon={<Store />}>
         <EmptyState title="Prodejce zatím nemá žádné sledované produkty" />
       </Section>
     );
@@ -317,22 +317,19 @@ function PriceList({ seller }: { seller: Seller }) {
 
   return (
     <Section
-      title="Kompletní ceník"
-      description="Kliknutím na řádek zobrazíte vývoj ceny produktu."
+      title="Ceník"
+      description="Klikněte na řádek pro graf ceny."
       icon={<Store />}
     >
-      <div className="overflow-hidden rounded-2xl border border-border">
+      <div className="overflow-hidden rounded-xl border border-border">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
               <TableHead>Produkt</TableHead>
-              <TableHead>Parametry</TableHead>
               <TableHead className="text-right">Cena</TableHead>
               <TableHead className="text-right">Kč/kWh</TableHead>
-              <TableHead className="text-right">Za základní j.</TableHead>
               <TableHead>Sklad</TableHead>
               <TableHead className="text-right">12 měs.</TableHead>
-              <TableHead>Aktualizace</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -354,30 +351,30 @@ function PriceList({ seller }: { seller: Seller }) {
                     }
                   }}
                 >
-                  <TableCell className="min-w-48 whitespace-normal">
+                  <TableCell className="whitespace-normal">
                     <div className="font-medium">{p.name}</div>
-                    <div className="mt-0.5">
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
                       <FuelBadge category={p.category} size="sm" showIcon={false} />
+                      {productParams(p).join(" · ")}
                     </div>
                   </TableCell>
-                  <TableCell className="min-w-56 whitespace-normal text-xs text-muted-foreground">
-                    {productParams(p).join(" · ") || "–"}
+                  <TableCell className="num text-right whitespace-nowrap">
+                    <div className="font-semibold">{formatCzkPerUnit(p.price, p.unit)}</div>
+                    {p.unit !== baseUnitLabel(p.category) && (
+                      <div className="text-xs text-muted-foreground">
+                        {formatCzkPerUnit(pricePerBaseUnit(p), baseUnitLabel(p.category))}
+                      </div>
+                    )}
                   </TableCell>
-                  <TableCell className="num whitespace-nowrap text-right font-semibold">
-                    {formatCzkPerUnit(p.price, p.unit)}
-                  </TableCell>
-                  <TableCell className="num whitespace-nowrap text-right">{formatKwhPrice(pricePerKwh(p))}</TableCell>
-                  <TableCell className="num whitespace-nowrap text-right text-muted-foreground">
-                    {formatCzkPerUnit(pricePerBaseUnit(p), baseUnitLabel(p.category))}
-                  </TableCell>
+                  <TableCell className="num text-right whitespace-nowrap">{formatKwhPrice(pricePerKwh(p))}</TableCell>
                   <TableCell>
                     <StockBadge stock={p.stock} />
+                    <div className="mt-0.5 text-xs whitespace-nowrap text-muted-foreground">
+                      {formatRelative(p.updatedAt)}
+                    </div>
                   </TableCell>
                   <TableCell className="text-right">
                     {change === null ? "–" : <PriceDelta value={change} />}
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                    {formatRelative(p.updatedAt)}
                   </TableCell>
                 </TableRow>
               );
@@ -412,7 +409,7 @@ function DeliverySection({ seller }: { seller: Seller }) {
   const estimate = estimateDelivery(seller, location, 1);
 
   return (
-    <Section title="Doprava" description="Podmínky dopravy a odhad pro vaši lokalitu." icon={<Truck />}>
+    <Section title="Doprava" icon={<Truck />}>
       <div className="grid items-stretch gap-6 lg:grid-cols-2">
         <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
           <Fact label="Způsob">{d.ownDelivery ? "Vlastní doprava" : "Pouze osobní odběr"}</Fact>
@@ -562,7 +559,7 @@ function IntelSection({ seller }: { seller: Seller }) {
           <div>
             <h2 className="text-xl font-semibold">Zatím bez konkurenční analýzy</h2>
             <p className="text-sm text-muted-foreground">
-              Nechte CrewAI agenty projít web prodejce a připravit SWOT, positioning a cenové srovnání.
+              SWOT, positioning a cenové srovnání z webu prodejce.
             </p>
           </div>
         </div>
@@ -571,7 +568,7 @@ function IntelSection({ seller }: { seller: Seller }) {
           className={cn(buttonVariants({ size: "lg" }), "shrink-0")}
         >
           <Sparkles />
-          Spustit AI analýzu konkurenta
+          Spustit analýzu
         </Link>
       </section>
     );
@@ -581,7 +578,7 @@ function IntelSection({ seller }: { seller: Seller }) {
   return (
     <Section
       title="Competitive Intelligence"
-      description={`Z dat CrewAI · analyzováno ${formatDate(intel.analyzedAt)}`}
+      description={`Analyzováno ${formatDate(intel.analyzedAt)}`}
       icon={<Brain />}
     >
       <div className="space-y-6">
@@ -611,7 +608,7 @@ function IntelSection({ seller }: { seller: Seller }) {
 
         {intel.usp.length > 0 && (
           <div>
-            <h3 className="mb-2 text-sm font-medium">Unikátní prodejní argumenty (USP)</h3>
+            <h3 className="mb-2 text-sm font-medium">Silné stránky (USP)</h3>
             <ul className="grid gap-2 sm:grid-cols-2">
               {intel.usp.map((u) => (
                 <li key={u} className="flex items-start gap-2 text-sm">
@@ -632,8 +629,7 @@ function IntelSection({ seller }: { seller: Seller }) {
           <h3 className="mb-3 text-sm font-medium">Cenové srovnání</h3>
           <PriceComparison seller={seller} />
           <p className="mt-3 text-xs text-muted-foreground">
-            Cenový index prodejce vůči průměru ČR: <span className="num">{formatPct(intel.priceIndexVsCz)}</span>{" "}
-            (záporná hodnota = levnější než průměr).
+            Cenový index vs. ČR: <span className="num">{formatPct(intel.priceIndexVsCz)}</span> (záporný = levnější).
           </p>
         </div>
 
@@ -643,7 +639,7 @@ function IntelSection({ seller }: { seller: Seller }) {
             className={buttonVariants({ variant: "outline" })}
           >
             <ExternalLink />
-            Otevřít celý report v CI Studiu
+            Celý report v CI Studiu
           </Link>
         )}
       </div>
@@ -659,7 +655,7 @@ export function SellerDetail({ slug }: { slug: string }) {
   const { data: seller, loading, error, reload } = useApi(() => getSeller(slug), [slug]);
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto w-full max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
       <nav aria-label="Drobečková navigace" className="flex flex-wrap items-center justify-between gap-2 text-sm">
         <ol className="flex items-center gap-1.5 text-muted-foreground">
           <li>
@@ -674,7 +670,7 @@ export function SellerDetail({ slug }: { slug: string }) {
         </ol>
         <Link href="/prodejci" className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-4" />
-          Zpět na katalog
+          Katalog
         </Link>
       </nav>
 

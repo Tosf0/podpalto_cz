@@ -1,9 +1,9 @@
 "use client";
 
-import { BarChart3, Leaf } from "lucide-react";
+import { BarChart3, Leaf, Lightbulb } from "lucide-react";
 import { BriquettesIcon, PelletsIcon, WoodIcon } from "@/components/common/fuel-icon";
 import type { MarketPulseItem, PriceTrendPoint, RegionStats } from "@/types";
-import { EmptyState, KpiCard, MockModeBadge, PageHeader } from "@/components/common";
+import { EmptyState, MockModeBadge, PageHeader, PriceDelta, Sparkline } from "@/components/common";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApi } from "@/hooks/use-api";
 import { getEnergyCosts, getMarketPulse, getPriceTrends, getRegionStats } from "@/lib/api";
@@ -62,6 +62,39 @@ function buildInsight(pulse: MarketPulseItem[], trends: PriceTrendPoint[], regio
   return parts.join(" ");
 }
 
+const PULSE_LABELS: Record<string, string> = {
+  hardWoodPrms: "Tvrdé dřevo",
+  softWoodPrms: "Měkké dřevo",
+  pelletsT: "Pelety",
+  briquettesT: "Brikety",
+};
+
+/** KPI dlaždice: krátký popisek, hodnota, změna a sparkline; všechny dlaždice mají stejné rozložení. */
+function PulseTile({ item }: { item: MarketPulseItem }) {
+  return (
+    <div className="@container flex h-full min-w-0 flex-col justify-between gap-3 rounded-2xl border border-border bg-card p-5 shadow-soft">
+      <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+        <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground [&_svg]:size-4">
+          {PULSE_ICONS[item.key]}
+        </span>
+        <span className="whitespace-nowrap">{PULSE_LABELS[item.key] ?? item.label}</span>
+      </div>
+      <div className="flex items-end justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <p className="num text-2xl font-semibold tracking-tight whitespace-nowrap text-foreground">
+            {formatNumber(item.value)}
+          </p>
+          <p className="text-xs whitespace-nowrap text-muted-foreground">{item.unit}</p>
+          <PriceDelta value={item.changePct} className="text-xs" />
+        </div>
+        {item.spark && item.spark.length > 1 && (
+          <Sparkline data={item.spark} color={COMMODITY_META[item.key].color} className="hidden shrink-0 @[12rem]:block" />
+        )}
+      </div>
+    </div>
+  );
+}
+
 function SectionSkeleton({ height = "h-96" }: { height?: string }) {
   return <Skeleton className={`${height} w-full rounded-2xl`} />;
 }
@@ -80,12 +113,12 @@ export function TrendsView() {
   const failed = pulse.error ?? trends.error ?? regions.error ?? energy.error;
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:space-y-8 lg:px-8">
+    <div className="mx-auto w-full max-w-7xl space-y-10 px-4 py-8 sm:px-6 lg:px-8">
       <PageHeader
         eyebrow="Analytika trhu"
-        title="Trh a cenové indexy v ČR"
+        title="Trh a ceny v ČR"
         icon={<BarChart3 />}
-        description="Jak se vyvíjejí ceny dřeva, pelet, briket a uhlí, který kraj je nejlevnější a co vás vyjde nejlevněji na 1 kWh tepla."
+        description="Vývoj cen, kraje a cena za kWh."
         actions={<MockModeBadge />}
       />
 
@@ -97,25 +130,16 @@ export function TrendsView() {
       )}
 
       <section aria-label="Aktuální průměrné ceny" className="space-y-4">
-        <div className="grid auto-rows-fr gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <p className="text-sm text-muted-foreground">Průměrné ceny v ČR a změna oproti minulému měsíci</p>
+        <div className="grid auto-rows-fr gap-4 grid-cols-2 lg:grid-cols-4">
           {pulse.data
-            ? pulse.data.map((p) => (
-                <KpiCard
-                  key={p.key}
-                  label={`${p.label} (průměr ČR)`}
-                  value={formatNumber(p.value)}
-                  unit={p.unit}
-                  changePct={p.changePct}
-                  spark={p.spark}
-                  sparkColor={COMMODITY_META[p.key].color}
-                  icon={PULSE_ICONS[p.key]}
-                />
-              ))
+            ? pulse.data.map((p) => <PulseTile key={p.key} item={p} />)
             : Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-32 rounded-2xl" />)}
         </div>
         {insight && (
-          <p className="rounded-2xl border border-border bg-accent px-4 py-3 text-sm text-accent-foreground sm:text-base">
-            {insight}
+          <p className="flex items-start gap-3 rounded-2xl border border-border bg-accent p-4 text-sm text-accent-foreground">
+            <Lightbulb aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+            <span>{insight}</span>
           </p>
         )}
       </section>

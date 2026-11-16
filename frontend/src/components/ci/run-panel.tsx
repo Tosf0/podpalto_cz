@@ -4,9 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   AlertCircle,
-  Bot,
   CheckCircle2,
-  ChevronDown,
   Circle,
   FileText,
   Globe,
@@ -17,7 +15,6 @@ import {
 import type { AnalysisRun, CrewLogEntry, CrewStep } from "@/types";
 import { ANALYSIS_POLL_MS, getAnalysisRun, startAnalysis } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -83,7 +80,6 @@ export function RunPanel({
   const [starting, setStarting] = useState(false);
   const [runId, setRunId] = useState<string | null>(null);
   const [run, setRun] = useState<AnalysisRun | null>(null);
-  const [showApi, setShowApi] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
   const onCompletedRef = useRef(onCompleted);
 
@@ -161,14 +157,10 @@ export function RunPanel({
   return (
     <Card className="rounded-2xl border border-border shadow-soft ring-0">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Play className="size-4 text-moss-strong" aria-hidden /> Spuštění nové analýzy
-        </CardTitle>
-        <CardDescription>
-          Zadejte adresu konkurenta. CrewAI projde jeho web, porovná ho s podpalto.cz a uloží Markdown report.
-        </CardDescription>
+        <CardTitle className="font-heading text-xl">Nová analýza</CardTitle>
+        <CardDescription>Zadejte web konkurenta.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-5">
+      <CardContent className="space-y-4">
         <form onSubmit={submit} className="space-y-3" noValidate>
           <div className="flex flex-col gap-2 sm:flex-row">
             <div className="relative flex-1">
@@ -200,7 +192,7 @@ export function RunPanel({
             </p>
           )}
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs text-muted-foreground">Příklady:</span>
+            <span className="text-xs text-muted-foreground">Zkuste:</span>
             {EXAMPLES.map((ex) => (
               <button
                 key={ex}
@@ -210,7 +202,7 @@ export function RunPanel({
                   setUrl(ex);
                   setUrlError(null);
                 }}
-                className="rounded-lg border border-border bg-card px-2.5 py-1 font-mono text-xs text-muted-foreground transition-colors hover:border-primary/50 hover:bg-accent hover:text-foreground disabled:opacity-50"
+                className="rounded-lg border border-border bg-card px-2 py-0.5 font-mono text-[11px] text-muted-foreground transition-colors hover:border-primary/50 hover:bg-accent hover:text-foreground disabled:opacity-50"
               >
                 {ex.replace("https://", "")}
               </button>
@@ -238,34 +230,21 @@ export function RunPanel({
               />
             </div>
 
-            <div className="grid gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-              <ol className="space-y-0">
-                {run.steps.map((s, i) => (
-                  <li key={s.id} className="relative flex gap-3 pb-5 last:pb-0">
-                    {i < run.steps.length - 1 && (
-                      <span
-                        aria-hidden
-                        className={cn("absolute top-6 bottom-0 left-[9.5px] w-px", s.status === "done" ? "bg-moss/40" : "bg-border")}
-                      />
+            <div className="space-y-4">
+              <ol className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                {run.steps.map((s) => (
+                  <li
+                    key={s.id}
+                    title={`${s.method}${s.agent_role ? " · " + s.agent_role : ""}`}
+                    className={cn(
+                      "flex items-center gap-2.5 rounded-xl border px-3 py-2",
+                      s.status === "running" ? "border-moss/40 bg-accent/60" : "border-border bg-card",
                     )}
-                    <span className="relative z-10 mt-0.5 bg-card">
-                      <StepIcon status={s.status} />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                        <span className={cn("text-sm font-medium", s.status === "pending" && "text-muted-foreground")}>{s.label}</span>
-                        {stepDuration(s) && <span className="num text-xs text-muted-foreground">{stepDuration(s)}</span>}
-                      </div>
-                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                        <Badge variant="outline" className="rounded-md font-mono text-[11px]">
-                          {s.method}
-                        </Badge>
-                        {s.agent_role && (
-                          <Badge variant="secondary" className="gap-1 rounded-md text-[11px]">
-                            <Bot aria-hidden /> {s.agent_role}
-                          </Badge>
-                        )}
-                      </div>
+                  >
+                    <StepIcon status={s.status} />
+                    <div className="min-w-0">
+                      <p className={cn("text-sm leading-tight font-medium", s.status === "pending" && "text-muted-foreground")}>{s.label}</p>
+                      {stepDuration(s) && <p className="num text-xs text-muted-foreground">{stepDuration(s)}</p>}
                     </div>
                   </li>
                 ))}
@@ -277,7 +256,7 @@ export function RunPanel({
                   <span className="font-mono">crew.log</span>
                   <span className="num ml-auto">{run.logs.length} řádků</span>
                 </div>
-                <div ref={logRef} role="log" aria-live="polite" className="h-64 overflow-y-auto p-3 font-mono text-xs leading-relaxed">
+                <div ref={logRef} role="log" aria-live="polite" className="h-44 overflow-y-auto p-3 font-mono text-xs leading-relaxed">
                   {run.logs.length === 0 && <p className="text-[#7f8a7c]">Čekám na první výstup…</p>}
                   {run.logs.map((l, i) => {
                     const st = LOG_STYLE[l.level];
@@ -300,7 +279,7 @@ export function RunPanel({
                   <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-moss-strong" aria-hidden />
                   <div>
                     <p className="text-sm font-semibold text-moss-strong">Analýza dokončena</p>
-                    <p className="text-sm text-muted-foreground">Report byl uložen do archivu a je připraven k prohlížení.</p>
+                    <p className="text-sm text-muted-foreground">Report je uložen v archivu.</p>
                   </div>
                 </div>
                 <Button onClick={() => onOpenReport(run.report_id!)}>
@@ -320,31 +299,6 @@ export function RunPanel({
             )}
           </div>
         )}
-
-        <div className="border-t border-border pt-4">
-          <button
-            type="button"
-            onClick={() => setShowApi((v) => !v)}
-            aria-expanded={showApi}
-            className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
-          >
-            <ChevronDown className={cn("size-4 transition-transform", !showApi && "-rotate-90")} aria-hidden />
-            API kontrakt
-          </button>
-          {showApi && (
-            <pre className="mt-3 overflow-x-auto rounded-xl bg-[#1b221d] p-4 font-mono text-xs leading-relaxed text-[#e6e0d4]">
-              {`POST /api/analyze
-{"competitor_url": "https://www.konkurent.cz"}
-→ {"run_id": "run_ab12", "status": "queued"}
-
-GET  /api/analyze/{run_id}      → AnalysisRun
-     { status, progress, steps[], logs[], report_id?, error? }
-
-GET  /api/reports               → CrewAnalysisReportSummary[]
-GET  /api/reports/{id}          → CrewAnalysisReport (vč. Markdownu)`}
-            </pre>
-          )}
-        </div>
       </CardContent>
     </Card>
   );

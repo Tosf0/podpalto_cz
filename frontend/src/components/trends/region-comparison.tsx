@@ -43,12 +43,18 @@ function scaleColor(price: number, avg: number): string {
   return r < 0 ? mix(GREEN, AMBER, r + 1) : mix(AMBER, RED, r);
 }
 
+/** Na úzké kartě zůstává jen vybraná komodita, na širší všechny. */
+function colCls(k: CommodityKey, active: CommodityKey): string {
+  return k === active ? "" : "hidden @3xl:table-cell";
+}
+
 type SortKey = CommodityKey | "name" | "priceIndex" | "changePct" | "sellerCount";
 
 function SortHead({
   k,
   children,
   right = true,
+  className,
   sortKey,
   sortDir,
   onSort,
@@ -56,6 +62,7 @@ function SortHead({
   k: SortKey;
   children: React.ReactNode;
   right?: boolean;
+  className?: string;
   sortKey: SortKey;
   sortDir: "asc" | "desc";
   onSort: (k: SortKey) => void;
@@ -65,7 +72,7 @@ function SortHead({
   return (
     <TableHead
       aria-sort={active ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
-      className={cn(right && "text-right")}
+      className={cn("px-1.5 @xl:px-3", right && "text-right", className)}
     >
       <button
         type="button"
@@ -134,14 +141,14 @@ export function RegionComparison({ regions }: { regions: RegionStats[] }) {
     <Section
       id="kraje"
       title="Srovnání 14 krajů ČR"
-      description="Průměrné ceny podle sídla prodejců. Barva sloupce ukazuje odchylku od průměru krajů – mechová levněji, hlinitá dráž."
+      description="Průměrné ceny podle sídla prodejců"
+      info="Barva sloupce ukazuje odchylku od průměru krajů: mechová = levněji, hlinitá = dráž. Osa nezačíná v nule, aby byly rozdíly čitelné. Ceny vč. DPH; dřevo v Kč/PRMS, ostatní paliva v Kč/t. Index: 100 = průměr ČR."
       actions={
         <Segmented<CommodityKey>
           label="Komodita"
           value={commodity}
           onChange={setCommodity}
           options={KEYS.map((k) => ({ value: k, label: SHORT_LABEL[k] }))}
-          className="max-w-full overflow-x-auto [scrollbar-width:none]"
         />
       }
     >
@@ -152,9 +159,9 @@ export function RegionComparison({ regions }: { regions: RegionStats[] }) {
           </span>
           <div className="min-w-0 text-sm">
             <p className="text-xs font-semibold tracking-wide text-moss-strong uppercase">Nejlevnější</p>
-            <p className="truncate font-medium text-foreground">{cheapest.fullName}</p>
+            <p className="font-medium text-foreground">{cheapest.fullName}</p>
             <p className="num text-muted-foreground">
-              {formatCzk(cheapest.price)}/{unit} · {formatPct((cheapest.price / avg - 1) * 100)} vs. průměr
+              {formatCzk(cheapest.price)}/{unit} · {formatPct((cheapest.price / avg - 1) * 100)}
             </p>
           </div>
         </div>
@@ -164,21 +171,21 @@ export function RegionComparison({ regions }: { regions: RegionStats[] }) {
           </span>
           <div className="min-w-0 text-sm">
             <p className="text-xs font-semibold tracking-wide text-clay-strong uppercase">Nejdražší</p>
-            <p className="truncate font-medium text-foreground">{priciest.fullName}</p>
+            <p className="font-medium text-foreground">{priciest.fullName}</p>
             <p className="num text-muted-foreground">
-              {formatCzk(priciest.price)}/{unit} · {formatPct((priciest.price / avg - 1) * 100)} vs. průměr
+              {formatCzk(priciest.price)}/{unit} · {formatPct((priciest.price / avg - 1) * 100)}
             </p>
           </div>
         </div>
       </div>
 
       <div
-        className="h-[28rem] w-full"
+        className="h-[26rem] w-full"
         role="img"
         aria-label={`Sloupcový graf průměrné ceny (${meta.label}) podle krajů, seřazeno od nejlevnějšího`}
       >
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} layout="vertical" margin={{ top: 16, right: 24, left: 0, bottom: 0 }}>
+          <BarChart data={chartData} layout="vertical" margin={{ top: 16, right: 16, left: 0, bottom: 0 }}>
             <CartesianGrid stroke={GRID_STROKE} strokeDasharray="3 3" horizontal={false} />
             <XAxis
               type="number"
@@ -192,7 +199,7 @@ export function RegionComparison({ regions }: { regions: RegionStats[] }) {
             <YAxis
               type="category"
               dataKey="name"
-              width={104}
+              width={118}
               tick={AXIS_TICK}
               axisLine={false}
               tickLine={false}
@@ -231,37 +238,36 @@ export function RegionComparison({ regions }: { regions: RegionStats[] }) {
           </BarChart>
         </ResponsiveContainer>
       </div>
-      <p className="text-xs text-muted-foreground">
-        Osa nezačíná v nule, aby byly rozdíly mezi kraji čitelné. Ceny jsou v Kč vč. DPH za {unit}.
-      </p>
 
-      <div className="overflow-hidden overflow-x-auto rounded-2xl border border-border">
-        <Table>
+      <div className="@container overflow-hidden rounded-xl border border-border">
+        <Table className="text-[0.8125rem] [&_td]:px-1.5 @xl:[&_td]:px-3">
           <TableHeader>
             <TableRow>
               <SortHead k="name" right={false} {...sh}>Kraj</SortHead>
               {KEYS.map((k) => (
-                <SortHead key={k} k={k} {...sh}>
+                <SortHead key={k} k={k} className={colCls(k, commodity)} {...sh}>
                   {SHORT_LABEL[k]}
                 </SortHead>
               ))}
-              <SortHead k="priceIndex" {...sh}>Index</SortHead>
-              <SortHead k="changePct" {...sh}>Změna m/m</SortHead>
-              <SortHead k="sellerCount" {...sh}>Prodejci</SortHead>
+              <SortHead k="priceIndex" className="hidden @lg:table-cell" {...sh}>Index</SortHead>
+              <SortHead k="changePct" {...sh}>m/m</SortHead>
+              <SortHead k="sellerCount" className="hidden @4xl:table-cell" {...sh}>Prodejci</SortHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {sorted.map((r) => (
               <TableRow key={r.region}>
-                <TableCell className="font-medium whitespace-nowrap">{r.name}</TableCell>
+                <TableCell className="px-1.5 font-medium whitespace-nowrap @xl:px-3"><span className="@xl:hidden">{REGIONS[r.region].short}</span>
+                  <span className="hidden @xl:inline">{r.name}</span>
+                </TableCell>
                 {KEYS.map((k) => (
-                  <TableCell key={k} className={cn("num text-right", k === commodity && "bg-accent/60 font-medium")}>
+                  <TableCell key={k} className={cn("num text-right", colCls(k, commodity), k === commodity && "bg-accent/60 font-medium")}>
                     {formatNumber(r.avgPrices[k])}
                   </TableCell>
                 ))}
                 <TableCell
                   className={cn(
-                    "num text-right font-medium",
+                    "num hidden text-right font-medium @lg:table-cell",
                     r.priceIndex < 98 && "text-moss-strong",
                     r.priceIndex > 102 && "text-clay-strong",
                   )}
@@ -271,15 +277,12 @@ export function RegionComparison({ regions }: { regions: RegionStats[] }) {
                 <TableCell className="text-right">
                   <PriceDelta value={r.changePct} />
                 </TableCell>
-                <TableCell className="num text-right">{r.sellerCount}</TableCell>
+                <TableCell className="num hidden text-right @4xl:table-cell">{r.sellerCount}</TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
-      <p className="text-xs text-muted-foreground">
-        Ceny dřeva v Kč/PRMS, ostatní paliva v Kč/t. Index: 100 = průměr ČR.
-      </p>
     </Section>
   );
 }

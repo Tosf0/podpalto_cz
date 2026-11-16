@@ -4,15 +4,12 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { MapPin, Trophy, Truck, Wand2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmptyState } from "@/components/common";
 import { useApi } from "@/hooks/use-api";
 import { getRegionStats, getSellers } from "@/lib/api";
@@ -29,7 +26,7 @@ import { formatCzk, formatKm, formatNumber, plural } from "@/lib/format";
 import { locationFromZip, usePreferences } from "@/components/providers/preferences-provider";
 import { cn } from "@/lib/utils";
 import type { FuelCategory, FuelProduct, Seller, WoodGroup } from "@/types";
-import { NumberField, parseNum } from "./fields";
+import { Collapsible, InfoTip, NumberField, Panel, parseNum } from "./fields";
 
 type FuelKey = "wood-hard" | "wood-soft" | "pellets" | "briquettes" | "coal";
 
@@ -175,74 +172,80 @@ export function SeasonCalculator() {
   const visible = showAll ? rows : rows.slice(0, 10);
 
   return (
-    <div className="space-y-5">
-      <Card className="rounded-2xl border border-border shadow-soft ring-0">
-        <CardContent className="space-y-5">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="season-zip">PSČ doručení</Label>
-              <div className="relative">
-                <MapPin className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  id="season-zip"
-                  inputMode="numeric"
-                  autoComplete="postal-code"
-                  placeholder="např. 110 00"
-                  value={zipValue}
-                  onChange={(e) => setZipInput(e.target.value)}
-                  aria-invalid={zipInvalid}
-                  className="num h-10 pl-8 text-base"
-                />
-              </div>
-              <p className={cn("text-xs", zipInvalid ? "text-clay-strong" : "text-muted-foreground")}>
-                {zipInvalid ? "PSČ nerozpoznáno" : loc ? `Počítáno pro: ${loc.label}` : "Zadejte PSČ"}
-              </p>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="season-fuel">Palivo</Label>
-              <Select value={fuel} onValueChange={(v) => changeFuel(v as FuelKey)}>
-                <SelectTrigger id="season-fuel" className="h-10 w-full text-base">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent position="popper">
-                  {(Object.keys(FUELS) as FuelKey[]).map((k) => (
-                    <SelectItem key={k} value={k}>
-                      {FUELS[k].label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <NumberField
-              id="season-qty"
-              label="Množství"
-              value={qty}
-              onChange={setQty}
-              suffix={f.unit}
-              step={f.unit === "PRMS" ? "0.5" : "0.1"}
-            />
-
-            <div className="flex flex-col justify-end gap-2">
-              <Label htmlFor="season-arm" className="flex h-10 items-center justify-between gap-3 rounded-xl border border-border px-3">
-                <span className="text-sm">Složení hydraulickou rukou</span>
-                <Switch id="season-arm" checked={arm} onCheckedChange={setArm} />
-              </Label>
+    <div className="space-y-4">
+      <Panel className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="season-zip">PSČ</Label>
+            <div className="relative">
+              <MapPin className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="season-zip"
+                inputMode="numeric"
+                autoComplete="postal-code"
+                placeholder="110 00"
+                value={zipValue}
+                onChange={(e) => setZipInput(e.target.value)}
+                aria-invalid={zipInvalid}
+                className="num h-10 rounded-xl pl-9 text-base"
+              />
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={saveLocation} disabled={!loc || zipInput === null}>
-              <MapPin /> Uložit jako moji polohu
-            </Button>
+          <div className="space-y-1.5">
+            <Label htmlFor="season-fuel">Palivo</Label>
+            <Select value={fuel} onValueChange={(v) => changeFuel(v as FuelKey)}>
+              <SelectTrigger id="season-fuel" className="h-10 w-full rounded-xl text-base">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent position="popper">
+                {(Object.keys(FUELS) as FuelKey[]).map((k) => (
+                  <SelectItem key={k} value={k}>
+                    {FUELS[k].label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="rounded-xl bg-secondary p-4">
-            <p className="mb-3 flex items-center gap-1.5 text-sm font-medium">
-              <Wand2 className="size-4 text-wood-strong" aria-hidden="true" /> Odhad spotřeby
-            </p>
-            <div className="flex flex-wrap items-end gap-3">
+          <NumberField
+            id="season-qty"
+            label="Množství"
+            value={qty}
+            onChange={setQty}
+            suffix={f.unit}
+            step={f.unit === "PRMS" ? "0.5" : "0.1"}
+          />
+
+          <div className="space-y-1.5">
+            <Label htmlFor="season-arm">Hydraulická ruka</Label>
+            <label
+              htmlFor="season-arm"
+              className="flex h-10 cursor-pointer items-center justify-between gap-3 rounded-xl border border-input px-3"
+            >
+              <span className="text-sm">{arm ? "Ano, složit" : "Ne"}</span>
+              <Switch id="season-arm" checked={arm} onCheckedChange={setArm} />
+            </label>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <p className={cn("flex items-center gap-1.5 text-sm", zipInvalid ? "text-clay-strong" : "text-muted-foreground")}>
+            <MapPin className="size-4 shrink-0" aria-hidden="true" />
+            {zipInvalid ? "PSČ nerozpoznáno" : loc ? loc.label : "Zadejte PSČ"}
+          </p>
+          <Button variant="outline" size="sm" onClick={saveLocation} disabled={!loc || zipInput === null}>
+            Uložit jako moji polohu
+          </Button>
+        </div>
+
+        <Collapsible
+          title="Nevím kolik – spočítat podle domu"
+          icon={<Wand2 className="size-4 text-wood-strong" aria-hidden="true" />}
+        >
+          <div className="grid items-end gap-4 lg:grid-cols-[auto_12rem_1fr]">
+            <div className="space-y-1.5">
+              <Label>Typ domu</Label>
               <div className="flex flex-wrap gap-1.5">
                 {DEMAND_PRESETS.map((p) => (
                   <Button
@@ -251,176 +254,98 @@ export function SeasonCalculator() {
                     variant={parseNum(demand) === p.kwh ? "default" : "outline"}
                     onClick={() => setDemand(String(p.kwh))}
                   >
-                    {p.label} · {formatNumber(p.kwh)}
+                    {p.label}
                   </Button>
                 ))}
               </div>
-              <NumberField
-                id="season-demand"
-                label="Potřeba tepla (kWh/rok)"
-                value={demand}
-                onChange={setDemand}
-                className="w-44"
-              />
-              <div className="pb-1 text-sm">
-                Doporučeno:{" "}
-                <strong className="num text-base">
+            </div>
+            <NumberField id="season-demand" label="Potřeba tepla" value={demand} onChange={setDemand} suffix="kWh/rok" />
+            <div className="flex items-center justify-between gap-3 rounded-xl bg-card px-4 py-2 sm:justify-end">
+              <p className="text-sm">
+                Doporučeno{" "}
+                <strong className="num text-base whitespace-nowrap">
                   {formatNumber(suggested, 1)} {f.unit}
-                </strong>{" "}
-                <span className="text-xs text-muted-foreground">
-                  (účinnost {Math.round(BOILER_EFFICIENCY[f.category] * 100)} %)
-                </span>
-              </div>
+                </strong>
+              </p>
               <Button size="sm" disabled={!suggested} onClick={() => setQty(String(suggested))}>
                 Použít
               </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </Collapsible>
+      </Panel>
 
       {loading && <Skeleton className="h-64 w-full rounded-2xl" />}
-      {error && (
-        <EmptyState title="Nepodařilo se načíst prodejce" description="Zkuste to prosím za chvíli znovu." />
-      )}
-
+      {error && <EmptyState title="Nepodařilo se načíst prodejce" description="Zkuste to znovu za chvíli." />}
       {!loading && !error && result && rows.length === 0 && (
-        <EmptyState
-          icon={<Truck />}
-          title="Nenašli jsme žádnou nabídku"
-          description="Pro zvolené palivo a polohu není skladem žádný prodejce s dojezdem nebo osobním odběrem."
-        />
+        <EmptyState icon={<Truck />} title="Žádná nabídka" description="Pro toto palivo a polohu nikdo nemá skladem." />
       )}
       {!loading && !error && !result && (
-        <EmptyState title="Zadejte PSČ a množství" description="Pak spočítáme celkovou cenu u jednotlivých prodejců." />
+        <EmptyState title="Zadejte PSČ a množství" description="Spočítáme cenu u každého prodejce." />
       )}
 
       {winner && (
         <>
-          <Card className="rounded-2xl border border-moss/30 bg-moss-soft shadow-soft ring-0">
-            <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-3">
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-moss text-primary-foreground">
-                  <Trophy className="size-5" aria-hidden="true" />
-                </span>
-                <div>
-                  <p className="text-xs font-semibold tracking-wider text-moss-strong uppercase">Nejvýhodnější nabídka</p>
-                  <p className="text-lg font-semibold">
-                    <Link href={`/prodejci/${winner.seller.slug}`} className="hover:underline">
-                      {winner.seller.name}
-                    </Link>
+          <div className="flex flex-col gap-4 rounded-2xl border border-moss/30 bg-moss-soft p-5 shadow-soft sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-moss text-primary-foreground">
+                <Trophy className="size-5" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold tracking-wider text-moss-strong uppercase">Nejvýhodnější</p>
+                <Link href={`/prodejci/${winner.seller.slug}`} className="block text-lg leading-snug font-semibold hover:underline">
+                  {winner.seller.name}
+                </Link>
+                {winner.saving !== undefined && winner.saving > 0 && (
+                  <p className="text-sm font-medium text-moss-strong">
+                    Ušetříte <span className="num">{formatCzk(winner.saving)}</span> oproti průměru kraje
                   </p>
-                  <p className="text-sm text-muted-foreground">
-                    {winner.offer.product.name} · {formatNumber(winner.offer.quantity, 1)} {unitLabel(winner.offer.product)}
-                  </p>
-                  {winner.saving !== undefined && winner.saving > 0 && (
-                    <p className="mt-1 text-sm font-semibold text-moss-strong">
-                      Ušetříte až <span className="num">{formatCzk(winner.saving)}</span> oproti průměru kraje
-                    </p>
-                  )}
-                </div>
+                )}
               </div>
-              <div className="text-left sm:text-right">
-                <p className="num text-4xl font-semibold tracking-tight text-moss-strong">{formatCzk(winner.offer.total)}</p>
-                <p className="num text-sm text-muted-foreground">
-                  {formatNumber(winner.offer.totalPerKwh, 2)} Kč/kWh vč. dopravy
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Desktop – tabulka */}
-          <div className="hidden overflow-hidden rounded-2xl border border-border bg-card shadow-soft md:block">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10">#</TableHead>
-                  <TableHead>Prodejce a produkt</TableHead>
-                  <TableHead className="text-right">Vzdálenost</TableHead>
-                  <TableHead className="text-right">Zboží</TableHead>
-                  <TableHead className="text-right">Doprava</TableHead>
-                  <TableHead className="text-right">Celkem</TableHead>
-                  <TableHead className="text-right">Kč/kWh</TableHead>
-                  <TableHead className="text-right">Vs. průměr kraje</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {visible.map((r, i) => (
-                  <TableRow key={r.seller.id} className={cn(i === 0 && "bg-moss-soft/60")}>
-                    <TableCell className="num font-semibold">{i + 1}</TableCell>
-                    <TableCell className="whitespace-normal">
-                      <Link href={`/prodejci/${r.seller.slug}`} className="font-medium hover:text-primary hover:underline">
-                        {r.seller.name}
-                      </Link>
-                      <p className="text-xs text-muted-foreground">
-                        {r.offer.product.name} · <span className="num">{formatNumber(r.offer.quantity, 1)}</span>{" "}
-                        {unitLabel(r.offer.product)}
-                        {r.offer.product.moisture && r.offer.product.category === "wood"
-                          ? ` · ${MOISTURE[r.offer.product.moisture].label.toLowerCase()}`
-                          : ""}
-                      </p>
-                    </TableCell>
-                    <TableCell className="num text-right">{formatKm(r.offer.delivery.distanceKm)}</TableCell>
-                    <TableCell className="num text-right">{formatCzk(r.offer.goods)}</TableCell>
-                    <TableCell className="num text-right">
-                      <DeliveryCell row={r} />
-                    </TableCell>
-                    <TableCell className={cn("num text-right text-base font-semibold", i === 0 && "text-moss-strong")}>
-                      {formatCzk(r.offer.total)}
-                    </TableCell>
-                    <TableCell className="num text-right">{formatNumber(r.offer.totalPerKwh, 2)}</TableCell>
-                    <TableCell className="text-right">
-                      <SavingCell saving={r.saving} />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            </div>
+            <div className="sm:text-right">
+              <p className="num text-4xl font-semibold tracking-tight whitespace-nowrap text-moss-strong">
+                {formatCzk(winner.offer.total)}
+              </p>
+              <p className="num text-sm whitespace-nowrap text-muted-foreground">
+                {formatNumber(winner.offer.totalPerKwh, 2)} Kč/kWh vč. dopravy
+              </p>
+            </div>
           </div>
 
-          {/* Mobil – karty */}
-          <ul className="space-y-3 md:hidden">
-            {visible.map((r, i) => (
-              <li key={r.seller.id}>
-                <Card size="sm" className={cn("rounded-2xl border border-border shadow-soft ring-0", i === 0 && "border-moss")}>
-                  <CardContent className="space-y-2">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-xs text-muted-foreground">#{i + 1}</p>
-                        <Link href={`/prodejci/${r.seller.slug}`} className="font-medium hover:underline">
-                          {r.seller.name}
-                        </Link>
-                        <p className="text-xs text-muted-foreground">
-                          {r.offer.product.name} · {formatNumber(r.offer.quantity, 1)} {unitLabel(r.offer.product)} ·{" "}
-                          {formatKm(r.offer.delivery.distanceKm)}
-                        </p>
-                      </div>
-                      <p className={cn("num shrink-0 text-xl font-semibold", i === 0 && "text-moss-strong")}>
-                        {formatCzk(r.offer.total)}
-                      </p>
-                    </div>
-                    <dl className="num grid grid-cols-3 gap-2 text-xs">
-                      <div>
-                        <dt className="font-sans text-muted-foreground">Zboží</dt>
-                        <dd>{formatCzk(r.offer.goods)}</dd>
-                      </div>
-                      <div>
-                        <dt className="font-sans text-muted-foreground">Doprava</dt>
-                        <dd>
-                          <DeliveryCell row={r} />
-                        </dd>
-                      </div>
-                      <div>
-                        <dt className="font-sans text-muted-foreground">Kč/kWh</dt>
-                        <dd>{formatNumber(r.offer.totalPerKwh, 2)}</dd>
-                      </div>
-                    </dl>
-                    <SavingCell saving={r.saving} />
-                  </CardContent>
-                </Card>
-              </li>
-            ))}
-          </ul>
+          <div className="flex items-center gap-1 pt-2">
+            <h3 className="font-heading text-base font-semibold">
+              {rows.length} {plural(rows.length, "nabídka", "nabídky", "nabídek")} od nejlevnější
+            </h3>
+            <InfoTip label="Jak to počítáme">
+              <p>
+                Cena = zboží + doprava k vám. Množství se u každého prodejce zaokrouhlí nahoru na prodejní jednotku.
+                Syrové dřevo je vynecháno.
+              </p>
+              <p>
+                Průměr kraje{result?.regionName ? ` (${result.regionName})` : ""} = průměrná cena paliva ×{" "}
+                {formatNumber(baseQty, 1)} {f.unit} + průměrná doprava ({formatCzk(result?.avgDelivery ?? 0)}).
+              </p>
+              {arm && rows.some((r) => r.armMissing) && <p>Někteří prodejci hydraulickou ruku nenabízejí.</p>}
+            </InfoTip>
+          </div>
+
+          <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
+            <div className={cn("hidden items-center border-b border-border bg-secondary/50 px-4 py-2.5 text-xs font-medium text-muted-foreground lg:grid", ROW_GRID)}>
+              <span>#</span>
+              <span>Prodejce</span>
+              <span className="text-right">Vzdálenost</span>
+              <span className="text-right">Doprava</span>
+              <span className="text-right">Celkem</span>
+              <span className="text-right">Kč/kWh</span>
+              <span className="text-right">Vs. průměr</span>
+            </div>
+            <ol className="divide-y divide-border">
+              {visible.map((r, i) => (
+                <ResultRow key={r.seller.id} row={r} rank={i + 1} />
+              ))}
+            </ol>
+          </div>
 
           {rows.length > 10 && (
             <div className="text-center">
@@ -429,39 +354,102 @@ export function SeasonCalculator() {
               </Button>
             </div>
           )}
-
-          <p className="text-xs text-muted-foreground">
-            Průměr kraje{result?.regionName ? ` (${result.regionName})` : ""} = průměrná cena paliva v kraji ×{" "}
-            {formatNumber(baseQty, 1)} {f.unit} + průměrná doprava ve výsledcích ({formatCzk(result?.avgDelivery ?? 0)}).
-            Množství je u každého prodejce zaokrouhleno nahoru na prodejní jednotku. Syrové dřevo je vynecháno.
-            {arm && rows.some((r) => r.armMissing) && " Někteří prodejci hydraulickou ruku nenabízejí."}
-          </p>
         </>
       )}
     </div>
   );
 }
 
-function DeliveryCell({ row }: { row: Row }) {
-  const d = row.offer.delivery;
-  if (d.outOfRange)
-    return (
-      <Badge variant="outline" className="rounded-lg font-sans whitespace-normal">
-        mimo dojezd – osobní odběr
-      </Badge>
-    );
-  if (d.free) return <span className="text-moss-strong">zdarma</span>;
-  return <span>{formatCzk(d.fee)}</span>;
+const ROW_GRID = "lg:grid-cols-[1.5rem_minmax(0,1fr)_4.5rem_5.5rem_6.5rem_4rem_6rem] lg:gap-3";
+
+function productLine(r: Row): string {
+  const p = r.offer.product;
+  const moist = p.moisture && p.category === "wood" ? ` · ${MOISTURE[p.moisture].label.toLowerCase()}` : "";
+  return `${p.name} · ${formatNumber(r.offer.quantity, 1)} ${unitLabel(p)}${moist}`;
 }
 
-function SavingCell({ saving }: { saving?: number }) {
+function ResultRow({ row: r, rank }: { row: Row; rank: number }) {
+  const first = rank === 1;
+  return (
+    <li className={cn(first && "bg-moss-soft/50")}>
+      {/* Desktop */}
+      <div className={cn("hidden items-center px-4 py-3 lg:grid", ROW_GRID)}>
+        <span className={cn("num text-sm font-semibold", first ? "text-moss-strong" : "text-muted-foreground")}>{rank}</span>
+        <div className="min-w-0">
+          <Link
+            href={`/prodejci/${r.seller.slug}`}
+            title={r.seller.name}
+            className="block leading-snug font-medium hover:text-primary hover:underline"
+          >
+            {r.seller.name}
+          </Link>
+          <p className="line-clamp-2 text-xs text-muted-foreground" title={productLine(r)}>
+            {productLine(r)}
+          </p>
+        </div>
+        <span className="num text-right text-sm whitespace-nowrap">{formatKm(r.offer.delivery.distanceKm)}</span>
+        <span className="text-right text-sm whitespace-nowrap">
+          <DeliveryCell row={r} />
+        </span>
+        <span className={cn("num text-right text-base font-semibold whitespace-nowrap", first && "text-moss-strong")}>
+          {formatCzk(r.offer.total)}
+        </span>
+        <span className="num text-right text-sm whitespace-nowrap">{formatNumber(r.offer.totalPerKwh, 2)}</span>
+        <span className="text-right">
+          <SavingChip saving={r.saving} />
+        </span>
+      </div>
+
+      {/* Mobil / úzké okno – karta */}
+      <div className="space-y-2 px-4 py-3 lg:hidden">
+        <div className="flex items-start gap-3">
+          <span className={cn("num w-5 pt-0.5 text-sm font-semibold", first ? "text-moss-strong" : "text-muted-foreground")}>
+            {rank}
+          </span>
+          <div className="min-w-0 flex-1">
+            <Link href={`/prodejci/${r.seller.slug}`} className="block leading-snug font-medium hover:underline">
+              {r.seller.name}
+            </Link>
+            <p className="line-clamp-2 text-xs text-muted-foreground">{productLine(r)}</p>
+          </div>
+          <p className={cn("num shrink-0 text-lg font-semibold whitespace-nowrap", first && "text-moss-strong")}>
+            {formatCzk(r.offer.total)}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pl-8 text-xs text-muted-foreground">
+          <span className="num whitespace-nowrap">{formatKm(r.offer.delivery.distanceKm)}</span>
+          <span className="whitespace-nowrap">
+            doprava: <DeliveryCell row={r} />
+          </span>
+          <span className="num whitespace-nowrap">{formatNumber(r.offer.totalPerKwh, 2)} Kč/kWh</span>
+          <span className="ml-auto">
+            <SavingChip saving={r.saving} />
+          </span>
+        </div>
+      </div>
+    </li>
+  );
+}
+
+function DeliveryCell({ row }: { row: Row }) {
+  const d = row.offer.delivery;
+  if (d.outOfRange) return <span className="text-muted-foreground">osobní odběr</span>;
+  if (d.free) return <span className="font-medium text-moss-strong">zdarma</span>;
+  return <span className="num">{formatCzk(d.fee)}</span>;
+}
+
+function SavingChip({ saving }: { saving?: number }) {
   if (saving === undefined) return <span className="text-xs text-muted-foreground">–</span>;
   const good = saving >= 0;
   return (
-    <span className={cn("num text-sm font-medium", good ? "text-moss-strong" : "text-clay-strong")}>
+    <span
+      className={cn(
+        "num inline-block rounded-lg px-2 py-0.5 text-xs font-semibold whitespace-nowrap",
+        good ? "bg-moss-soft text-moss-strong" : "bg-clay-soft text-clay-strong",
+      )}
+    >
       {good ? "−" : "+"}
       {formatCzk(Math.abs(saving))}
-      <span className="ml-1 font-sans text-xs font-normal text-muted-foreground">{good ? "levněji" : "dráž"}</span>
     </span>
   );
 }

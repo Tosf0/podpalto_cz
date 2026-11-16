@@ -72,32 +72,47 @@ export function EnergyCostChart({ items }: { items: EnergyCostItem[] }) {
     <Section
       id="kwh"
       title="Srovnání ceny za 1 kWh tepla"
-      description="Cena paliv se udává v různých jednotkách (PRMS, tuna). Po přepočtu na kWh je porovnání férové."
+      description="Paliva přepočtená na společnou jednotku"
+      info={
+        <>
+          „Energie v palivu“ vychází z výhřevnosti a vlhkosti paliva. „Dodané teplo“ navíc počítá s účinností spalování
+          (dřevo 78 %, pelety 90 %, brikety 80 %, uhlí 72 %) – to skutečně zaplatíte za teplo v domě.
+        </>
+      }
       actions={
         <Segmented<Mode>
           label="Způsob výpočtu"
           value={mode}
           onChange={setMode}
           options={[
-            { value: "heat", label: "Dodané teplo (po účinnosti kotle)" },
+            { value: "heat", label: "Dodané teplo" },
             { value: "fuel", label: "Energie v palivu" },
           ]}
         />
       }
     >
-      <div className="flex items-start gap-3 rounded-xl border border-moss/30 bg-moss-soft p-3 text-sm">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-card text-moss-strong">
-          <Trophy aria-hidden="true" className="size-4" />
-        </span>
-        <p className="text-foreground">
-          <strong className="font-semibold">{cheapest.label}</strong> je nejlevnější:{" "}
-          <span className="num font-medium">{formatKwhPrice(cheapest.value)}</span>
-          {savingPct > 0 && (
-            <>
-              , tedy o <span className="num font-medium">{savingPct} %</span> méně než {max.label.toLowerCase()}.
-            </>
-          )}
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-moss/30 bg-moss-soft p-3 text-sm">
+        <div className="flex min-w-0 flex-1 basis-64 items-center gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-card text-moss-strong">
+            <Trophy aria-hidden="true" className="size-4" />
+          </span>
+          <p className="text-foreground">
+            <strong className="font-semibold">{cheapest.label}</strong> je nejlevnější:{" "}
+            <span className="num font-medium">{formatKwhPrice(cheapest.value)}</span>
+            {savingPct > 0 && (
+              <>
+                , o <span className="num font-medium">{savingPct} %</span> méně než {max.label.toLowerCase()}.
+              </>
+            )}
+          </p>
+        </div>
+        <Button asChild className="shrink-0">
+          <Link href="/kalkulacka#sezona">
+            <Calculator aria-hidden="true" />
+            Spočítat pro můj dům
+            <ArrowRight aria-hidden="true" />
+          </Link>
+        </Button>
       </div>
 
       <div className="h-80 w-full" role="img" aria-label="Sloupcový graf ceny za kilowatthodinu podle paliva">
@@ -116,7 +131,7 @@ export function EnergyCostChart({ items }: { items: EnergyCostItem[] }) {
             <YAxis
               type="category"
               dataKey="label"
-              width={172}
+              width={152}
               axisLine={false}
               tickLine={false}
               interval={0}
@@ -159,24 +174,6 @@ export function EnergyCostChart({ items }: { items: EnergyCostItem[] }) {
             {FUEL_META[c].label}
           </span>
         ))}
-      </div>
-
-      <div className="flex flex-col gap-4 rounded-xl bg-secondary p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="max-w-2xl space-y-1 text-sm text-muted-foreground">
-          <p className="font-medium text-foreground">Jak číst srovnání</p>
-          <p>
-            „Energie v palivu“ vychází z výhřevnosti a vlhkosti paliva. „Dodané teplo“ navíc zohledňuje typickou účinnost
-            spalování (dřevo 78 %, pelety 90 %, brikety 80 %, uhlí 72 %) – to je částka, kterou skutečně zaplatíte za
-            teplo v domě. Syrové dřevo vychází levněji za PRMS, ale část energie spotřebuje na odpaření vody.
-          </p>
-        </div>
-        <Button asChild className="shrink-0">
-          <Link href="/kalkulacka#sezona">
-            <Calculator aria-hidden="true" />
-            Spočítat pro můj dům
-            <ArrowRight aria-hidden="true" />
-          </Link>
-        </Button>
       </div>
     </Section>
   );

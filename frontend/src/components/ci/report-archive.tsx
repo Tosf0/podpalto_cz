@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Archive, Clock, Cpu, MapPin, Search } from "lucide-react";
+import { ArrowDownUp, Archive, Search } from "lucide-react";
 import type { CrewAnalysisReportSummary, FuelCategory, RegionCode } from "@/types";
-import { FUEL_CATEGORIES, FUEL_META, REGIONS } from "@/lib/constants";
+import { FUEL_CATEGORIES, FUEL_META } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { EmptyState, FuelBadge, ListSkeleton, RegionSelect } from "@/components/common";
+import { EmptyState, ListSkeleton, RegionSelect } from "@/components/common";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -48,7 +48,7 @@ export function ReportArchive({
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Hledat název, doménu, výtah…"
+            placeholder="Hledat report…"
             aria-label="Hledat v reportech"
             className="h-9 rounded-xl bg-card pl-9"
           />
@@ -68,28 +68,29 @@ export function ReportArchive({
               ))}
             </SelectContent>
           </Select>
-          <Select value={sort} onValueChange={(v) => setSort(v as "desc" | "asc")}>
-            <SelectTrigger aria-label="Řazení" className="col-span-2 w-full min-w-0 bg-card">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="z-[1200]">
-              <SelectItem value="desc">Nejnovější první</SelectItem>
-              <SelectItem value="asc">Nejstarší první</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        <span className="num">{filtered.length}</span> z <span className="num">{reports?.length ?? 0}</span> reportů
-      </p>
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span>
+          <span className="num">{filtered.length}</span> z <span className="num">{reports?.length ?? 0}</span> reportů
+        </span>
+        <button
+          type="button"
+          onClick={() => setSort((v) => (v === "desc" ? "asc" : "desc"))}
+          className="inline-flex items-center gap-1 rounded-lg px-1.5 py-1 font-medium hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
+        >
+          <ArrowDownUp className="size-3.5" aria-hidden />
+          {sort === "desc" ? "Nejnovější" : "Nejstarší"}
+        </button>
+      </div>
 
       {loading && !reports ? (
         <ListSkeleton count={4} />
       ) : filtered.length === 0 ? (
-        <EmptyState icon={<Archive />} title="Žádné reporty" description="Zkuste upravit hledání nebo filtry." />
+        <EmptyState icon={<Archive />} title="Žádné reporty" description="Upravte hledání nebo filtry." />
       ) : (
-        <ul className="space-y-2 lg:max-h-[640px] lg:overflow-y-auto lg:pr-1">
+        <ul className="max-h-72 space-y-1.5 overflow-y-auto pr-1 xl:max-h-[640px]">
           {filtered.map((r) => {
             const active = r.id === selectedId;
             return (
@@ -99,38 +100,15 @@ export function ReportArchive({
                   onClick={() => onSelect(r.id)}
                   aria-current={active ? "true" : undefined}
                   className={cn(
-                    "w-full rounded-2xl border bg-card p-3.5 text-left transition-all hover:border-primary/40 hover:shadow-soft",
-                    active ? "border-primary bg-accent/50" : "border-border",
+                    "w-full rounded-xl border bg-card px-3 py-2.5 text-left transition-colors hover:border-primary/40 focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none",
+                    active ? "border-primary bg-accent/60" : "border-border",
                   )}
                 >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold">{r.competitor_name}</p>
-                      <p className="truncate font-mono text-xs text-muted-foreground">{r.competitor_domain}</p>
-                    </div>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="min-w-0 text-sm leading-snug font-semibold">{r.competitor_name}</p>
                     <span className="num shrink-0 text-xs text-muted-foreground">{formatDate(r.created_at)}</span>
                   </div>
-                  <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{r.excerpt}</p>
-                  <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[11px] text-muted-foreground">
-                    {r.region && (
-                      <span className="inline-flex items-center gap-1">
-                        <MapPin className="size-3" aria-hidden /> {REGIONS[r.region].short}
-                      </span>
-                    )}
-                    <span className="num inline-flex items-center gap-1">
-                      <Clock className="size-3" aria-hidden /> {Math.round(r.duration_s)} s
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <Cpu className="size-3" aria-hidden /> {r.model.split("/").pop()}
-                    </span>
-                  </div>
-                  {r.categories && r.categories.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {r.categories.map((c) => (
-                        <FuelBadge key={c} category={c} size="sm" />
-                      ))}
-                    </div>
-                  )}
+                  <p className="mt-0.5 font-mono text-xs break-all text-muted-foreground">{r.competitor_domain}</p>
                 </button>
               </li>
             );

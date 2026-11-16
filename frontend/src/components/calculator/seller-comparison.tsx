@@ -31,9 +31,9 @@ export function SellerComparison() {
 
   const picker = (
     <Select value="" onValueChange={(id) => id && toggleCompare(id)} disabled={selected.length >= MAX_COMPARE}>
-      <SelectTrigger className="h-9 w-full sm:w-64" aria-label="Přidat prodejce k porovnání">
+      <SelectTrigger className="h-10 w-full rounded-xl sm:w-64" aria-label="Přidat prodejce k porovnání">
         <Plus />
-        <SelectValue placeholder={selected.length >= MAX_COMPARE ? "Maximum 4 prodejci" : "Přidat prodejce"} />
+        <SelectValue placeholder={selected.length >= MAX_COMPARE ? "Maximum 4" : "Přidat prodejce"} />
       </SelectTrigger>
       <SelectContent position="popper" className="max-h-72">
         {available.map((s) => (
@@ -49,8 +49,8 @@ export function SellerComparison() {
     return (
       <EmptyState
         icon={<GitCompareArrows />}
-        title="Zatím nemáte nic k porovnání"
-        description="Na mapě klikněte u prodejce na „Porovnat“, nebo ho přidejte rovnou tady."
+        title="Nic k porovnání"
+        description="Přidejte prodejce zde nebo na mapě."
         action={
           <div className="flex flex-col items-center gap-3 sm:flex-row">
             {picker}
@@ -76,10 +76,10 @@ export function SellerComparison() {
   const cols = { gridTemplateColumns: `minmax(120px,160px) repeat(${selected.length}, minmax(170px,1fr))` };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         {picker}
-        <Button variant="ghost" size="sm" onClick={clearCompare}>
+        <Button variant="outline" size="sm" onClick={clearCompare}>
           <X /> Vymazat vše
         </Button>
       </div>
@@ -183,7 +183,7 @@ export function SellerComparison() {
         </div>
       </div>
       {selected.length < 2 && (
-        <p className="text-sm text-muted-foreground">Přidejte alespoň jednoho dalšího prodejce pro srovnání vedle sebe.</p>
+        <p className="text-sm text-muted-foreground">Přidejte dalšího prodejce.</p>
       )}
     </div>
   );

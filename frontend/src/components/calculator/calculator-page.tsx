@@ -1,87 +1,108 @@
 "use client";
 
-import { Calculator, Flame, GitCompareArrows, BookOpen, Scale } from "lucide-react";
+import { useCallback, useSyncExternalStore } from "react";
+import { BookOpen, Calculator, Flame, GitCompareArrows, Scale, type LucideIcon } from "lucide-react";
 import { PageHeader } from "@/components/common";
-import { SectionShell } from "./fields";
+import { cn } from "@/lib/utils";
 import { WoodConverter } from "./wood-converter";
 import { RawWoodExplainer } from "./raw-wood-explainer";
 import { SeasonCalculator } from "./season-calculator";
 import { SellerComparison } from "./seller-comparison";
 import { Methodology } from "./methodology";
 
-const NAV = [
-  { id: "prevodnik", label: "Převodník", icon: Scale },
-  { id: "sezona", label: "Sezónní nákup", icon: Flame },
-  { id: "srovnani", label: "Srovnání prodejců", icon: GitCompareArrows },
-  { id: "metodika", label: "Metodika", icon: BookOpen },
+type TabId = "prevodnik" | "sezona" | "srovnani" | "metodika";
+
+const TABS: { id: TabId; label: string; short: string; icon: LucideIcon }[] = [
+  { id: "prevodnik", label: "Převodník", short: "Převodník", icon: Scale },
+  { id: "sezona", label: "Sezónní nákup", short: "Sezóna", icon: Flame },
+  { id: "srovnani", label: "Srovnání prodejců", short: "Srovnání", icon: GitCompareArrows },
+  { id: "metodika", label: "Metodika", short: "Metodika", icon: BookOpen },
 ];
 
+function readHash(): TabId {
+  const h = window.location.hash.replace("#", "");
+  return TABS.some((t) => t.id === h) ? (h as TabId) : "prevodnik";
+}
+
+function subscribe(cb: () => void) {
+  window.addEventListener("hashchange", cb);
+  return () => window.removeEventListener("hashchange", cb);
+}
+
 export function CalculatorPage() {
+  // Aktivní záložka vychází z location.hash, takže odkazy #sezona apod. fungují.
+  const tab = useSyncExternalStore(subscribe, readHash, () => "prevodnik" as TabId);
+
+  const select = useCallback((id: TabId) => {
+    window.history.replaceState(null, "", `#${id}`);
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+  }, []);
+
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-      <PageHeader
-        eyebrow="Nástroje"
-        title="Chytrá kalkulačka vytápění"
-        description="Přepočítejte jednotky dřeva, zjistěte skutečnou cenu za kWh a najděte nejvýhodnější nákup včetně dopravy."
-        icon={<Calculator />}
-      />
+    <div className="mx-auto w-full max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
+      <div className="pt-6 lg:pt-8">
+        <PageHeader
+          title="Kalkulačka"
+          description="Jednotky, sezónní nákup a srovnání prodejců."
+          icon={<Calculator />}
+        />
+      </div>
 
-      <nav
-        aria-label="Sekce stránky"
-        className="sticky top-14 z-30 lg:top-0 -mx-4 mt-4 overflow-x-auto border-b border-border bg-background/90 px-4 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
-      >
-        <ul className="flex min-w-max gap-1 py-2">
-          {NAV.map(({ id, label, icon: Icon }) => (
-            <li key={id}>
-              <a
-                href={`#${id}`}
-                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-primary"
+      <div className="sticky top-14 z-30 -mx-4 bg-background/90 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:top-0 lg:-mx-8 lg:px-8">
+        <div
+          role="tablist"
+          aria-label="Nástroje kalkulačky"
+          className="flex w-full gap-1 rounded-full bg-muted p-1 sm:inline-flex sm:w-auto"
+        >
+          {TABS.map(({ id, label, short, icon: Icon }) => {
+            const active = tab === id;
+            return (
+              <button
+                key={id}
+                id={`tab-${id}`}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                aria-controls={id}
+                onClick={() => select(id)}
+                className={cn(
+                  "inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-full px-2.5 text-sm font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 sm:flex-none sm:px-4",
+                  active
+                    ? "bg-primary text-primary-foreground shadow-soft"
+                    : "text-muted-foreground hover:bg-card hover:text-foreground",
+                )}
               >
-                <Icon className="size-4" aria-hidden="true" />
-                {label}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </nav>
+                <Icon className="hidden size-4 sm:block" aria-hidden="true" />
+                <span className="sm:hidden">{short}</span>
+                <span className="hidden sm:inline">{label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
-      <div className="mt-8 space-y-14">
-        <SectionShell
-          id="prevodnik"
-          eyebrow="1 · Převodník"
-          title="Převodník jednotek dřeva a výhřevnosti"
-          description="PRMS, PRM a PLM nejsou totéž. Zadejte objem, vyberte dřevinu a vlhkost a uvidíte, kolik energie ve dřevě skutečně je."
-        >
-          <WoodConverter />
-          <RawWoodExplainer />
-        </SectionShell>
-
-        <SectionShell
-          id="sezona"
-          eyebrow="2 · Sezónní nákup"
-          title="Kalkulačka sezónního nákupu vč. dopravy"
-          description="Porovnáme prodejce podle konečné ceny: palivo plus doprava k vám domů. Seřazeno od nejlevnějšího."
-        >
-          <SeasonCalculator />
-        </SectionShell>
-
-        <SectionShell
-          id="srovnani"
-          eyebrow="3 · Srovnávač"
-          title="Srovnání vybraných prodejců"
-          description="Prodejce přidáte tlačítkem „Porovnat“ na mapě, nebo přímo zde. Porovnat lze až 4 prodejce."
-        >
-          <SellerComparison />
-        </SectionShell>
-
-        <SectionShell
-          id="metodika"
-          eyebrow="4 · Metodika"
-          title="Jak počítáme"
-          description="Všechny koeficienty vycházejí z jednoho místa v aplikaci, takže dokumentace odpovídá výpočtům."
-        >
-          <Methodology />
-        </SectionShell>
+      <div className="mt-2">
+        {tab === "prevodnik" && (
+          <section id="prevodnik" role="tabpanel" aria-labelledby="tab-prevodnik" className="space-y-4">
+            <WoodConverter />
+            <RawWoodExplainer />
+          </section>
+        )}
+        {tab === "sezona" && (
+          <section id="sezona" role="tabpanel" aria-labelledby="tab-sezona">
+            <SeasonCalculator />
+          </section>
+        )}
+        {tab === "srovnani" && (
+          <section id="srovnani" role="tabpanel" aria-labelledby="tab-srovnani">
+            <SellerComparison />
+          </section>
+        )}
+        {tab === "metodika" && (
+          <section id="metodika" role="tabpanel" aria-labelledby="tab-metodika">
+            <Methodology />
+          </section>
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 /** Sdílené barvy os a mřížky grafů – CSS proměnné, takže fungují ve světlém i tmavém režimu. */
@@ -43,7 +45,27 @@ export function ChartTooltipRow({
   );
 }
 
-/** Segmentový přepínač (radiogroup) – ovládání režimů grafů. */
+/** Malá ikona (i) – vysvětlivky schované do tooltipu místo dlouhých textů. */
+export function InfoTip({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button
+          type="button"
+          aria-label={label}
+          className="inline-flex size-6 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+        >
+          <Info aria-hidden="true" className="size-4" />
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top" className="max-w-xs text-pretty">
+        {children}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+/** Segmentový přepínač (radiogroup) – ovládání režimů grafů. Může se uvnitř sebe posouvat, nikdy nestlačí okolí. */
 export function Segmented<T extends string>({
   value,
   onChange,
@@ -61,7 +83,10 @@ export function Segmented<T extends string>({
     <div
       role="radiogroup"
       aria-label={label}
-      className={cn("inline-grid shrink-0 auto-cols-fr grid-flow-col gap-1 rounded-full bg-secondary p-1", className)}
+      className={cn(
+        "flex max-w-full gap-1 overflow-x-auto rounded-full bg-secondary p-1 [scrollbar-width:none]",
+        className,
+      )}
     >
       {options.map((o) => {
         const active = o.value === value;
@@ -73,10 +98,10 @@ export function Segmented<T extends string>({
             aria-checked={active}
             onClick={() => onChange(o.value)}
             className={cn(
-              "rounded-full px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+              "shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
               active
                 ? "bg-card text-foreground shadow-soft"
-                : "text-muted-foreground hover:text-foreground",
+                : "text-muted-foreground hover:bg-card/60 hover:text-foreground",
             )}
           >
             {o.label}
@@ -87,11 +112,12 @@ export function Segmented<T extends string>({
   );
 }
 
-/** Karta sekce s nadpisem a popisem. */
+/** Karta sekce: nadpis (+ volitelná vysvětlivka), jedna krátká věta a ovládání, které se při nedostatku místa zalomí pod nadpis. */
 export function Section({
   id,
   title,
   description,
+  info,
   actions,
   children,
   className,
@@ -99,6 +125,7 @@ export function Section({
   id?: string;
   title: string;
   description?: ReactNode;
+  info?: ReactNode;
   actions?: ReactNode;
   children: ReactNode;
   className?: string;
@@ -106,14 +133,17 @@ export function Section({
   return (
     <section
       id={id}
-      className={cn("scroll-mt-24 space-y-4 rounded-2xl border border-border bg-card p-4 shadow-soft sm:p-6", className)}
+      className={cn("@container scroll-mt-24 space-y-4 rounded-2xl border border-border bg-card p-5 shadow-soft", className)}
     >
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0 space-y-1">
-          <h2 className="text-xl font-semibold text-foreground">{title}</h2>
-          {description && <p className="max-w-2xl text-sm text-muted-foreground">{description}</p>}
+      <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+        <div className="min-w-0 flex-1 basis-64 space-y-0.5">
+          <div className="flex items-center gap-1.5">
+            <h2 className="text-xl font-semibold text-foreground">{title}</h2>
+            {info && <InfoTip label={`Vysvětlivka: ${title}`}>{info}</InfoTip>}
+          </div>
+          {description && <p className="text-sm text-muted-foreground">{description}</p>}
         </div>
-        {actions}
+        {actions && <div className="min-w-0 max-w-full">{actions}</div>}
       </header>
       {children}
     </section>
