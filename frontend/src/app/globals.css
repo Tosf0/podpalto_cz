@@ -1,0 +1,338 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-jakarta);
+  --font-mono: var(--font-jetbrains);
+  --font-heading: var(--font-heading-serif);
+  --color-forest: var(--forest);
+  --color-forest-foreground: var(--forest-foreground);
+  /* Lesní a dřevěná paleta (theme-aware: v dark mode se přepínají na světlejší odstíny) */
+  --color-wood: var(--wood);
+  --color-wood-strong: var(--wood-strong);
+  --color-wood-soft: var(--wood-soft);
+  --color-moss: var(--moss);
+  --color-moss-strong: var(--moss-strong);
+  --color-moss-soft: var(--moss-soft);
+  --color-pine: var(--pine);
+  --color-pine-strong: var(--pine-strong);
+  --color-pine-soft: var(--pine-soft);
+  --color-clay: var(--clay);
+  --color-clay-strong: var(--clay-strong);
+  --color-clay-soft: var(--clay-soft);
+  --color-coal: var(--coal);
+  --color-coal-strong: var(--coal-strong);
+  --color-coal-soft: var(--coal-soft);
+  --shadow-soft: var(--shadow-soft);
+  --shadow-float: var(--shadow-float);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  /*
+   * Jednotná škála zaoblení:
+   *   sm 6 px  – štítky, drobné odznaky
+   *   md 8 px  – vnitřní prvky (ikony, buňky)
+   *   lg 10 px / xl 12 px – tlačítka, inputy, čipy
+   *   2xl 16 px – karty, panely, widgety na mapě
+   *   full – jen vyhledávací lišta, segmentové přepínače a cenovky na mapě
+   */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.2);
+  --radius-2xl: calc(var(--radius) * 1.6);
+  --radius-3xl: calc(var(--radius) * 2);
+  --radius-4xl: calc(var(--radius) * 2.4);
+}
+
+/*
+ * Lesní chalupa – čistě bílý základ, widgety v tlumených barvách lesa, dřeva a uhlí.
+ * Paleta: světlé dřevo (bříza, dub), tmavé dřevo (ořech), mech, šalvěj, jehličí, hlína, uhel.
+ */
+:root {
+  --background: #ffffff;
+  --foreground: #2b2823;
+  --card: #ffffff;
+  --card-foreground: #2b2823;
+  --popover: #ffffff;
+  --popover-foreground: #2b2823;
+  --primary: #4e6e50;
+  --primary-foreground: #ffffff;
+  --secondary: #f5ede0;
+  --secondary-foreground: #5b4632;
+  --muted: #f6f4ef;
+  --muted-foreground: #6e675c;
+  --accent: #edf2e8;
+  --accent-foreground: #3f5a40;
+  --destructive: #b5654f;
+  --border: #e8e3d9;
+  --input: #e2dccf;
+  --ring: #8faa88;
+  --forest: #5e7f59;
+  --forest-foreground: #ffffff;
+
+  --wood: #a27b52;
+  --wood-strong: #6b4f37;
+  --wood-soft: #f5ede0;
+  --moss: #6f8f69;
+  --moss-strong: #3f5a40;
+  --moss-soft: #edf2e8;
+  --pine: #2f4535;
+  --pine-strong: #23352a;
+  --pine-soft: #e4ebe4;
+  --clay: #b5654f;
+  --clay-strong: #8a4434;
+  --clay-soft: #f6e5dd;
+  --coal: #3b3936;
+  --coal-strong: #262422;
+  --coal-soft: #eeece8;
+
+  --chart-1: #8a6a4f;
+  --chart-2: #c9a97e;
+  --chart-3: #6f8f69;
+  --chart-4: #b5826a;
+  --chart-5: #5e5b57;
+  --radius: 0.625rem;
+
+  /* Levý navigační panel – tmavé jehličí */
+  --sidebar: #2f4535;
+  --sidebar-foreground: #ede6d8;
+  --sidebar-primary: #d8c09a;
+  --sidebar-primary-foreground: #2b2823;
+  --sidebar-accent: rgb(255 255 255 / 0.08);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgb(255 255 255 / 0.1);
+  --sidebar-ring: #d8c09a;
+
+  --shadow-soft: 0 1px 2px rgb(43 40 35 / 0.05), 0 4px 14px -6px rgb(43 40 35 / 0.12);
+  --shadow-float: 0 2px 6px rgb(43 40 35 / 0.06), 0 12px 32px -12px rgb(43 40 35 / 0.28);
+}
+
+.dark {
+  --background: #161a16;
+  --foreground: #ece6da;
+  --card: #1d221d;
+  --card-foreground: #ece6da;
+  --popover: #1d221d;
+  --popover-foreground: #ece6da;
+  --primary: #9db592;
+  --primary-foreground: #162016;
+  --secondary: #2e2820;
+  --secondary-foreground: #e6d6be;
+  --muted: #232922;
+  --muted-foreground: #a39c8e;
+  --accent: #263226;
+  --accent-foreground: #c9d8be;
+  --destructive: #d8957f;
+  --border: rgb(236 230 218 / 0.1);
+  --input: rgb(236 230 218 / 0.14);
+  --ring: #7e9a78;
+  --forest: #9db592;
+  --forest-foreground: #162016;
+
+  --wood: #c9a97e;
+  --wood-strong: #e2cba6;
+  --wood-soft: rgb(201 169 126 / 0.13);
+  --moss: #8faa88;
+  --moss-strong: #bcd0b3;
+  --moss-soft: rgb(143 170 136 / 0.13);
+  --pine: #a9c0a8;
+  --pine-strong: #cfe0cc;
+  --pine-soft: rgb(169 192 168 / 0.12);
+  --clay: #d8957f;
+  --clay-strong: #ebb7a6;
+  --clay-soft: rgb(216 149 127 / 0.13);
+  --coal: #a8a39a;
+  --coal-strong: #dad5cc;
+  --coal-soft: rgb(255 255 255 / 0.06);
+
+  --chart-1: #c9a97e;
+  --chart-2: #e2cba6;
+  --chart-3: #8faa88;
+  --chart-4: #d8957f;
+  --chart-5: #a8a39a;
+
+  --sidebar: #111511;
+  --sidebar-foreground: #e6e0d4;
+  --sidebar-primary: #d8c09a;
+  --sidebar-primary-foreground: #1d1a15;
+  --sidebar-accent: rgb(255 255 255 / 0.06);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgb(255 255 255 / 0.08);
+  --sidebar-ring: #d8c09a;
+
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.3), 0 4px 14px -6px rgb(0 0 0 / 0.5);
+  --shadow-float: 0 2px 6px rgb(0 0 0 / 0.3), 0 12px 32px -12px rgb(0 0 0 / 0.6);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+  /* Nadpisy stránek a sekcí – teplé patkové písmo (Lora) */
+  h1,
+  h2 {
+    font-family: var(--font-heading-serif), ui-serif, Georgia, serif;
+    letter-spacing: -0.01em;
+  }
+}
+
+@layer utilities {
+  /* Ceny, jednotky a analytická čísla */
+  .num {
+    font-family: var(--font-jetbrains), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+}
+
+/* ---------- Leaflet ---------- */
+.leaflet-container {
+  font-family: inherit;
+  background: var(--muted);
+  /* vlastní stacking context – z-index panelů Leafletu (400–1000) nepřeleze dialogy/sheety (z-50) */
+  isolation: isolate;
+}
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--popover);
+  color: var(--popover-foreground);
+  box-shadow: var(--shadow-soft);
+}
+.leaflet-popup-content-wrapper {
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+}
+.leaflet-popup-content {
+  margin: 0;
+}
+/* OSM dlaždice zklidněné do čistého „positron“ vzhledu */
+.podpalto-tiles {
+  /* jemně teplý, papírový podklad, ať mapa ladí s dřevem a lesem */
+  filter: grayscale(0.85) sepia(0.12) brightness(1.05) contrast(0.86);
+}
+.dark .podpalto-tiles {
+  filter: grayscale(1) invert(1) brightness(0.82) contrast(0.92) hue-rotate(180deg);
+}
+.dark .leaflet-control-zoom a,
+.dark .leaflet-control-attribution {
+  background: var(--card);
+  color: var(--muted-foreground);
+  border-color: var(--border);
+}
+.dark .leaflet-control-attribution a {
+  color: var(--muted-foreground);
+}
+
+/* Cenový špendlík na mapě */
+.price-pin {
+  background: transparent;
+  border: none;
+}
+.price-pin > div {
+  transition: transform 160ms ease, box-shadow 160ms ease;
+  transform-origin: bottom center;
+}
+.price-pin .pin-body {
+  border-color: var(--pin);
+  transition: background-color 160ms ease, color 160ms ease;
+}
+.price-pin .pin-dot {
+  background: var(--fuel);
+}
+.price-pin .pin-tail {
+  border-top-color: var(--pin);
+}
+.price-pin.is-active > div {
+  transform: scale(1.12) translateY(-2px);
+}
+.price-pin.is-active .pin-body {
+  background: var(--pin);
+  color: #ffffff;
+}
+.price-pin.is-active .pin-dot {
+  background: #ffffff;
+}
+@keyframes pin-pulse {
+  0% { box-shadow: 0 0 0 0 rgb(78 110 80 / 0.5); }
+  70% { box-shadow: 0 0 0 12px rgb(78 110 80 / 0); }
+  100% { box-shadow: 0 0 0 0 rgb(78 110 80 / 0); }
+}
+.price-pin.is-active > div > span:first-child {
+  animation: pin-pulse 1.2s ease-out infinite;
+}
+
+/* Při najetí vytáhni špendlík / cluster nad sousední (částečně překryté) */
+.leaflet-marker-icon:hover {
+  z-index: 100000 !important;
+}
+
+/* Popisky krajů na heat mapě – nenápadné pilulky (jméno + hodnota), nepřekáží prodejnám */
+.region-label {
+  background: transparent;
+  border: none;
+  pointer-events: none;
+}
+.region-label__pill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  width: max-content;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--card) 82%, transparent);
+  border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+  font-size: 10px;
+  line-height: 1.3;
+  color: var(--foreground);
+  white-space: nowrap;
+}
+.region-label__name {
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+.region-label__value {
+  font-weight: 700;
+}
