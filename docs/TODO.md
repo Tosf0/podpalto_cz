@@ -4,6 +4,76 @@ Průběžný seznam otevřených úkolů a dočasných rozhodnutí. Hotové věc
 důležitá rozhodnutí přesouváme do README příslušné služby. Datum = kdy byla položka
 zapsána nebo naposledy změněna.
 
+## Rozhodnutí: jediný zdroj dat je Supabase (18. 11. 2026)
+
+Stav: frontend na produkci už čte **všechna data jen ze Supabase** (projekt Podpalto).
+REST větve v `frontend/src/lib/api/*` (`apiFetch` na `NEXT_PUBLIC_API_URL`) jsou pozůstatek
+původního zadání a nikdy se nespustí. Jediné skutečné volání REST je spuštění analýzy v CI
+Studiu (`POST /api/analyze` + polling `GET /api/analyze/{run_id}`), dnes simulované.
+
+Cíl: **agenti zapisují do Supabase, frontend čte ze Supabase, žádné veřejné REST API.**
+
+- [ ] **Agenti → Supabase:** výstup podle `docs/agent-output-spec.md` (prodejci s polohou,
+      produkty, ceny, běhy). Nejdřív export do JSON souboru, pak přímý zápis se *secret*
+      klíčem (jen na serveru) v pořadí `sellers` → `products` → `price_observations` →
+      `scrape_runs`.
+- [ ] **Frontend: smazat REST větve** v `src/lib/api/sellers.ts`, `market.ts`, `reports.ts`,
+      `analysis.ts` a `client.ts`; ukázková data ponechat jen jako offline režim bez
+      Supabase. V `frontend/README.md` nahradit kapitolu 5 (REST kontrakt) odkazem na schéma
+      (`frontend/supabase/migrations/`) a `docs/agent-output-spec.md`.
+- [ ] **CI Studio přes frontu v databázi místo REST:**
+      - frontend vloží řádek do `analysis_runs` (tabulka a RLS pro tarif Pro už existují),
+      - služba `app` si nové řádky (`status = 'queued'`) vyzvedává – polling, nebo
+        databázový webhook / Supabase Realtime – a spustí příslušný flow,
+      - během běhu zapisuje do řádku `status`, `progress`, `steps`, `logs`, na konci
+        `report_id` a výsledek do `analysis_reports` (+ `seller_intel` u profilu prodejce),
+      - frontend sleduje řádek přes Supabase Realtime (žádná URL backendu, CORS ani
+        veřejný endpoint na Railway).
+- [ ] Na straně databáze doplnit sloupce pro frontu a typy reportů (viz rozhodnutí o CI
+      Studiu níže) a `sellers.external_key` pro upsert od agentů.
+
+## Rozhodnutí: co je CI Studio (18. 11. 2026)
+
+Otázka: je CI Studio (a) report o trhu podle paliv a kraje (`MarketResearchFlow`), nebo
+(b) profil prodejce podle URL (plní `seller_intel`, flow se musí napsat znovu)? Pole
+`threatLevel` a sekce „Recommendations for podpalto.cz“ předpokládají, že podpalto.cz je
+konkurent prodejců – to nesedí s neutrálním přehledem pro domácnosti.
+
+Rozhodnutí: **obojí, ale neutrálně a z pohledu uživatele, který si platí Pro** (analytik,
+obchodník, prodejce), ne z pohledu podpalto.cz. Podpalto.cz je srovnávač, ne konkurent.
+
+1. **Tržní report = výchozí typ (MVP, hned).** Uživatel zvolí palivo a kraj → `MarketResearchFlow`.
+   Obsah: ceny a jejich rozptyl, průměr kraje vs. ČR, vývoj v čase, nejlevnější nabídky
+   vč. dopravy, sezónnost, srovnání paliv v Kč/kWh, poptávka (Sčítání 2021).
+2. **Profil prodejce = druhý typ (až budou data podle `agent-output-spec.md`).**
+   Prodejce se vybírá **z našeho katalogu**, ne libovolnou URL (data už sbíráme; URL jen
+   jako „navrhnout nový zdroj“ do registru). Neutrální popis: sortiment, ceny vůči průměru
+   kraje a ČR (cenový index), doprava, silné a slabé stránky (SWOT ponechat, je popisná),
+   zdroje s citacemi.
+3. **Odstranit perspektivu konkurenta:** zrušit `threatLevel` (v `seller_intel` sloupec
+   `threat_level` a ve frontendu odznak „hrozba“) a sekci „Recommendations for podpalto.cz“.
+   Nahradit ji sekcí **„Srovnání s trhem“** (kde je prodejce levnější / dražší a v čem).
+4. **Doporučení jen pro prodejce o jeho vlastním obchodě:** uživatel s tarifem *Prodejce*
+   a schváleným profilem (`sellers.owner_id`) dostane u svého profilu navíc sekci
+   „Doporučení pro váš obchod“ (cena vůči okolí, doprava, chybějící údaje). Nikdy
+   doporučení „jak porazit konkrétní firmu“.
+5. `seller_intel` na detailu prodejce zůstává jen pro Pro a zobrazuje neutrální profil.
+
+Úkoly:
+
+- [ ] `app`: `MarketResearchFlow` vstup `{fuel_category, region}` → výstup Markdown podle
+      osnovy v bodě 1 + strukturovaná data (ceny, index, počet nabídek) pro grafy.
+- [ ] `app`: nový `SellerProfileFlow` vstup `{seller_key}` → Markdown + strukturovaný
+      profil do `seller_intel` (bez `threat_level`, se „Srovnáním s trhem“).
+- [ ] DB: `analysis_reports.kind` (`market` | `seller`), `analysis_reports.params`
+      (jsonb: palivo, kraj), `analysis_reports.subject_seller_id`; stejné sloupce
+      v `analysis_runs`; z `seller_intel` odstranit `threat_level`, přidat
+      `market_comparison` (jsonb).
+- [ ] Frontend CI Studio: dvě záložky „Trh“ (palivo + kraj) a „Prodejce“ (výběr
+      z katalogu); přejmenovat „Competitor analysis“ → „Analýza trhu a prodejců“,
+      odstranit odznak hrozby a sekci doporučení pro podpalto.cz; ukázkové reporty přepsat
+      do nové osnovy.
+
 ## Plán: co ze zadávajícího dokumentu (PDF) ještě zbývá (18. 11. 2026)
 
 Pořadí: nejdřív stage 1, pak 2, pak 3. Čísla stránek a sekcí odkazují na PDF
@@ -197,13 +267,8 @@ rozhodnutí:** nechat přísně podle PDF, nebo např. klece brát jako sypané 
 - [ ] **Crew pro report** (MarketResearchFlow) zatím neproběhla naostro nad skutečnými
       daty; ověřit výstup a cenu běhu.
 - [ ] **Plánování sběru** a **PostgreSQL/TimescaleDB**: viz stage 2.
-- [ ] **Sjednotit API mezi frontendem a backendem** (zapsáno 18. 11. 2026, po merge do
-      `dev`): frontend (`frontend/README.md`, kap. 5 „REST API kontrakt pro CrewAI backend“,
-      typy v `frontend/src/types/index.ts`) očekává např. `GET /api/sellers`,
-      `GET /api/sellers/{slug}`, `GET /api/reports/{id}`; služba `app` dnes nabízí jen
-      `POST/GET /runs` a `/health`. Data pro mapu a prodejce jsou ve službě `tools`
-      (`prices.sqlite`, nástroje `eshop_catalog`, `price_comparison`, `heating_demand`),
-      ale veřejné API nad nimi není. Frontend zatím běží v mock režimu nebo nad Supabase.
+- [ ] **Sjednotit API mezi frontendem a backendem** – rozhodnuto 18. 11. 2026, viz
+      sekce „Rozhodnutí: jediný zdroj dat je Supabase“ níže.
 - [ ] **Mapa/dashboard po krajích** z druhého návrhu (GeoJSON krajů, PSČ → kraj) zatím
       není; data mají kraj prodejce a oblast platnosti ceny.
 - [ ] **Sledování nákladů na LLM** (extrakce a report) zatím žádné.
