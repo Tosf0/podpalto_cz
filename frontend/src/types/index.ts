@@ -223,6 +223,26 @@ export interface Seller {
   intel?: SellerIntel;
   /** ISO datum, kdy CrewAI naposledy prošel web prodejce. */
   lastScrapedAt: string;
+  /** Profil převzal a ověřil sám prodejce (účet „Prodejce“). */
+  verified?: boolean;
+  /** Profil má vlastníka (schválená žádost prodejce). */
+  claimed?: boolean;
+}
+
+/** Recenze prodejce od přihlášeného uživatele (tabulka `reviews`). */
+export interface SellerReview {
+  id: string;
+  seller_id: string;
+  user_id: string;
+  /** Zkrácené jméno autora, např. „Jana D.“ */
+  author_name: string;
+  rating: number;
+  title: string | null;
+  body: string | null;
+  seller_reply: string | null;
+  seller_replied_at: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 /* ------------------------------------------------------------------ */
@@ -395,6 +415,28 @@ export interface UserLocation extends GeoPoint {
   label: string;
   zip?: string;
   region?: RegionCode;
+}
+
+/* ------------------------------------------------------------------ */
+/* Účty a tarify                                                       */
+/* ------------------------------------------------------------------ */
+
+/** Tarif účtu: free (běžný uživatel), pro (CI Studio), seller (účet prodejce). */
+export type PlanTier = "free" | "pro" | "seller";
+
+/** Role: user, editor (píše blog), admin. */
+export type UserRole = "user" | "editor" | "admin";
+
+/** Profil přihlášeného uživatele (tabulka `profiles`). */
+export interface UserProfile {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  avatar_url: string | null;
+  phone: string | null;
+  plan: PlanTier;
+  plan_expires_at: string | null;
+  role: UserRole;
 }
 
 /* ------------------------------------------------------------------ */

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, Truck } from "lucide-react";
+import { CheckCircle2, Loader2, Truck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,11 +13,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { formatCzk, formatNumber } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { offerTotal } from "@/lib/pricing";
+import { USES_DB, submitOrderRequest } from "@/lib/api";
 import type { FuelProduct, Seller, UserLocation } from "@/types";
 
 /**
- * Poptávka / objednávka u prodejce. V demo režimu se nikam neodesílá – jen potvrdí souhrn.
- * Po napojení backendu: POST /api/orders { seller_id, product_id, quantity, … }.
+ * Poptávka / objednávka u prodejce. Se Supabase se uloží do `order_requests` (prodejce ji uvidí
+ * ve svém účtu), v demo režimu jen potvrdí souhrn.
  */
 export function OrderDialog({
   seller,
@@ -40,6 +41,7 @@ export function OrderDialog({
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [note, setNote] = useState("");
+  const [sending, setSending] = useState(false);
 
   const product = products.find((p) => p.id === productId) ?? initialProduct;
   const qty = Math.max(0, Number(quantity.replace(",", ".")) || 0);
@@ -58,14 +60,42 @@ export function OrderDialog({
 
         <form
           className="space-y-4"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            if (!canSubmit) return;
-            onOpenChange(false);
-            toast.success(t("home.order.toastTitle"), {
-              description: t("home.order.toastDesc", { qty: formatNumber(qty, qty % 1 ? 1 : 0), unit: product.unit, total: formatCzk(offer.total) }),
-              icon: <CheckCircle2 className="size-4" />,
-            });
+            if (!canSubmit || sending) return;
+            const summary = { qty: formatNumber(qty, qty % 1 ? 1 : 0), unit: product.unit, total: formatCzk(offer.total) };
+            if (!USES_DB) {
+              onOpenChange(false);
+              toast.success(t("home.order.toastTitle"), { description: t("home.order.toastDesc", summary), icon: <CheckCircle2 className="size-4" /> });
+              return;
+            }
+            setSending(true);
+            try {
+              await submitOrderRequest({
+                sellerId: seller.id,
+                productId: product.id,
+                productName: product.name,
+                unit: product.unit,
+                quantity: qty,
+                unitPriceCzk: product.price,
+                deliveryFeeCzk: offer.delivery.outOfRange ? null : offer.delivery.fee,
+                hydraulicArm: arm,
+                totalCzk: offer.total,
+                distanceKm: Number.isFinite(offer.delivery.distanceKm) ? Math.round(offer.delivery.distanceKm * 10) / 10 : null,
+                contactName: name.trim(),
+                contactPhone: phone.trim(),
+                deliveryLabel: location.label,
+                deliveryLat: location.lat,
+                deliveryLng: location.lng,
+                note,
+              });
+              onOpenChange(false);
+              toast.success(t("account.order.sentTitle"), { description: t("account.order.sentDesc", summary), icon: <CheckCircle2 className="size-4" /> });
+            } catch (err) {
+              toast.error(t("account.order.failed", { message: err instanceof Error ? err.message : String(err) }));
+            } finally {
+              setSending(false);
+            }
           }}
         >
           <div className="grid grid-cols-[1fr_7.5rem] gap-3">
@@ -133,7 +163,8 @@ export function OrderDialog({
             </div>
           </div>
 
-          <Button type="submit" size="lg" className="w-full" disabled={!canSubmit}>
+          <Button type="submit" size="lg" className="w-full" disabled={!canSubmit || sending}>
+            {sending && <Loader2 className="animate-spin" />}
             {t("home.order.submit")}
           </Button>
         </form>

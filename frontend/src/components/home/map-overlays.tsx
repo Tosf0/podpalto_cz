@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import type L from "leaflet";
-import { Layers, LocateFixed, Minus, Plus } from "lucide-react";
+import { ChevronDown, ChevronUp, Layers, LocateFixed, Minus, Plus } from "lucide-react";
 import { FuelIcon, PriceDelta } from "@/components/common";
 import { usePreferences } from "@/components/providers/preferences-provider";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,6 +18,12 @@ import { cn } from "@/lib/utils";
 
 /** Společný vzhled plovoucích widgetů nad mapou. */
 export const floatCard = "pointer-events-auto rounded-2xl border border-border bg-card/95 shadow-float backdrop-blur";
+
+/**
+ * „Zamlžené sklo“ pro lišty nad mapou: poloprůhledné pozadí s rozmazáním a zvýšenou sytostí,
+ * takže mapa je pod lištou tušit, ale text zůstává čitelný.
+ */
+export const glassBar = "bg-card/60 backdrop-blur-xl backdrop-saturate-150 dark:bg-card/55";
 
 /** Šířka bočních skupin v horní liště – vlevo i vpravo stejná (symetrie). */
 export const TOP_SIDE_WIDTH = "w-[156px] @3xl:w-[188px]";
@@ -49,7 +56,7 @@ export function PriceModePill({ className }: { className?: string }) {
     { value: "kwh", label: moneyUnit("kWh") },
   ];
   return (
-    <div role="radiogroup" aria-label={t("home.overlays.priceMode")} className={cn("grid h-11 shrink-0 grid-cols-2 gap-1 rounded-full bg-muted p-1", TOP_SIDE_WIDTH, className)}>
+    <div role="radiogroup" aria-label={t("home.overlays.priceMode")} className={cn("grid h-11 shrink-0 grid-cols-2 gap-1 rounded-full bg-muted/70 p-1", TOP_SIDE_WIDTH, className)}>
       {options.map((o) => (
         <button
           key={o.value}
@@ -85,7 +92,7 @@ export function MapControlsPill({
 }) {
   const { t } = useI18n();
   return (
-    <div className={cn("flex h-11 shrink-0 items-center gap-0.5 rounded-full bg-muted p-1", TOP_SIDE_WIDTH, className)}>
+    <div className={cn("flex h-11 shrink-0 items-center gap-0.5 rounded-full bg-muted/70 p-1", TOP_SIDE_WIDTH, className)}>
       <PillIconButton label={t("home.overlays.regionsMap")} onClick={onToggleRegions} pressed={showRegions}>
         <Layers aria-hidden />
       </PillIconButton>
@@ -107,7 +114,8 @@ export function MapTopBar({ children, className }: { children: React.ReactNode; 
   return (
     <div
       className={cn(
-        "pointer-events-auto flex h-14 w-full items-center gap-1.5 rounded-full border border-border bg-card/95 p-1.5 shadow-float backdrop-blur",
+        "pointer-events-auto flex h-14 w-full items-center gap-1.5 rounded-full border border-white/50 p-1.5 shadow-float dark:border-white/10",
+        glassBar,
         className,
       )}
     >
@@ -142,20 +150,39 @@ const PULSE_FUEL: Record<CommodityKey, FuelCategory> = {
 };
 const TIER_ORDER: PriceTier[] = ["below", "average", "above"];
 
-/** Spodní pás: průměrné ceny v ČR (4 stejné dlaždice) + legenda barev cenovek. */
+/** Mini-widget vlevo dole: význam barev cenovek na mapě. */
+export function PriceTierLegend({ className }: { className?: string }) {
+  const { t } = useI18n();
+  return (
+    <div className={cn(floatCard, "p-3 text-[11px]", TOP_SIDE_WIDTH, className)}>
+      <p className="font-semibold text-foreground">{t("home.overlays.tierTitle")}</p>
+      <p className="mb-2 text-muted-foreground">{t("home.overlays.tierHint")}</p>
+      <ul className="space-y-1.5">
+        {TIER_ORDER.map((tier) => (
+          <li key={tier} className="flex items-center gap-2 text-foreground/80">
+            <span aria-hidden className="size-2.5 shrink-0 rounded-full border-2 bg-card" style={{ borderColor: PRICE_TIER_META[tier].color }} />
+            {PRICE_TIER_META[tier].label}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Spodní pás: průměrné ceny v ČR – 4 stejné dlaždice se stejným odsazením shora i zdola. */
 export function MarketStrip({ className }: { className?: string }) {
   const { t } = useI18n();
   const { data, loading } = useApi(() => getMarketPulse(), []);
   const items = PULSE.map((k) => data?.find((i) => i.key === k));
 
   return (
-    <section aria-label={t("home.overlays.marketAria")} className={cn("border-t border-border bg-card px-4 py-3", className)}>
+    <section aria-label={t("home.overlays.marketAria")} className={cn("px-4 py-3", glassBar, className)}>
       <div className="grid grid-cols-2 gap-2 @3xl:grid-cols-4 @3xl:gap-3">
         {items.map((item, i) =>
           loading || !item ? (
             <Skeleton key={i} className="h-[52px] rounded-xl @3xl:h-[58px]" />
           ) : (
-            <div key={item.key} className="flex h-[52px] min-w-0 flex-col justify-center rounded-xl bg-muted/60 px-3 @3xl:h-[58px]">
+            <div key={item.key} className="flex h-[52px] min-w-0 flex-col justify-center rounded-xl bg-muted/55 px-3 @3xl:h-[58px]">
               <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground [&_svg]:size-3.5">
                 <FuelIcon category={PULSE_FUEL[item.key]} className="shrink-0 text-wood" />
                 <span className="truncate">{COMMODITY_META[item.key].label}</span>
@@ -171,16 +198,74 @@ export function MarketStrip({ className }: { className?: string }) {
           ),
         )}
       </div>
-      <div className="mt-2.5 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-[11px] text-muted-foreground">
-        <span className="hidden font-medium text-foreground/80 @3xl:inline">{t("home.overlays.marketTitle")}</span>
-        <span aria-hidden className="hidden h-3 w-px bg-border @3xl:inline-block" />
-        {TIER_ORDER.map((t) => (
-          <span key={t} className="inline-flex items-center gap-1.5">
-            <span aria-hidden className="size-2.5 rounded-full border-2 bg-card" style={{ borderColor: PRICE_TIER_META[t].color }} />
-            {PRICE_TIER_META[t].label}
-          </span>
-        ))}
-      </div>
     </section>
+  );
+}
+
+/**
+ * Spodní dok nad mapou (desktop): legenda cenovek vlevo, pod ní skleněný pás průměrných cen.
+ * Výčnělek uprostřed pás sbalí – mapa pak sahá až dolů a legenda sjede s ním.
+ * `onInsetChange` hlásí, kolik pixelů zespodu dok zakrývá (pro odsazení mapy a atribuce).
+ */
+export function MapBottomDock({
+  open,
+  onToggle,
+  onInsetChange,
+  className,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  onInsetChange?: (px: number) => void;
+  className?: string;
+}) {
+  const { t } = useI18n();
+  const stripRef = useRef<HTMLDivElement>(null);
+  const onInsetRef = useRef(onInsetChange);
+  useEffect(() => {
+    onInsetRef.current = onInsetChange;
+  });
+
+  useEffect(() => {
+    const el = stripRef.current;
+    if (!el) return;
+    const report = () => onInsetRef.current?.(open ? el.offsetHeight : 0);
+    report();
+    const ro = new ResizeObserver(report);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [open]);
+
+  const label = open ? t("home.overlays.collapseStrip") : t("home.overlays.expandStrip");
+
+  return (
+    <div className={cn("pointer-events-none absolute inset-x-0 bottom-0 z-[1000] flex flex-col", className)}>
+      <div className="px-4 pb-3">
+        <PriceTierLegend />
+      </div>
+      <div className="relative">
+        {/* Výčnělek – při rozbaleném pásu sedí na jeho horní hraně, při sbaleném na spodním okraji mapy */}
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          aria-controls="market-strip"
+          aria-label={label}
+          title={label}
+          className={cn(
+            "pointer-events-auto absolute bottom-full left-1/2 flex h-6 w-16 -translate-x-1/2 items-center justify-center rounded-t-2xl text-foreground/70 transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+            glassBar,
+          )}
+        >
+          {open ? <ChevronDown aria-hidden className="size-4" /> : <ChevronUp aria-hidden className="size-4" />}
+        </button>
+        <div className={cn("grid transition-[grid-template-rows] duration-300 ease-out", open ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}>
+          <div className="min-h-0 overflow-hidden">
+            <div ref={stripRef} id="market-strip" inert={!open}>
+              <MarketStrip className="pointer-events-auto" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }

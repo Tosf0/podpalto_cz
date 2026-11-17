@@ -56,8 +56,8 @@ cp .env.example .env.local      # Windows PowerShell: copy .env.example .env.loc
 | `NEXT_PUBLIC_MAP_TILE_ATTRIBUTION` | *(prázdné)* | Text atribuce k dlaždicím (HTML). |
 | `NEXT_PUBLIC_GEOCODER_URL` | `https://photon.komoot.io/api/` | Geokodér pro našeptávač adres nad mapou (Photon, data OpenStreetMap, omezeno na ČR). `off` = jen lokální shody (PSČ, města). Pro produkci vlastní instance Photonu nebo komerční API. |
 | `NEXT_PUBLIC_SITE_URL` | `https://podpalto.cz` | Veřejná adresa webu pro kanonické URL, `sitemap.xml`, `robots.txt` a Open Graph. |
-| `NEXT_PUBLIC_SUPABASE_URL` | *(prázdné)* | Supabase projekt pro blog. **Zatím nenapojeno** – prázdné = ukázkové články ze `src/data/blog.ts`. |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | *(prázdné)* | Veřejný (publishable/anon) klíč Supabase. Čtení článků hlídá RLS – anonym vidí jen publikované. |
+| `NEXT_PUBLIC_SUPABASE_URL` | *(prázdné)* | Supabase projekt „Podpalto“ (`https://sdhinkqouseaaesodqyy.supabase.co`). Vyplněné = data z databáze a povinné přihlášení; prázdné = demo režim na `src/data/` bez účtů. |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | *(prázdné)* | Veřejný (publishable) klíč Supabase. Přístup k datům hlídá RLS. |
 | `NEXT_PUBLIC_EUR_CZK_RATE` | `24.43` | Kurz Kč za 1 € pro zobrazení cen v eurech (Nastavení → Měna). Výchozí kurz ČNB z 16. 11. 2026. Data i API zůstávají v Kč. |
 | `NEXT_PUBLIC_REGIONS_GEOJSON_URL` | *(prázdné)* | Volitelné GeoJSON hranic 14 krajů (vlastnost `kod` = `PHA`/`STC`/… nebo `nazev`) pro choropleth. Bez něj se vykreslí plynulá heat mapa celé ČR (oříznutá hranicí státu). |
 
@@ -595,18 +595,53 @@ Další detaily mock režimu:
 
 ---
 
-## 6a. Blog a napojení na Supabase
+## 6a. Supabase: databáze, účty a tarify
 
-Blog je zatím **čistě UI s ukázkovými články** (`src/data/blog.ts`, ilustrace v `public/blog/`). Napojení je připravené takto:
+Projekt **Podpalto** (org *Lukas Projects*, region Frankfurt `eu-central-1`, ref `sdhinkqouseaaesodqyy`).
 
-1. **Schéma:** `supabase/migrations/20261117000000_blog.sql` – tabulka `blog_posts` (Markdown obsah, obálka, rubrika, štítky, autor, stav, SEO pole), tabulka `blog_editors` (kdo smí psát), RLS (veřejnost čte jen publikované, redaktoři vše) a veřejný bucket `blog-images` pro fotky. Spustit v Supabase SQL Editoru nebo `supabase db push`.
-2. **Proměnné:** vyplnit `NEXT_PUBLIC_SUPABASE_URL` a `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Jakmile jsou nastavené, `src/lib/api/blog.ts` čte publikované články přes REST (`fetchPublishedPosts` v `src/lib/blog/supabase.ts`) – bez další závislosti. *Netestováno proti reálnému projektu.*
-3. **Editor:** doinstalovat `@supabase/supabase-js` + `@supabase/ssr`, přidat přihlášení redaktora a doplnit `saveBlogPost` / `uploadBlogImage` (návrh v `src/lib/blog/supabase.ts`). Fotky vložené v editoru mají v textu dočasnou adresu `upload:<id>`, kterou upload nahradí veřejnou URL z bucketu.
-4. **Cache:** čtení je v `"use cache"` s tagem `blog`. Po uložení článku zavolat `revalidateTag("blog")` (server action), aby se změna hned projevila.
+### Přístup a tarify
+
+| Kdo | Co smí |
+|---|---|
+| Nepřihlášený | Jen blog (`/blog`, `/blog/[slug]`), ceník `/plany` a přihlášení. Vše ostatní přesměruje `src/proxy.ts` na `/prihlaseni?mode=signup&next=…`. |
+| `free` (výchozí) | Mapa cen, kalkulačka, prodejci (vč. hodnocení), trendy, poptávky u prodejců. |
+| `pro` ($20/měs.) | Navíc CI Studio a CI shrnutí prodejců (SWOT, cenový index). `/ci-studio` bez Pro → `/plany?feature=ci`. |
+| `seller` ($20/měs.) | Účet prodejce: po schválení žádosti (`seller_claims` → `approve_seller_claim`) upravuje svůj profil, produkty a ceny a vidí poptávky. |
+| role `editor` / `admin` | Píše a publikuje blog (`/blog/novy`), nahrává fotky. Admin vidí vše a schvaluje prodejce. |
+
+Platby (Stripe) zatím nejsou – tlačítko na `/plany` ukáže „Platby zatím nejsou v provozu“. Tarif a roli nastavuje ručně admin v SQL Editoru (uživatel je sám změnit nemůže, viz granty):
+
+```sql
+update public.profiles set plan = 'pro', role = 'admin'
+where id = (select id from auth.users where email = 'vas@email.cz');
+```
+
+### Schéma (`supabase/migrations/`)
+
+| Migrace | Obsah |
+|---|---|
+| `…200000_core.sql` | `profiles` (tarif, role), `user_preferences` (jazyk, měna, zobrazení cen, motiv, výchozí poloha, porovnání, stav mapy), `plans`, `subscriptions` (připraveno pro Stripe), trigger založení profilu při registraci, RLS pomocníci `is_pro()` / `is_editor()` / `is_admin()`. |
+| `…200100_market.sql` | `regions`, `sellers` (adresa, GPS + PostGIS `geog`, kontakty, doprava, štítky, externí hodnocení, vlastník), `products` (druh paliva a parametry, aktuální cena), `price_observations` (historie cen – trigger přepisuje aktuální cenu), `reviews`, `order_requests`, `seller_claims`, `seller_intel`, `analysis_reports`, `analysis_runs`, `commodity_price_stats`, `region_stats`, `scrape_sources`, `scrape_runs`; RPC `api_sellers`, `api_region_stats`, `api_price_trends`, `sellers_within`. |
+| `…200200_blog.sql` | `blog_posts` + bucket `blog-images`. |
+| `…200300_storage.sql` | Buckety `seller-photos` a `avatars`. |
+| `…200400_harden_helper_grants.sql` | RLS pomocníky smí volat jen přihlášení. |
+
+Ukázková data: `supabase/seed.sql` (generuje `node scripts/generate-seed.mjs` ze `src/data/`). V produkčním projektu už jsou nahraná.
+
+**Agenti (scraping, CrewAI)** zapisují serverově se *secret* klíčem (obchází RLS): nový prodejce → `sellers`, položky → `products`, nová cena → `insert into price_observations (product_id, price_czk, source_url)` (aktuální cena se přepíše triggerem), běh → `scrape_runs`, měsíční průměry → `commodity_price_stats` / `region_stats`, report → `analysis_reports` + `seller_intel`.
+
+Frontend: `src/lib/supabase/*` (klient pro prohlížeč, server, proxy), `src/lib/api/*` čte přes RPC, `AuthProvider` drží session a profil, `PreferencesProvider` synchronizuje nastavení do `user_preferences`.
+
+Typy z databáze lze vygenerovat: `npx supabase gen types typescript --project-id sdhinkqouseaaesodqyy > src/lib/supabase/database.types.ts` (vyžaduje `npx supabase login`).
+
+## 6b. Blog a Supabase
+
+1. **Čtení:** `src/lib/api/blog.ts` čte publikované články z `blog_posts` přes REST s veřejným klíčem (RLS: anonym vidí jen publikované), cache `"use cache"` s tagem `blog`. Bez Supabase běží na `src/data/blog.ts`.
+2. **Psaní:** `/blog/novy` vyžaduje přihlášení; ukládat do databáze a publikovat smí role `editor` / `admin`. Fotky z editoru (`upload:<id>`) a obálka se při uložení nahrají do bucketu `blog-images` a nahradí veřejnou URL (`uploadBlogImage`, `saveBlogPost`). Pak server action `revalidateBlog()` zneplatní cache.
 
 Mapování řádku tabulky na typ `BlogPost` je v `rowToPost` / `postToRow`. Obsah článků se nepřekládá (je česky), UI blogu ano.
 
-SEO: `src/app/sitemap.ts` (hlavní stránky, články, prodejci) a `src/app/robots.ts` (neindexuje `/ci-studio` a `/blog/novy`).
+SEO: `src/app/sitemap.ts` (se Supabase jen veřejné stránky: blog, ceník, přihlášení) a `src/app/robots.ts` (neindexuje `/ci-studio` a `/blog/novy`).
 
 ---
 
@@ -621,6 +656,48 @@ Nasazení je plánované na pozdější fázi. Postup:
 5. Backend musí povolit CORS pro produkční doménu Vercelu (sekce 5.1).
 
 Pro produkci s vyšším provozem nepoužívejte veřejný OpenStreetMap jako zdroj dlaždic. Nastavte vlastního poskytovatele přes `NEXT_PUBLIC_MAP_TILE_URL` a respektujte jeho podmínky a atribuci.
+
+### TODO – vlastní doména (Wedos → Cloudflare → Vercel)
+
+Kód žádnou adresu napevno nemá – kanonické URL, sitemapa, `robots.txt`, Open Graph i JSON-LD se berou z `NEXT_PUBLIC_SITE_URL`, odkazy v e-mailech z adresy, na které uživatel web otevřel. Při změně domény se tedy upravuje jen nastavení služeb níže. Postup v tomto pořadí:
+
+**1. DNS – Wedos a Cloudflare**
+- [ ] Přidat doménu `podpalto.cz` do Cloudflare (plán Free) a zkontrolovat, že se převzaly stávající DNS záznamy (hlavně MX, pokud u domény běží e-mail).
+- [ ] U Wedosu přepnout nameservery domény na dva, které přidělí Cloudflare. Počkat, až je zóna v Cloudflare *Active* (minuty až 24 h).
+- [ ] Cloudflare → SSL/TLS: režim **Full (strict)** (pro případ, že se někdy zapne proxy).
+
+**2. Vercel**
+- [ ] Projekt `podpalto-cz` → Settings → Domains: přidat `podpalto.cz` a `www.podpalto.cz`; jednu nastavit jako hlavní a druhou přesměrovat (doporučeno `www` → `podpalto.cz`, 308).
+- [ ] V Cloudflare vytvořit záznamy přesně podle Vercelu (typicky `A` pro kořen a `CNAME` pro `www`) a nechat je **DNS only** (šedý mráček), jinak Vercel nevydá SSL certifikát.
+- [ ] Počkat na „Valid Configuration“ a vydání certifikátu u obou domén.
+- [ ] Environment Variables (Production): `NEXT_PUBLIC_SITE_URL=https://podpalto.cz`. Preview může zůstat na `*.vercel.app`.
+- [ ] **Redeploy** produkce (proměnné `NEXT_PUBLIC_*` se zapékají do buildu).
+
+**3. Supabase (projekt Podpalto)**
+- [ ] Authentication → URL Configuration → **Site URL**: `https://podpalto.cz` (výchozí cíl odkazů v e-mailech).
+- [ ] **Redirect URLs** – ponechat/přidat: `https://podpalto.cz/**`, `https://www.podpalto.cz/**`, `https://podpalto-cz.vercel.app/**` (náhledy), `http://localhost:3001/**` (vývoj).
+- [ ] Authentication → Emails → šablony: zkontrolovat texty (čeština) a že odkazy používají `{{ .ConfirmationURL }}` / `{{ .RedirectTo }}`, ne napevno starou adresu.
+- [ ] Vlastní SMTP (např. Resend) s odesílatelem `noreply@podpalto.cz` – vestavěný e-mail Supabase má nízký hodinový limit.
+- [ ] *(Volitelné, placený add-on)* Custom Domain pro Supabase, např. `auth.podpalto.cz`, aby uživatel neviděl `*.supabase.co`. Pak aktualizovat `NEXT_PUBLIC_SUPABASE_URL` ve Vercelu i v `.env.local`.
+- [ ] Pokud přibude přihlášení přes Google/Apple: v konzoli poskytovatele přidat jako Authorized redirect URI callback Supabase (`https://<ref nebo vlastní doména>/auth/v1/callback`) a jako povolený původ `https://podpalto.cz`.
+
+**4. E-mail a DNS záznamy v Cloudflare**
+- [ ] Záznamy SMTP poskytovatele: **SPF** (TXT), **DKIM** (TXT/CNAME), **DMARC** (`_dmarc` TXT, např. `v=DMARC1; p=quarantine`), případně return-path CNAME.
+- [ ] Ověřit doménu u poskytovatele SMTP a poslat zkušební e-mail (registrace, obnova hesla) – nesmí padat do spamu.
+
+**5. Ostatní služby**
+- [ ] Backend FastAPI/CrewAI na Railway: povolit CORS pro `https://podpalto.cz` (a `www`), viz sekce 5.1.
+- [ ] Mapové dlaždice / geokodér s API klíčem (např. MapTiler): přidat `podpalto.cz` mezi povolené domény klíče.
+- [ ] Stripe (až bude): webhook `https://podpalto.cz/api/stripe/webhook`, success/cancel URL a doména v nastavení Checkoutu.
+- [ ] Google Search Console: ověřit doménu TXT záznamem v Cloudflare a odeslat `https://podpalto.cz/sitemap.xml`. Případně totéž v Bing Webmaster Tools.
+- [ ] Lokální `.env.local` a `.env.example`: `NEXT_PUBLIC_SITE_URL` nechat na localhost / doplnit produkční hodnotu do dokumentace.
+
+**6. Kontrola po přepnutí**
+- [ ] `https://podpalto.cz` i `https://www.podpalto.cz` mají platný certifikát a `www` přesměruje.
+- [ ] Registrace → e-mail → odkaz vede na `https://podpalto.cz/auth/callback…` a uživatel je přihlášený.
+- [ ] Obnova hesla → `/nove-heslo` funguje.
+- [ ] `https://podpalto.cz/sitemap.xml` a `robots.txt` obsahují novou doménu; kanonická URL článku blogu ukazuje na `podpalto.cz`.
+- [ ] Nepřihlášený na `/` → přesměrování na registraci; blog čitelný bez účtu.
 
 ---
 

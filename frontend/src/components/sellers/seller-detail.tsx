@@ -10,6 +10,7 @@ import {
   ExternalLink,
   GitCompareArrows,
   Globe,
+  Lock,
   Mail,
   MapPin,
   Phone,
@@ -48,6 +49,9 @@ import { getSeller } from "@/lib/api/sellers";
 import { getPriceTrends, getRegionStats } from "@/lib/api/market";
 import { useApi } from "@/hooks/use-api";
 import { usePreferences } from "@/components/providers/preferences-provider";
+import { useAuth } from "@/components/providers/auth-provider";
+import { invalidateApiCache } from "@/lib/api";
+import { SellerReviews } from "./seller-reviews";
 import { SwotMatrix } from "@/components/ci/swot-matrix";
 import { EmptyState, FuelBadge, PriceDelta, SellerTags, StarRating, StockBadge } from "@/components/common";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -559,6 +563,27 @@ function PriceComparison({ seller }: { seller: Seller }) {
 
 function IntelSection({ seller }: { seller: Seller }) {
   const intel = seller.intel;
+  const auth = useAuth();
+  // CI shrnutí vrací databáze jen tarifu Pro (RLS) – ostatním nabídneme přechod
+  if (!intel && auth.enabled && !auth.isPro) {
+    return (
+      <section className="flex flex-col items-start gap-4 rounded-2xl border border-dashed border-moss/40 bg-accent p-6 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-card text-accent-foreground">
+            <Lock className="size-5" />
+          </span>
+          <div>
+            <h2 className="text-xl font-semibold">{t("account.upsell.title")}</h2>
+            <p className="text-sm text-muted-foreground">{t("account.upsell.text")}</p>
+          </div>
+        </div>
+        <Link href="/plany?feature=ci" className={cn(buttonVariants({ size: "lg" }), "shrink-0")}>
+          <Sparkles />
+          {t("account.upsell.cta")}
+        </Link>
+      </section>
+    );
+  }
   if (!intel) {
     return (
       <section className="flex flex-col items-start gap-4 rounded-2xl border border-dashed border-moss/40 bg-accent p-6 sm:flex-row sm:items-center sm:justify-between">
@@ -711,6 +736,13 @@ export function SellerDetail({ slug }: { slug: string }) {
           <Hero seller={seller} />
           <PriceList seller={seller} />
           <DeliverySection seller={seller} />
+          <SellerReviews
+            seller={seller}
+            onChanged={() => {
+              invalidateApiCache("sellers:");
+              reload();
+            }}
+          />
           <IntelSection seller={seller} />
         </>
       )}

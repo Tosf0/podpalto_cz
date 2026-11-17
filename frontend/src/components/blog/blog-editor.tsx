@@ -36,6 +36,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { estimateReadingMinutes, plainText, slugify } from "@/lib/blog/utils";
+import { saveBlogPost, uploadBlogImage } from "@/lib/blog/supabase";
+import { USES_DB } from "@/lib/api/db";
+import { useAuth } from "@/components/providers/auth-provider";
+import { revalidateBlog } from "@/app/blog/actions";
 import { formatDate, formatNumber } from "@/lib/format";
 import { useI18n, type MessageKey } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -43,10 +47,11 @@ import { BlogCover, CategoryBadge } from "./blog-parts";
 import { BlogProse } from "./blog-prose";
 
 /**
- * Editor článku (zatím bez databáze).
+ * Editor článku. Koncept se průběžně drží v localStorage; redaktor (role editor/admin) ho ukládá
+ * a publikuje do Supabase (`blog_posts`).
  *
  * Fotky: vložená fotka se v textu objeví jako `![popis](upload:<id> "popisek")` a náhled ji zobrazí
- * z mapy `images`. Po napojení Supabase se soubor nahraje do bucketu `blog-images` (uploadBlogImage)
+ * z mapy `images`. Při uložení do databáze se soubor nahraje do bucketu `blog-images`
  * a `upload:<id>` se nahradí veřejnou URL.
  */
 
@@ -54,6 +59,8 @@ const STORAGE_KEY = "podpalto:blog-draft:v1";
 const CATEGORIES: BlogCategory[] = ["rady", "trh", "pruvodce"];
 
 interface Draft {
+  /** ID článku v databázi (po prvním uložení). */
+  id?: string;
   title: string;
   slug: string;
   slugTouched: boolean;
@@ -91,6 +98,7 @@ const EMPTY: Draft = {
 function fromPost(p: BlogPost): Draft {
   return {
     ...EMPTY,
+    id: USES_DB ? p.id : undefined,
     title: p.title,
     slug: p.slug,
     slugTouched: true,
@@ -156,8 +164,12 @@ function Field({ label, hint, htmlFor, children }: { label: string; hint?: strin
   );
 }
 
-export function BlogEditor({ drafts }: { drafts: BlogPost[] }) {
+export function BlogEditor({ drafts, canPublish }: { drafts: BlogPost[]; canPublish: boolean }) {
   const { t } = useI18n();
+  const { user, profile } = useAuth();
+  const [saving, setSaving] = useState(false);
+  /** Soubory vybrané v tomto sezení – nahrají se do Storage při uložení (id → File, "cover" → obálka). */
+  const filesRef = useRef(new Map<string, File>());
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [mode, setMode] = useState<Mode>("split");
   const [loaded, setLoaded] = useState(false);
@@ -229,6 +241,7 @@ export function BlogEditor({ drafts }: { drafts: BlogPost[] }) {
     if (!file) return;
     const id = Math.random().toString(36).slice(2, 8);
     const dataUrl = await readFile(file);
+    filesRef.current.set(id, file);
     setDraft((d) => ({ ...d, images: { ...d.images, [id]: dataUrl } }));
     insertBlock(`![${t("blog.editor.snippets.imageAlt")}](upload:${id} "${t("blog.editor.snippets.imageCaption")}")`);
   };
@@ -236,6 +249,7 @@ export function BlogEditor({ drafts }: { drafts: BlogPost[] }) {
   const onCoverPicked = async (file: File | undefined) => {
     if (!file) return;
     const url = await readFile(file);
+    filesRef.current.set("cover", file);
     setDraft((d) => ({ ...d, cover: { url, alt: d.cover?.alt ?? "" } }));
   };
 
@@ -246,29 +260,97 @@ export function BlogEditor({ drafts }: { drafts: BlogPost[] }) {
 
   /* ------------------------------ akce ------------------------------ */
 
-  const save = () => {
-    if (!draft.title.trim()) {
-      toast.error(t("blog.editor.actions.missingTitle"));
-      return false;
-    }
+  const saveLocal = (d: Draft, quiet = false) => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
-      toast.success(t("blog.editor.actions.saved"));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
     } catch {
       // příliš velké fotky pro localStorage – uložit aspoň text
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...draft, images: {}, cover: null }));
-      toast.success(t("blog.editor.actions.saved"));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...d, images: {}, cover: null }));
     }
-    return true;
+    if (!quiet) toast.success(t("blog.editor.actions.saved"));
   };
 
-  const publish = () => {
-    if (!save()) return;
-    toast(t("blog.editor.actions.publishToast"), { description: t("blog.editor.actions.publishToastDesc") });
+  /** Nahraje nové fotky do Storage a nahradí `upload:<id>` / data URL obálky veřejnými URL. */
+  const uploadPending = async (d: Draft): Promise<Draft> => {
+    let content = d.content;
+    const images = { ...d.images };
+    for (const [id, file] of filesRef.current) {
+      if (id === "cover" || !content.includes(`upload:${id}`)) continue;
+      const url = await uploadBlogImage(file);
+      content = content.split(`upload:${id}`).join(url);
+      delete images[id];
+      filesRef.current.delete(id);
+    }
+    let cover = d.cover;
+    const coverFile = filesRef.current.get("cover");
+    if (cover?.url.startsWith("data:") && coverFile) {
+      cover = { ...cover, url: await uploadBlogImage(coverFile) };
+      filesRef.current.delete("cover");
+    }
+    return { ...d, content, images, cover };
   };
+
+  /** Uloží článek: redaktor do databáze, ostatní jen do prohlížeče. */
+  const save = async (status: BlogPostStatus = draft.status) => {
+    if (!draft.title.trim()) {
+      toast.error(t("blog.editor.actions.missingTitle"));
+      return;
+    }
+    const base = { ...draft, status };
+    if (!USES_DB) {
+      saveLocal(base);
+      if (status === "published") toast(t("blog.editor.actions.publishToast"), { description: t("blog.editor.actions.publishToastDesc") });
+      return;
+    }
+    if (!canPublish || !user) {
+      saveLocal(base, true);
+      toast(t("account.editor.noRights"));
+      return;
+    }
+    setSaving(true);
+    try {
+      if (filesRef.current.size > 0) toast(t("account.editor.uploading"));
+      const ready = await uploadPending(base);
+      const publishedAt = status === "published" ? new Date(`${ready.publishDate}T08:00:00`).toISOString() : null;
+      const id = await saveBlogPost({
+        id: ready.id,
+        slug: ready.slug || slugify(ready.title),
+        title: ready.title.trim(),
+        excerpt: ready.excerpt.trim(),
+        content: ready.content,
+        cover_url: ready.cover?.url ?? null,
+        cover_alt: ready.cover?.alt ?? null,
+        cover_credit: null,
+        category: ready.category,
+        tags: ready.tags.split(",").map((x) => x.trim()).filter(Boolean),
+        author_id: user.id,
+        author_name: profile?.full_name || user.email || "Redakce podpalto.cz",
+        author_role: null,
+        author_avatar_url: profile?.avatar_url ?? null,
+        status,
+        published_at: publishedAt,
+        reading_minutes: estimateReadingMinutes(ready.content),
+        seo_title: ready.seoTitle.trim() || null,
+        seo_description: ready.seoDescription.trim() || null,
+      });
+      const saved = { ...ready, id };
+      setDraft(saved);
+      saveLocal(saved, true);
+      await revalidateBlog();
+      toast.success(status === "published" ? t("account.editor.published") : t("account.editor.saved"));
+    } catch (err) {
+      saveLocal(base, true);
+      toast.error(t("account.editor.failed", { message: err instanceof Error ? err.message : String(err) }));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const publish = () => void save("published");
 
   const reset = () => {
     setDraft({ ...EMPTY, publishDate: today() });
+    filesRef.current.clear();
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch {
@@ -367,10 +449,10 @@ export function BlogEditor({ drafts }: { drafts: BlogPost[] }) {
         description={t("blog.editor.description")}
         actions={
           <>
-            <Button variant="outline" onClick={save} disabled={!loaded}>
+            <Button variant="outline" onClick={() => void save()} disabled={!loaded || saving}>
               <Save /> {t("blog.editor.actions.saveDraft")}
             </Button>
-            <Button onClick={publish} disabled={!loaded}>
+            <Button onClick={publish} disabled={!loaded || saving}>
               <Send /> {t("blog.editor.actions.publish")}
             </Button>
           </>
@@ -596,10 +678,10 @@ export function BlogEditor({ drafts }: { drafts: BlogPost[] }) {
               />
             </Field>
             <div className="flex flex-col gap-2">
-              <Button onClick={publish} disabled={!loaded}>
+              <Button onClick={publish} disabled={!loaded || saving}>
                 <Send /> {t("blog.editor.actions.publish")}
               </Button>
-              <Button variant="outline" onClick={save} disabled={!loaded}>
+              <Button variant="outline" onClick={() => void save()} disabled={!loaded || saving}>
                 <Save /> {t("blog.editor.actions.saveDraft")}
               </Button>
               <Button variant="ghost" size="sm" onClick={reset} className="text-muted-foreground">
@@ -664,7 +746,7 @@ export function BlogEditor({ drafts }: { drafts: BlogPost[] }) {
                     >
                       <p className="line-clamp-2 text-sm font-medium">{p.title}</p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {t("blog.editor.side.draft")} · {formatDate(p.updated_at)}
+                        {t(`blog.editor.side.${p.status}`)} · {formatDate(p.updated_at)}
                       </p>
                     </button>
                   </li>

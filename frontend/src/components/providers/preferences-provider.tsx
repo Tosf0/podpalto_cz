@@ -1,18 +1,25 @@
 "use client";
 
 import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import type { PriceMode, UserLocation } from "@/types";
+import { useTheme } from "next-themes";
+import type { PriceMode, RegionCode, UserLocation } from "@/types";
 import { DEFAULT_LOCATION, ZIP_PREFIX_LOCATIONS } from "@/lib/constants";
 import { setFormatSettings, type Currency } from "@/lib/format";
 import { DEFAULT_LANG, isLang, localeOf, setCurrentLang, type Lang } from "@/lib/i18n/translate";
+import { getSupabaseBrowser } from "@/lib/supabase/client";
+import { useAuth } from "./auth-provider";
 
 /**
- * Globální uživatelské preference (sdílené napříč stránkami, uložené v localStorage):
+ * Globální uživatelské preference:
  * - priceMode: zobrazení ceny za jednotku (PRMS/t) vs. Kč/kWh
- * - location: lokalita uživatele (pro vzdálenosti a dopravu)
- * - compareIds: prodejci vybraní k porovnání (tlačítko „Porovnat“)
- * - lang: jazyk UI (cs / de / en) – demo data zůstávají česky
- * - currency: měna zobrazení (CZK / EUR) – data jsou v Kč, při EUR se přepočítávají kurzem
+ * - location: výchozí poloha uživatele (pro vzdálenosti a dopravu)
+ * - compareIds: prodejci vybraní k porovnání
+ * - lang / currency: jazyk UI a měna zobrazení
+ * - mapShowRegions / mapStripOpen: stav mapy (vrstva krajů, pás průměrných cen)
+ * - motiv (light/dark) drží next-themes, ukládá se sem spolu s ostatním
+ *
+ * Přihlášenému uživateli se vše ukládá do tabulky `user_preferences` (platí na všech zařízeních),
+ * localStorage slouží jako rychlá mezipaměť a pro demo režim bez Supabase.
  */
 interface PreferencesValue {
   lang: Lang;
@@ -28,12 +35,34 @@ interface PreferencesValue {
   compareIds: string[];
   toggleCompare: (sellerId: string) => void;
   clearCompare: () => void;
+  mapShowRegions: boolean;
+  setMapShowRegions: (v: boolean) => void;
+  mapStripOpen: boolean;
+  setMapStripOpen: (v: boolean) => void;
 }
 
 const PreferencesContext = createContext<PreferencesValue | null>(null);
 
 const STORAGE_KEY = "podpalto:prefs:v1";
 const MAX_COMPARE = 4;
+const SAVE_DEBOUNCE_MS = 600;
+
+type Saved = Partial<Pick<PreferencesValue, "priceMode" | "location" | "compareIds" | "lang" | "currency" | "mapShowRegions" | "mapStripOpen">>;
+
+interface PreferencesRow {
+  lang: Lang;
+  currency: Currency;
+  price_mode: PriceMode;
+  theme: "light" | "dark" | "system";
+  location_label: string | null;
+  location_lat: number | null;
+  location_lng: number | null;
+  location_zip: string | null;
+  location_region: RegionCode | null;
+  compare_seller_ids: string[];
+  map_show_regions: boolean;
+  map_strip_open: boolean;
+}
 
 /** PSČ → lokalita (hrubě podle prvních dvou číslic). */
 export function locationFromZip(zip: string): UserLocation | null {
@@ -46,25 +75,34 @@ export function locationFromZip(zip: string): UserLocation | null {
 }
 
 export function PreferencesProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
+  const { theme, setTheme } = useTheme();
   const [priceMode, setPriceMode] = useState<PriceMode>("unit");
   const [location, setLocation] = useState<UserLocation>(DEFAULT_LOCATION);
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [lang, setLang] = useState<Lang>(DEFAULT_LANG);
   const [currency, setCurrency] = useState<Currency>("CZK");
+  const [mapShowRegions, setMapShowRegions] = useState(false);
+  const [mapStripOpen, setMapStripOpen] = useState(true);
   const [hydrated, setHydrated] = useState(false);
+  /** Uživatel, jehož preference už jsou načtené z databáze (teprve pak se ukládají zpět). */
+  const [syncedUserId, setSyncedUserId] = useState<string | null>(null);
 
-  // načtení z localStorage až po hydrataci (žádný mismatch SSR/CSR)
+  // 1) localStorage až po hydrataci (žádný mismatch SSR/CSR)
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        const saved = JSON.parse(raw) as Partial<Pick<PreferencesValue, "priceMode" | "location" | "compareIds" | "lang" | "currency">>;
+        const saved = JSON.parse(raw) as Saved;
         /* eslint-disable react-hooks/set-state-in-effect */
         if (saved.priceMode === "unit" || saved.priceMode === "kwh") setPriceMode(saved.priceMode);
         if (saved.location?.lat && saved.location?.lng) setLocation(saved.location);
         if (Array.isArray(saved.compareIds)) setCompareIds(saved.compareIds.slice(0, MAX_COMPARE));
         if (isLang(saved.lang)) setLang(saved.lang);
         if (saved.currency === "CZK" || saved.currency === "EUR") setCurrency(saved.currency);
+        if (typeof saved.mapShowRegions === "boolean") setMapShowRegions(saved.mapShowRegions);
+        if (typeof saved.mapStripOpen === "boolean") setMapStripOpen(saved.mapStripOpen);
         /* eslint-enable react-hooks/set-state-in-effect */
       }
     } catch {
@@ -76,11 +114,76 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
   useEffect(() => {
     if (!hydrated) return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ priceMode, location, compareIds, lang, currency }));
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ priceMode, location, compareIds, lang, currency, mapShowRegions, mapStripOpen }),
+      );
     } catch {
       /* ignorovat */
     }
-  }, [hydrated, priceMode, location, compareIds, lang, currency]);
+  }, [hydrated, priceMode, location, compareIds, lang, currency, mapShowRegions, mapStripOpen]);
+
+  // 2) přihlášený uživatel: načíst preference z databáze (mají přednost před localStorage)
+  useEffect(() => {
+    const supabase = getSupabaseBrowser();
+    if (!hydrated || !supabase || !userId) return;
+    let cancelled = false;
+    void supabase
+      .from("user_preferences")
+      .select("lang, currency, price_mode, theme, location_label, location_lat, location_lng, location_zip, location_region, compare_seller_ids, map_show_regions, map_strip_open")
+      .eq("user_id", userId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return;
+        const row = data as PreferencesRow | null;
+        if (row) {
+          if (isLang(row.lang)) setLang(row.lang);
+          setCurrency(row.currency);
+          setPriceMode(row.price_mode);
+          if (row.location_lat != null && row.location_lng != null) {
+            setLocation({
+              label: row.location_label ?? DEFAULT_LOCATION.label,
+              lat: row.location_lat,
+              lng: row.location_lng,
+              zip: row.location_zip ?? undefined,
+              region: row.location_region ?? undefined,
+            });
+          }
+          setCompareIds((row.compare_seller_ids ?? []).slice(0, MAX_COMPARE));
+          setMapShowRegions(row.map_show_regions);
+          setMapStripOpen(row.map_strip_open);
+          if (row.theme === "light" || row.theme === "dark") setTheme(row.theme);
+        }
+        setSyncedUserId(userId);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [hydrated, userId, setTheme]);
+
+  // 3) změny ukládat do databáze (s krátkým zpožděním, ať se neposílá každé kliknutí zvlášť)
+  useEffect(() => {
+    const supabase = getSupabaseBrowser();
+    if (!supabase || !userId || syncedUserId !== userId) return;
+    const handle = setTimeout(() => {
+      void supabase.from("user_preferences").upsert({
+        user_id: userId,
+        lang,
+        currency,
+        price_mode: priceMode,
+        theme: theme === "dark" ? "dark" : "light",
+        location_label: location.label.slice(0, 200),
+        location_lat: location.lat,
+        location_lng: location.lng,
+        location_zip: location.zip ?? null,
+        location_region: location.region ?? null,
+        compare_seller_ids: compareIds.slice(0, MAX_COMPARE),
+        map_show_regions: mapShowRegions,
+        map_strip_open: mapStripOpen,
+      });
+    }, SAVE_DEBOUNCE_MS);
+    return () => clearTimeout(handle);
+  }, [userId, syncedUserId, lang, currency, priceMode, theme, location, compareIds, mapShowRegions, mapStripOpen]);
 
   // jazyk dokumentu (čtečky obrazovky, dělení slov)
   useEffect(() => {
@@ -120,8 +223,12 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
       compareIds,
       toggleCompare,
       clearCompare,
+      mapShowRegions,
+      setMapShowRegions,
+      mapStripOpen,
+      setMapStripOpen,
     }),
-    [lang, currency, priceMode, location, setLocationByZip, compareIds, toggleCompare, clearCompare],
+    [lang, currency, priceMode, location, setLocationByZip, compareIds, toggleCompare, clearCompare, mapShowRegions, mapStripOpen],
   );
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;

@@ -13,6 +13,11 @@ export function AppShell({ children, footer }: { children: React.ReactNode; foot
   const pathname = usePathname();
   const fullscreen = pathname === "/";
 
+  // Přihlášení / registrace: samostatná stránka bez navigace
+  if (pathname.startsWith("/prihlaseni")) {
+    return <PreferencesRemountBoundary>{children}</PreferencesRemountBoundary>;
+  }
+
   return (
     <div className="flex min-h-dvh flex-col bg-background lg:h-dvh lg:flex-row lg:overflow-hidden">
       <AppSidebar />

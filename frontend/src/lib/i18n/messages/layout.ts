@@ -30,7 +30,7 @@ export const layout = defineMessages({
     settings: {
       open: "Nastavení",
       title: "Nastavení",
-      description: "Uloží se jen v tomto prohlížeči.",
+      description: "Ukládá se do vašeho účtu a platí na všech zařízeních.",
       language: { title: "Jazyk", hint: "Texty aplikace. Údaje prodejců zůstávají česky." },
       currency: {
         title: "Měna",
@@ -109,7 +109,7 @@ export const layout = defineMessages({
     settings: {
       open: "Einstellungen",
       title: "Einstellungen",
-      description: "Wird nur in diesem Browser gespeichert.",
+      description: "Wird in Ihrem Konto gespeichert und gilt auf allen Geräten.",
       language: { title: "Sprache", hint: "Texte der App. Händlerangaben bleiben auf Tschechisch." },
       currency: {
         title: "Währung",
@@ -189,7 +189,7 @@ export const layout = defineMessages({
     settings: {
       open: "Settings",
       title: "Settings",
-      description: "Saved in this browser only.",
+      description: "Saved to your account and synced across devices.",
       language: { title: "Language", hint: "App texts. Seller details stay in Czech." },
       currency: {
         title: "Currency",

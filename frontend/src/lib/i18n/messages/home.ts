@@ -27,6 +27,10 @@ export const home = defineMessages({
       pricier: "dráž",
       marketAria: "Průměrné ceny v ČR",
       marketTitle: "Průměr ČR · změna za měsíc",
+      tierTitle: "Barvy cenovek",
+      tierHint: "cena vůči průměru",
+      collapseStrip: "Skrýt průměrné ceny",
+      expandStrip: "Zobrazit průměrné ceny",
     },
     filters: {
       title: "Filtry",
@@ -127,6 +131,10 @@ export const home = defineMessages({
       pricier: "teurer",
       marketAria: "Durchschnittspreise in Tschechien",
       marketTitle: "Ø Tschechien · Änderung zum Vormonat",
+      tierTitle: "Farben der Preisschilder",
+      tierHint: "Preis im Vergleich zum Durchschnitt",
+      collapseStrip: "Durchschnittspreise ausblenden",
+      expandStrip: "Durchschnittspreise einblenden",
     },
     filters: {
       title: "Filter",
@@ -227,6 +235,10 @@ export const home = defineMessages({
       pricier: "pricier",
       marketAria: "Average prices in Czechia",
       marketTitle: "Czech average · monthly change",
+      tierTitle: "Price tag colours",
+      tierHint: "price vs. average",
+      collapseStrip: "Hide average prices",
+      expandStrip: "Show average prices",
     },
     filters: {
       title: "Filters",

@@ -26,7 +26,7 @@ import type { CommodityKey, FuelCategory } from "@/types";
 import { cn } from "@/lib/utils";
 import { AddressSearch } from "./address-search";
 import { FiltersPanel } from "./filters-panel";
-import { MapControlsPill, MapTopBar, MarketStrip, PriceModePill, RegionLegend } from "./map-overlays";
+import { MapBottomDock, MapControlsPill, MapTopBar, PriceModePill, RegionLegend } from "./map-overlays";
 import { SellerPanel } from "./seller-panel";
 import { useMediaQuery } from "./use-media-query";
 
@@ -59,7 +59,8 @@ function zoomFor(place: PlaceSuggestion): number {
  * vpravo panel filtrů (1/5) nebo detail vybraného prodejce (2/5).
  */
 export function HomeView() {
-  const { priceMode, location, setLocation } = usePreferences();
+  const { priceMode, location, setLocation, mapShowRegions: showRegions, setMapShowRegions: setShowRegions, mapStripOpen, setMapStripOpen } =
+    usePreferences();
   const { t } = useI18n();
   const sellersApi = useApi(() => getSellers(), []);
   const regionsApi = useApi(() => getRegionStats(), []);
@@ -70,9 +71,10 @@ export function HomeView() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [focus, setFocus] = useState<MapFocus | null>(null);
   const [addressPicked, setAddressPicked] = useState(false);
-  const [showRegions, setShowRegions] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [map, setMap] = useState<L.Map | null>(null);
+  /** Kolik px zespodu zakrývá pás průměrných cen (0 = sbalený / mobil). */
+  const [bottomInset, setBottomInset] = useState(0);
   const nonce = useRef(0);
 
   const deferredFilters = useDeferredValue(filters);
@@ -153,9 +155,12 @@ export function HomeView() {
 
   return (
     <div className="flex h-[calc(100dvh-3.5rem)] min-h-0 lg:h-dvh">
-      {/* Sloupec mapy: mapa s překryvnými widgety + ukotvený pás průměrných cen */}
+      {/* Sloupec mapy: mapa přes celou výšku, widgety a skleněné lišty plavou nad ní */}
       <div className="@container isolate flex min-w-0 flex-1 flex-col">
-      <div className="relative min-h-0 flex-1">
+      <div
+        className="podpalto-map-wrap relative min-h-0 flex-1"
+        style={{ "--map-bottom-inset": `${isDesktop ? bottomInset : 0}px` } as React.CSSProperties}
+      >
         <SellerMap
           matches={matches}
           location={location}
@@ -171,7 +176,7 @@ export function HomeView() {
           regionStats={regionStats}
           regionMetric={regionMetric}
           showRegions={showRegions}
-          fitPadding={isDesktop ? { top: 96, bottom: 40, left: 48, right: 48 } : { top: 80, bottom: 96, left: 24, right: 24 }}
+          fitPadding={isDesktop ? { top: 96, bottom: bottomInset + 150, left: 48, right: 48 } : { top: 80, bottom: 96, left: 24, right: 24 }}
           onMapReady={setMap}
         />
 
@@ -190,7 +195,7 @@ export function HomeView() {
               <MapControlsPill
                 map={map}
                 showRegions={showRegions}
-                onToggleRegions={() => setShowRegions((v) => !v)}
+                onToggleRegions={() => setShowRegions(!showRegions)}
                 onLocate={onLocate}
                 className="hidden @sm:flex"
               />
@@ -216,10 +221,10 @@ export function HomeView() {
             </button>
           </div>
         </div>
-      </div>
 
-        {/* Pás průměrných cen – pevně pod mapou, od levé po pravou lištu */}
-        <MarketStrip className="hidden shrink-0 lg:block" />
+        {/* Desktop: legenda cenovek vlevo dole + sbalitelný pás průměrných cen přes celou šířku mapy */}
+        {isDesktop && <MapBottomDock open={mapStripOpen} onToggle={() => setMapStripOpen(!mapStripOpen)} onInsetChange={setBottomInset} />}
+      </div>
       </div>
 
       {/* Pravý panel: filtry (1/5) ↔ detail prodejce (2/5) */}

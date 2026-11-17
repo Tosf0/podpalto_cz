@@ -336,3 +336,9 @@
 .region-label__value {
   font-weight: 700;
 }
+
+/* Ovládací prvky Leafletu (atribuce) se posouvají nad skleněný pás průměrných cen. */
+.podpalto-map-wrap .leaflet-bottom {
+  bottom: var(--map-bottom-inset, 0px);
+  transition: bottom 300ms ease-out;
+}

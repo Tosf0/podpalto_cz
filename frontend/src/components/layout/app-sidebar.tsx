@@ -2,11 +2,12 @@
 
 import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { LogOut, Menu, Moon, Settings, Sun } from "lucide-react";
+import { LogIn, LogOut, Menu, Moon, Settings, Sparkles, Sun } from "lucide-react";
 import { toast } from "sonner";
 import { Logo } from "@/components/common/logo";
+import { initialsOf, useAuth } from "@/components/providers/auth-provider";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
@@ -114,35 +115,89 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
         </ul>
       </nav>
 
-      {/* Patička panelu: nastavení přes celou šířku, pod ním účet a odhlášení */}
+      {/* Patička panelu: nastavení přes celou šířku, pod ním účet (tarif, odhlášení) */}
       <div className="shrink-0 space-y-3 border-t border-sidebar-border p-4">
         <button type="button" onClick={() => setSettingsOpen(true)} className={cn(widgetButton, "h-11 w-full bg-sidebar-accent text-sm")}>
           <Settings aria-hidden />
           {t("layout.settings.open")}
         </button>
-
-        <div className="flex items-center gap-3 px-1">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground">
-            CH
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-semibold text-sidebar-foreground">{t("layout.account.name")}</span>
-            <span className="block truncate text-[11px] text-sidebar-foreground/55">{t("layout.account.demo")}</span>
-          </span>
-          <PanelIconButton
-            label={t("layout.account.logout")}
-            onClick={() =>
-              toast(t("layout.account.logoutToast"), {
-                description: t("layout.account.logoutToastDesc"),
-              })
-            }
-          >
-            <LogOut aria-hidden />
-          </PanelIconButton>
-        </div>
+        <AccountRow onNavigate={onNavigate} />
       </div>
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+    </div>
+  );
+}
+
+/** Účet v patičce panelu: přihlášený uživatel s tarifem, nebo výzva k přihlášení. */
+function AccountRow({ onNavigate }: { onNavigate?: () => void }) {
+  const { t } = useI18n();
+  const router = useRouter();
+  const { enabled, loading, user, profile, plan, signOut } = useAuth();
+
+  // Demo režim bez Supabase – původní ukázkový účet
+  if (!enabled) {
+    return (
+      <div className="flex items-center gap-3 px-1">
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground">
+          CH
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-semibold text-sidebar-foreground">{t("layout.account.name")}</span>
+          <span className="block truncate text-[11px] text-sidebar-foreground/55">{t("layout.account.demo")}</span>
+        </span>
+        <PanelIconButton label={t("layout.account.logout")} onClick={() => toast(t("layout.account.logoutToast"), { description: t("layout.account.logoutToastDesc") })}>
+          <LogOut aria-hidden />
+        </PanelIconButton>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Link
+        href="/prihlaseni?mode=signup"
+        onClick={onNavigate}
+        aria-busy={loading}
+        className={cn(widgetButton, "h-11 w-full bg-sidebar-primary text-sm text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:text-sidebar-primary-foreground")}
+      >
+        <LogIn aria-hidden />
+        {loading ? "…" : t("account.menu.signin")}
+      </Link>
+    );
+  }
+
+  const name = profile?.full_name || user.email || "";
+  const logout = async () => {
+    await signOut();
+    toast(t("account.menu.loggedOut"));
+    onNavigate?.();
+    router.replace("/prihlaseni");
+    router.refresh();
+  };
+
+  return (
+    <div className="flex items-center gap-3 px-1">
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sm font-semibold text-sidebar-primary-foreground">
+        {initialsOf(profile?.full_name, user.email)}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold text-sidebar-foreground" title={name}>
+          {name}
+        </span>
+        <Link
+          href="/plany"
+          onClick={onNavigate}
+          className="inline-flex items-center gap-1 text-[11px] text-sidebar-foreground/60 hover:text-sidebar-foreground"
+        >
+          <Sparkles aria-hidden className="size-3" />
+          {t(`account.planNames.${plan}`)}
+          {profile && profile.role !== "user" && ` · ${t(`account.roles.${profile.role}`)}`}
+        </Link>
+      </span>
+      <PanelIconButton label={t("account.menu.logout")} onClick={() => void logout()}>
+        <LogOut aria-hidden />
+      </PanelIconButton>
     </div>
   );
 }

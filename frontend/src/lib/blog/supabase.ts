@@ -1,18 +1,13 @@
 /**
- * Příprava napojení blogu na Supabase (ZATÍM NEPOUŽITO – blog běží na dummy datech).
+ * Blog ↔ Supabase (projekt „Podpalto“, tabulka `blog_posts`, bucket `blog-images`).
  *
- * Postup napojení:
- * 1. V Supabase spustit migraci `supabase/migrations/20261117000000_blog.sql`
- *    (tabulka `blog_posts`, RLS, bucket `blog-images`).
- * 2. Do `.env.local` / Vercelu doplnit `NEXT_PUBLIC_SUPABASE_URL` a `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
- *    Jakmile jsou vyplněné, `src/lib/api/blog.ts` začne číst publikované články odsud přes REST (PostgREST).
- * 3. Pro editor (zápis, nahrávání fotek, přihlášení redaktorů) doinstalovat `@supabase/supabase-js`
- *    a `@supabase/ssr` a implementovat `saveBlogPost` / `uploadBlogImage` níže.
- *
- * Čtení je napsané čistým `fetch`, aby nebyla potřeba žádná závislost. Nebylo testováno proti
- * reálnému projektu – po napojení ověřit.
+ * - Čtení publikovaných článků běží na serveru čistým `fetch` přes REST (PostgREST) s veřejným klíčem –
+ *   RLS vrací anonymům jen `status = 'published'`. Používá `src/lib/api/blog.ts` (cache `blog`).
+ * - Zápis (editor) běží v prohlížeči přihlášeného redaktora (`profiles.role` editor/admin):
+ *   `saveBlogPost` + `uploadBlogImage`, potom server action `revalidateBlog()`.
  */
 import type { BlogCategory, BlogPost, BlogPostStatus } from "@/types";
+import { getSupabaseBrowser } from "@/lib/supabase/client";
 
 export const SUPABASE_URL = (process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/+$/, "");
 export const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "";
@@ -109,19 +104,29 @@ export function blogImageUrl(path: string): string {
   return `${SUPABASE_URL}/storage/v1/object/public/${BLOG_IMAGES_BUCKET}/${path.replace(/^\/+/, "")}`;
 }
 
-/*
- * TODO po napojení (vyžaduje @supabase/supabase-js a přihlášeného redaktora):
- *
- * export async function saveBlogPost(post: BlogPost) {
- *   const { error } = await supabase.from("blog_posts").upsert(postToRow(post));
- *   if (error) throw error;
- *   // revalidateTag("blog") v server action, aby se změna hned projevila na webu
- * }
- *
- * export async function uploadBlogImage(file: File): Promise<string> {
- *   const path = `${crypto.randomUUID()}-${file.name}`;
- *   const { error } = await supabase.storage.from(BLOG_IMAGES_BUCKET).upload(path, file);
- *   if (error) throw error;
- *   return blogImageUrl(path);
- * }
- */
+/** Nahraje fotku do bucketu `blog-images` a vrátí její veřejnou URL (jen redaktor). */
+export async function uploadBlogImage(file: File): Promise<string> {
+  const supabase = getSupabaseBrowser();
+  if (!supabase) throw new Error("Supabase není nakonfigurovaný.");
+  const ext = (file.name.split(".").pop() ?? "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+  const path = `${new Date().toISOString().slice(0, 7)}/${crypto.randomUUID()}.${ext}`;
+  const { error } = await supabase.storage.from(BLOG_IMAGES_BUCKET).upload(path, file, { contentType: file.type, upsert: false });
+  if (error) throw new Error(error.message);
+  return blogImageUrl(path);
+}
+
+/** Data článku k uložení (bez generovaných sloupců). */
+export type BlogPostInput = Omit<BlogRow, "id" | "updated_at"> & { id?: string; author_id: string | null };
+
+/** Vloží nebo upraví článek a vrátí jeho ID (jen redaktor – jinak RLS zápis odmítne). */
+export async function saveBlogPost(post: BlogPostInput): Promise<string> {
+  const supabase = getSupabaseBrowser();
+  if (!supabase) throw new Error("Supabase není nakonfigurovaný.");
+  const { id, ...row } = post;
+  const query = id
+    ? supabase.from("blog_posts").update(row).eq("id", id).select("id").single()
+    : supabase.from("blog_posts").insert(row).select("id").single();
+  const { data, error } = await query;
+  if (error) throw new Error(error.message);
+  return (data as { id: string }).id;
+}
