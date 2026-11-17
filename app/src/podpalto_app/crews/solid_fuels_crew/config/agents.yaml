@@ -1,6 +1,7 @@
 # Hierarchical crew: `research_manager` delegates, the others are specialists.
 # remote_tools = tool names served by the tools service (GET /tools).
-# The LLM comes from the MODEL env var unless an agent sets `llm:`.
+# LLM: MANAGER_MODEL for research_manager, AGENT_MODEL for the others (both fall back to
+# MODEL); an `llm:` key on an agent overrides them.
 # Keep task-specific inputs ({fuel_types}, ...) in tasks.yaml, not here.
 #
 # Context for every agent: the platform publishes a market overview for households

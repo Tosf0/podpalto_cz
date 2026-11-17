@@ -32,6 +32,8 @@ _FEED = Path(__file__).parents[2] / "tools" / "tests" / "fixtures" / "heureka_fe
 )
 
 os.environ.setdefault("MODEL", "anthropic/claude-opus-5-5")
+os.environ["MANAGER_MODEL"] = "anthropic/claude-opus-5-5"
+os.environ["AGENT_MODEL"] = "anthropic/claude-sonnet-5-5"
 os.environ.setdefault("ANTHROPIC_API_KEY", "test-key-not-used")
 os.environ.setdefault("CREWAI_DISABLE_TELEMETRY", "true")
 os.environ.setdefault("CREWAI_TRACING_ENABLED", "false")

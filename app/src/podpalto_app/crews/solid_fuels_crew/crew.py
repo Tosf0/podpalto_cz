@@ -11,6 +11,7 @@ from crewai import Agent, Crew, Process, Task
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.project import CrewBase, agent, crew, task
 
+from podpalto_app.crews.llm import agent_llm, manager_llm
 from podpalto_app.remote_tools import load_remote_tools
 
 
@@ -30,6 +31,7 @@ class SolidFuelsCrew:
             tools=load_remote_tools(tool_names),
             allow_delegation=False,
             verbose=True,
+            **agent_llm(config),
         )
 
     # --- specialists (one method per agent in agents.yaml) -----------------
@@ -57,10 +59,12 @@ class SolidFuelsCrew:
     # --- manager: deliberately not an @agent, it must not be in `agents` ---
 
     def research_manager(self) -> Agent:
+        config = self.agents_config["research_manager"]  # type: ignore[index]
         return Agent(
-            config=self.agents_config["research_manager"],  # type: ignore[index]
+            config=config,
             allow_delegation=True,
             verbose=True,
+            **manager_llm(config),
         )
 
     # --- tasks (one method per task in tasks.yaml, in execution order) -----

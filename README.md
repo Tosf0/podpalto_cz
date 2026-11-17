@@ -78,7 +78,7 @@ uv run uvicorn podpalto_app.api.app:app --port 8000   # 3. služba s agenty
 
 Sběr (`CollectionFlow`) projde 22 zdrojů z registru `tools/src/podpalto_tools/collect/sources.yaml`:
 deset e-shopů (feed nebo veřejné produktové stránky, bez LLM) a dvanáct ceníků uhelných skladů
-a prodejců dřeva (čte je extrakční crew, takže potřebuje `MODEL` a API klíč). Respektuje
+a prodejců dřeva (čte je extrakční crew, takže potřebuje `AGENT_MODEL` a API klíč). Respektuje
 `robots.txt` a trvá kolem 15 minut. Bez sběru cenové nástroje vrací chybu s návodem. Pravidla
 sběru a normalizace popisuje [tools/README.md](tools/README.md), flows a crews
 [app/README.md](app/README.md).

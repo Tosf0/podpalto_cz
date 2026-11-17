@@ -22,6 +22,7 @@ from crewai import Agent, Crew, Process, Task
 from crewai.agents.agent_builder.base_agent import BaseAgent
 from crewai.project import CrewBase, agent, crew, task
 
+from podpalto_app.crews.llm import agent_llm
 from podpalto_app.domain import SellerPriceExtractionList
 
 Guardrail = Callable[[Any], tuple[bool, Any]]
@@ -38,21 +39,22 @@ class ExtractionCrew:
     def __init__(self, guardrail: Guardrail | None = None) -> None:
         self._guardrail = guardrail
 
-    @agent
-    def price_list_extractor(self) -> Agent:
+    def _agent(self, name: str) -> Agent:
+        config = self.agents_config[name]  # type: ignore[index]
         return Agent(
-            config=self.agents_config["price_list_extractor"],  # type: ignore[index]
+            config=config,
             allow_delegation=False,
             verbose=True,
+            **agent_llm(config),
         )
 
     @agent
+    def price_list_extractor(self) -> Agent:
+        return self._agent("price_list_extractor")
+
+    @agent
     def market_qa_auditor(self) -> Agent:
-        return Agent(
-            config=self.agents_config["market_qa_auditor"],  # type: ignore[index]
-            allow_delegation=False,
-            verbose=True,
-        )
+        return self._agent("market_qa_auditor")
 
     @task
     def extract_price_rows(self) -> Task:

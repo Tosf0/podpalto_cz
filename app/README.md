@@ -104,8 +104,11 @@ uv run kickoff wood_pellets firewood --region "Kraj Vysočina" --focus "nejlevn�
 uv run plot                          # HTML diagramy obou flows
 ```
 
-`collect` potřebuje `MODEL` a API klíč jen kvůli ceníkům; feedy a Shoptet obchody LLM
-nepoužívají.
+`collect` potřebuje `AGENT_MODEL` (nebo `MODEL`) a API klíč jen kvůli ceníkům; feedy
+a Shoptet obchody LLM nepoužívají.
+
+Manažer a ostatní agenti mají každý svůj model (`MANAGER_MODEL`, `AGENT_MODEL`, viz
+Konfigurace). Klíč `llm:` u agenta v YAML má přednost před oběma.
 
 ## API
 
@@ -120,7 +123,9 @@ nepoužívají.
 
 | Proměnná | Výchozí | Význam |
 |---|---|---|
-| `MODEL` | — | LLM pro všechny agenty, např. `anthropic/claude-opus-5-5` |
+| `MANAGER_MODEL` | `MODEL` | LLM manažera crew pro report, např. `anthropic/claude-opus-5-5` |
+| `AGENT_MODEL` | `MODEL` | LLM všech ostatních agentů (specialisté, extrakční crew), např. `anthropic/claude-sonnet-5-5` |
+| `MODEL` | — | záložní LLM pro tu z dvou proměnných výše, která není vyplněná |
 | `ANTHROPIC_API_KEY` | — | klíč k LLM |
 | `TOOLS_API_URL` | `http://localhost:8001` | adresa služby `tools` |
 | `TOOLS_API_TIMEOUT_S` | `30` | časový limit volání nástroje |

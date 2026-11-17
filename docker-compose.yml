@@ -30,7 +30,7 @@ services:
       context: .
       dockerfile: app/Dockerfile
     env_file:
-      - path: .env # MODEL, ANTHROPIC_API_KEY
+      - path: .env # MANAGER_MODEL, AGENT_MODEL, MODEL, ANTHROPIC_API_KEY
         required: false
     environment:
       TOOLS_API_URL: http://tools:8001
