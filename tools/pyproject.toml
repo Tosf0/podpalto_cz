@@ -4,10 +4,16 @@ version = "0.1.0"
 description = "Tools service (FastAPI): data sources used by the podpalto.cz agents"
 requires-python = ">=3.10,<3.14"
 dependencies = [
+    "defusedxml>=0.7",  # feeds are untrusted XML
     "fastapi>=0.115",
+    "httpx>=0.28",
     "pydantic>=2.11",
+    "pyyaml>=6.0",
     "uvicorn>=0.30",
 ]
+
+[project.scripts]
+podpalto-collect = "podpalto_tools.collect.cli:main"
 
 [build-system]
 requires = ["hatchling"]

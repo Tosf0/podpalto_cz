@@ -28,18 +28,19 @@ class Article(BaseModel):
     url: str
 
 
-_F, _B, _C = FuelType.FIREWOOD, FuelType.BRIQUETTES, FuelType.COAL
+_F, _B, _C = FuelType.FIREWOOD, FuelType.WOOD_BRIQUETTES, FuelType.BROWN_COAL
+_P, _K = FuelType.WOOD_PELLETS, FuelType.COKE
 _ROWS: list[tuple[str, str, Topic, list[FuelType], str]] = [
     ("Stricter emission limits proposed for household solid-fuel boilers", "2026-10-21",
-     Topic.REGULATION, [_C, _F],
+     Topic.REGULATION, [_C, _K, _F],
      "A draft amendment would tighten emission classes for small boilers and stoves; "
      "older coal boilers would face earlier phase-out deadlines."),
     ("Boiler replacement subsidy round reopens with higher support for biomass", "2026-09-30",
-     Topic.SUBSIDIES, [_F, _B],
+     Topic.SUBSIDIES, [_F, _B, _P],
      "The new subsidy call favours switching from coal to biomass boilers, which is "
-     "expected to raise demand for wood briquettes and firewood."),
+     "expected to raise demand for pellets, wood briquettes and firewood."),
     ("Coal retail prices edge up before the heating season", "2026-10-06",
-     Topic.PRICES, [_C],
+     Topic.PRICES, [_C, _K],
      "Retailers report brown coal prices about 3 % higher year on year, citing "
      "emission allowance costs and lower domestic output."),
     ("Briquette prices stabilise after two volatile seasons", "2026-09-12",
@@ -47,9 +48,9 @@ _ROWS: list[tuple[str, str, Topic, list[FuelType], str]] = [
      "Wholesale prices of hardwood briquettes are flat year on year; sellers compete "
      "mainly on free delivery and pallet discounts."),
     ("Sawmill output drop tightens supply of sawdust for briquette makers", "2026-08-25",
-     Topic.SUPPLY, [_B],
+     Topic.SUPPLY, [_B, _P],
      "Lower construction activity reduced sawmill residues; smaller producers warn "
-     "of limited stock of RUF briquettes in peak months."),
+     "of limited stock of pellets and RUF briquettes in peak months."),
     ("Bark beetle salvage logging ends, firewood supply normalises", "2026-07-14",
      Topic.SUPPLY, [_F],
      "With salvage logging over, spruce firewood is less abundant and its discount "
@@ -59,9 +60,9 @@ _ROWS: list[tuple[str, str, Topic, list[FuelType], str]] = [
      "Graded household coal from the quarry will be available for fewer seasons than "
      "planned; retailers are looking for import alternatives."),
     ("Reduced VAT rate on firewood under review", "2026-05-18",
-     Topic.REGULATION, [_F, _B],
+     Topic.REGULATION, [_F, _B, _P],
      "The finance ministry is reviewing reduced VAT rates on heating fuels; a change "
-     "would directly affect consumer prices of firewood and briquettes."),
+     "would directly affect consumer prices of firewood, briquettes and pellets."),
 ]  # fmt: skip
 
 ARTICLES: list[Article] = [

@@ -1,25 +1,34 @@
 # podpalto_cz
 
-Projekt z oblasti **Competitive Intelligence** (analýza konkurence) pro **podpalto.cz**
+Přehled trhu tuhých paliv pro koncové zákazníky: platforma **podpalto.cz**
 
 ## O projektu
 
-Cílem projektu je sbírat, zpracovat a vyhodnotit informace o konkurenci a trhu tak, aby z nich vznikla využitelná doporučení pro podpalto.cz.
+podpalto.cz žádná paliva neprodává. Cílem je dát domácnostem nezávislý přehled: co které
+palivo stojí, kde je nejlevnější v přepočtu na jednotku a na kWh a co se na trhu děje.
 
-Systém sbírá data o trhu tuhých paliv (dřevo, brikety, uhlí) z více zdrojů a tým AI agentů z nich sestaví report s doporučeními.
+Systém sbírá data o trhu tuhých paliv (hnědé a černé uhlí, koks, uhelné brikety, dřevěné
+pelety a brikety, palivové dřevo) z e-shopů, uhelných skladů a prodejců dřeva a tým AI agentů
+z nich sestaví přehled pro kupující. Všechna čísla počítá obyčejný kód; agenti ceníky čtou
+(citují), kontrolují, porovnávají a komentují.
 
-> Tuto sekci doplň: konkrétní cíle, zkoumané konkurenty a použité metody.
+> Tuto sekci doplň: konkrétní cíle a rozsah sledovaných prodejců.
 
 ## Architektura
 
-Monorepo se třemi částmi. Backend tvoří dvě samostatné služby (dva kontejnery), které spolu
-mluví jen přes HTTP. Multiagentní systém je postavený na frameworku
-[CrewAI](https://docs.crewai.com) s hierarchickým procesem (manažer deleguje na specialisty).
+Architektura vychází z rešerše „Zdroje dat o pevných palivech“ (PDF, sekce 4): deterministický
+**CrewAI Flow** navenek, specializované **Crews** uvnitř kroků a striktní **Pydantic**
+kontrakt (`SolidFuelPriceRecord`). Backend tvoří dvě samostatné služby (dva kontejnery),
+které spolu mluví jen přes HTTP.
 
 ```
-frontend ──HTTP──▶ app :8000 ──────────────────────HTTP──▶ tools :8001 ──▶ zdroje dat
-                   FastAPI → flow → hierarchický crew      FastAPI, jeden modul = jeden zdroj
-                   (manažer → specialisté → RemoteTool)    (zatím mock data)
+frontend ──HTTP──▶ app :8000 ─────────────────────────────HTTP──▶ tools :8001 ──▶ weby prodejců
+                   CollectionFlow: @router podle druhu zdroje      robots.txt, stahování,
+                     ├ feed / Shoptet ─────────────────────────▶   ověření citací, normalizace
+                     └ ceník ─▶ ExtractionCrew (extraktor →         (Kč/t, Kč/prms, Kč/kWh),
+                                QA auditor, cituje, nepočítá)      SQLite, nástroje pro agenty
+                   MarketResearchFlow: hierarchická crew ──────▶   (ceny skutečné, zbytek mock)
+                     (manažer → specialisté → RemoteTool)
 ```
 
 ```
@@ -31,12 +40,13 @@ podpalto_cz/
 ├── app/                 # služba s agenty: API, flows, crews, klient nástrojů  → app/README.md
 ├── tools/               # služba s nástroji: zdroje dat pro agenty            → tools/README.md
 ├── frontend/            # uživatelské rozhraní (framework zatím nevybrán)     → frontend/README.md
+├── data/                # databáze snímků a kopie feedů služby tools (neverzuje se)
 └── outputs/             # vygenerované reporty (neverzují se)
 ```
 
 | Část | Balíček | Port | Závislosti |
 |---|---|---|---|
-| `tools/` | `podpalto_tools` | 8001 | FastAPI (bez CrewAI) |
+| `tools/` | `podpalto_tools` | 8001 | FastAPI, SQLite (bez CrewAI) |
 | `app/` | `podpalto_app` | 8000 | CrewAI, FastAPI; na `tools` jen přes `TOOLS_API_URL` |
 | `frontend/` | — | — | jen API služby `app` |
 
@@ -62,14 +72,23 @@ copy .env.example .env   # Windows (macOS/Linux: cp) a doplň ANTHROPIC_API_KEY
 
 ```bash
 uv run uvicorn podpalto_tools.api:app --port 8001     # 1. služba s nástroji
-uv run uvicorn podpalto_app.api.app:app --port 8000   # 2. služba s agenty
+uv run collect                                        # 2. sběr cen do ./data (stačí občas)
+uv run uvicorn podpalto_app.api.app:app --port 8000   # 3. služba s agenty
 ```
+
+Sběr (`CollectionFlow`) projde 22 zdrojů z registru `tools/src/podpalto_tools/collect/sources.yaml`:
+deset e-shopů (feed nebo veřejné produktové stránky, bez LLM) a dvanáct ceníků uhelných skladů
+a prodejců dřeva (čte je extrakční crew, takže potřebuje `MODEL` a API klíč). Respektuje
+`robots.txt` a trvá kolem 15 minut. Bez sběru cenové nástroje vrací chybu s návodem. Pravidla
+sběru a normalizace popisuje [tools/README.md](tools/README.md), flows a crews
+[app/README.md](app/README.md).
 
 Interaktivní dokumentace API: <http://localhost:8000/docs> a <http://localhost:8001/docs>.
 Průzkum se spouští přes `POST /runs` (nejpohodlněji tlačítkem „Try it out“ v `/docs`):
 
 ```json
-{ "fuel_types": ["briquettes", "coal"], "focus": "pricing before winter" }
+{ "fuel_types": ["wood_pellets", "wood_briquettes"], "region": "Kraj Vysočina",
+  "focus": "cheapest heat per kWh this winter" }
 ```
 
 Odpověď obsahuje `run_id`; stav a hotový report vrací `GET /runs/{run_id}`.
@@ -77,13 +96,14 @@ Odpověď obsahuje `run_id`; stav a hotový report vrací `GET /runs/{run_id}`.
 Bez API jde jeden průzkum spustit i přímo (služba `tools` musí běžet):
 
 ```bash
-uv run kickoff briquettes coal --focus "pricing before winter"
+uv run kickoff wood_pellets wood_briquettes --focus "cheapest heat per kWh this winter"
 ```
 
 ### Docker
 
 ```bash
-docker compose up --build   # tools na :8001, app na :8000, reporty do ./outputs
+docker compose up --build                  # tools na :8001, app na :8000, reporty do ./outputs
+docker compose exec app collect            # první spuštění: sběr cen do ./data
 ```
 
 ### Vývoj

@@ -17,17 +17,24 @@ class Indicator(str, Enum):
 
 _FIRST_YEAR = 2021
 _PRICE_UNITS = {
-    FuelType.FIREWOOD: "CZK per prms incl. VAT",
-    FuelType.BRIQUETTES: "CZK per tonne incl. VAT",
-    FuelType.COAL: "CZK per tonne incl. VAT",
+    fuel: "CZK per prms incl. VAT" if fuel is FuelType.FIREWOOD else "CZK per tonne incl. VAT"
+    for fuel in FuelType
 }
 _SERIES: dict[tuple[Indicator, FuelType], list[float]] = {
     (Indicator.AVG_RETAIL_PRICE, FuelType.FIREWOOD): [1650, 2600, 2450, 2300, 2350],
-    (Indicator.AVG_RETAIL_PRICE, FuelType.BRIQUETTES): [5900, 11200, 9400, 8700, 8900],
-    (Indicator.AVG_RETAIL_PRICE, FuelType.COAL): [4800, 8900, 7600, 6900, 7100],
+    (Indicator.AVG_RETAIL_PRICE, FuelType.WOOD_BRIQUETTES): [5900, 11200, 9400, 8700, 8900],
+    (Indicator.AVG_RETAIL_PRICE, FuelType.WOOD_PELLETS): [6400, 13800, 10900, 9600, 9900],
+    (Indicator.AVG_RETAIL_PRICE, FuelType.BROWN_COAL): [4800, 8900, 7600, 6900, 7100],
+    (Indicator.AVG_RETAIL_PRICE, FuelType.BLACK_COAL): [7200, 12900, 10800, 9900, 10100],
+    (Indicator.AVG_RETAIL_PRICE, FuelType.COAL_BRIQUETTES): [5600, 9800, 8600, 8000, 8200],
+    (Indicator.AVG_RETAIL_PRICE, FuelType.COKE): [9800, 16500, 14200, 13100, 13400],
     (Indicator.HOUSEHOLD_CONSUMPTION, FuelType.FIREWOOD): [100, 108, 104, 101, 99],
-    (Indicator.HOUSEHOLD_CONSUMPTION, FuelType.BRIQUETTES): [100, 121, 112, 106, 104],
-    (Indicator.HOUSEHOLD_CONSUMPTION, FuelType.COAL): [100, 96, 88, 81, 74],
+    (Indicator.HOUSEHOLD_CONSUMPTION, FuelType.WOOD_BRIQUETTES): [100, 121, 112, 106, 104],
+    (Indicator.HOUSEHOLD_CONSUMPTION, FuelType.WOOD_PELLETS): [100, 118, 124, 129, 133],
+    (Indicator.HOUSEHOLD_CONSUMPTION, FuelType.BROWN_COAL): [100, 96, 88, 81, 74],
+    (Indicator.HOUSEHOLD_CONSUMPTION, FuelType.BLACK_COAL): [100, 95, 87, 80, 75],
+    (Indicator.HOUSEHOLD_CONSUMPTION, FuelType.COAL_BRIQUETTES): [100, 97, 90, 84, 79],
+    (Indicator.HOUSEHOLD_CONSUMPTION, FuelType.COKE): [100, 94, 85, 79, 73],
 }
 _LAST_YEAR = _FIRST_YEAR + len(next(iter(_SERIES.values()))) - 1
 

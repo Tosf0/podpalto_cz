@@ -73,7 +73,7 @@ TOOL = ToolSpec(
     name="page_text",
     description=(
         "Downloads a live web page and returns its visible text (no HTML). Use it to "
-        "read a specific competitor page when you already know its URL."
+        "read a specific seller or news page when you already know its URL."
     ),
     input_model=PageTextInput,
     output_model=PageTextOutput,

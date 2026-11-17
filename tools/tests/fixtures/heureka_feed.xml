@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Synthetic feed of a fictional shop. It reproduces the ways real Shoptet feeds
+     state (or hide) the package size; no real seller data is stored in the repository. -->
+<SHOP>
+  <SHOPITEM>
+    <ITEM_ID>101</ITEM_ID>
+    <ITEMGROUP_ID>10</ITEMGROUP_ID>
+    <PRODUCTNAME>Dřevěné pelety ENplus A1 - pytel 15 kg velikost palety pelet: paleta 1050 kg (70 x pytel 15 kg)</PRODUCTNAME>
+    <URL>https://demopaliva.example/pelety-a1/?variantId=101</URL>
+    <PRICE_VAT>13650,00</PRICE_VAT>
+    <CATEGORYTEXT>Pevná paliva | Dřevěné pelety</CATEGORYTEXT>
+    <DELIVERY_DATE>0</DELIVERY_DATE>
+    <DELIVERY><DELIVERY_ID>VLASTNI_PREPRAVA</DELIVERY_ID><DELIVERY_PRICE>0</DELIVERY_PRICE></DELIVERY>
+    <PARAM><PARAM_NAME>velikost palety pelet</PARAM_NAME><VAL>paleta 1050 kg (70 x pytel 15 kg)</VAL></PARAM>
+    <PARAM><PARAM_NAME>Výhřevnost</PARAM_NAME><VAL>≥ 17,3 MJ / Kg</VAL></PARAM>
+  </SHOPITEM>
+  <SHOPITEM>
+    <ITEM_ID>102</ITEM_ID>
+    <ITEMGROUP_ID>10</ITEMGROUP_ID>
+    <PRODUCTNAME>Dřevěné pelety ENplus A1 - pytel 15 kg velikost palety pelet: pytel 15 kg</PRODUCTNAME>
+    <URL>https://demopaliva.example/pelety-a1/?variantId=102</URL>
+    <PRICE_VAT>198,00</PRICE_VAT>
+    <CATEGORYTEXT>Pevná paliva | Dřevěné pelety</CATEGORYTEXT>
+    <DELIVERY_DATE>3</DELIVERY_DATE>
+    <PARAM><PARAM_NAME>velikost palety pelet</PARAM_NAME><VAL>pytel 15 kg</VAL></PARAM>
+  </SHOPITEM>
+  <SHOPITEM>
+    <ITEM_ID>103</ITEM_ID>
+    <PRODUCTNAME>Dřevěné pelety Big Bag</PRODUCTNAME>
+    <URL>https://demopaliva.example/pelety-big-bag/</URL>
+    <PRICE_VAT>14890,00</PRICE_VAT>
+    <CATEGORYTEXT>Pevná paliva | Dřevěné pelety</CATEGORYTEXT>
+    <PARAM><PARAM_NAME>Objemová hmotnost</PARAM_NAME><VAL>&gt; 650 kg/rm (6 tun v 8 m³ skladovacího prostoru)</VAL></PARAM>
+    <PARAM><PARAM_NAME>Výhřevnost</PARAM_NAME><VAL>~ 4,9 kWh/kg (2 kg dřevěných pelet = cca 1 l topného oleje)</VAL></PARAM>
+  </SHOPITEM>
+  <SHOPITEM>
+    <ITEM_ID>201</ITEM_ID>
+    <PRODUCTNAME>Dřevěné brikety RUF BUK</PRODUCTNAME>
+    <URL>https://demopaliva.example/brikety-ruf-buk/</URL>
+    <PRICE_VAT>10080,00</PRICE_VAT>
+    <CATEGORYTEXT>Dřevěné brikety</CATEGORYTEXT>
+    <DELIVERY_DATE>0</DELIVERY_DATE>
+    <DELIVERY><DELIVERY_ID>VLASTNI_PREPRAVA</DELIVERY_ID><DELIVERY_PRICE>1399,00</DELIVERY_PRICE></DELIVERY>
+    <DELIVERY><DELIVERY_ID>GEIS</DELIVERY_ID><DELIVERY_PRICE>990,00</DELIVERY_PRICE></DELIVERY>
+    <PARAM><PARAM_NAME>Balení</PARAM_NAME><VAL>84 ks po 10 kg</VAL></PARAM>
+    <PARAM><PARAM_NAME>Výhřevnost</PARAM_NAME><VAL>17,5 MJ/kg</VAL></PARAM>
+    <PARAM><PARAM_NAME>Paleta</PARAM_NAME><VAL>nevratná 100 x 120 cm</VAL></PARAM>
+  </SHOPITEM>
+  <SHOPITEM>
+    <ITEM_ID>202</ITEM_ID>
+    <PRODUCTNAME>Brikety Pini Kay extra tvrdé</PRODUCTNAME>
+    <URL>https://demopaliva.example/brikety-pini-kay/</URL>
+    <PRICE_VAT>11520,00</PRICE_VAT>
+    <CATEGORYTEXT>Heureka.cz | Topení | Tuhá paliva</CATEGORYTEXT>
+    <DELIVERY_DATE>1</DELIVERY_DATE>
+    <PARAM><PARAM_NAME>Balení v 10kg PE foliích - na paletě</PARAM_NAME><VAL>96ks</VAL></PARAM>
+    <PARAM><PARAM_NAME>Výhřevnost</PARAM_NAME><VAL>18,5 - .31 kWh/Kg</VAL></PARAM>
+  </SHOPITEM>
+  <SHOPITEM>
+    <ITEM_ID>203</ITEM_ID>
+    <PRODUCTNAME>Dřevěné brikety RUF 10 kg</PRODUCTNAME>
+    <URL>https://demopaliva.example/brikety-ruf-10kg/</URL>
+    <PRICE_VAT>9990,00</PRICE_VAT>
+    <CATEGORYTEXT>Dřevěné brikety</CATEGORYTEXT>
+    <DELIVERY_DATE>0</DELIVERY_DATE>
+  </SHOPITEM>
+  <SHOPITEM>
+    <ITEM_ID>301</ITEM_ID>
+    <PRODUCTNAME>Hnědé uhlí ořech 2</PRODUCTNAME>
+    <URL>https://demopaliva.example/hnede-uhli-orech-2/</URL>
+    <PRICE_VAT>9600,00</PRICE_VAT>
+    <CATEGORYTEXT>Uhlí a uhelné brikety</CATEGORYTEXT>
+    <DELIVERY_DATE>0</DELIVERY_DATE>
+    <PARAM><PARAM_NAME>Balení</PARAM_NAME><VAL>60 ks po 20 kg</VAL></PARAM>
+    <PARAM><PARAM_NAME>Výhřevnost</PARAM_NAME><VAL>17 - 19 Mj/kg</VAL></PARAM>
+  </SHOPITEM>
+  <SHOPITEM>
+    <ITEM_ID>302</ITEM_ID>
+    <PRODUCTNAME>Brikety Rekord - paleta 900 kg</PRODUCTNAME>
+    <URL>https://demopaliva.example/brikety-rekord/</URL>
+    <PRICE_VAT>8910,00</PRICE_VAT>
+    <CATEGORYTEXT>Uhlí a uhelné brikety</CATEGORYTEXT>
+    <DELIVERY_DATE>0</DELIVERY_DATE>
+  </SHOPITEM>
+  <SHOPITEM>
+    <ITEM_ID>401</ITEM_ID>
+    <PRODUCTNAME>Otopový koks ořech 1 - pytel 25 kg</PRODUCTNAME>
+    <URL>https://demopaliva.example/koks-orech-1/</URL>
+    <PRICE_VAT>450,00</PRICE_VAT>
+    <CATEGORYTEXT>Uhlí a uhelné brikety</CATEGORYTEXT>
+    <DELIVERY_DATE>0</DELIVERY_DATE>
+  </SHOPITEM>
+  <SHOPITEM>
+    <ITEM_ID>501</ITEM_ID>
+    <ITEMGROUP_ID>50</ITEMGROUP_ID>
+    <PRODUCTNAME>Palivové dřevo tvrdé - polínka ≤ 33cm objem dřeva: sypaný 1 m3</PRODUCTNAME>
+    <URL>https://demopaliva.example/palivove-drevo-tvrde/?variantId=501</URL>
+    <PRICE_VAT>1890,00</PRICE_VAT>
+    <CATEGORYTEXT>Pevná paliva volně ložená | Palivové dřevo</CATEGORYTEXT>
+    <PARAM><PARAM_NAME>objem dřeva</PARAM_NAME><VAL>sypaný 1 m3</VAL></PARAM>
+  </SHOPITEM>
+  <SHOPITEM>
+    <ITEM_ID>502</ITEM_ID>
+    <ITEMGROUP_ID>50</ITEMGROUP_ID>
+    <PRODUCTNAME>Palivové dřevo tvrdé - polínka ≤ 33cm objem dřeva: klec 1,2 m3</PRODUCTNAME>
+    <URL>https://demopaliva.example/palivove-drevo-tvrde/?variantId=502</URL>
+    <PRICE_VAT>2760,00</PRICE_VAT>
+    <CATEGORYTEXT>Pevná paliva volně ložená | Palivové dřevo</CATEGORYTEXT>
+    <PARAM><PARAM_NAME>objem dřeva</PARAM_NAME><VAL>klec 1,2 m3</VAL></PARAM>
+  </SHOPITEM>
+  <SHOPITEM>
+    <ITEM_ID>503</ITEM_ID>
+    <PRODUCTNAME>Palivové dřevo měkké - PackFix 1,6 m3</PRODUCTNAME>
+    <URL>https://demopaliva.example/palivove-drevo-mekke/</URL>
+    <PRICE_VAT>3184,00</PRICE_VAT>
+    <CATEGORYTEXT>Pevná paliva volně ložená | Palivové dřevo</CATEGORYTEXT>
+  </SHOPITEM>
+  <SHOPITEM>
+    <ITEM_ID>504</ITEM_ID>
+    <PRODUCTNAME>Buk štípaný v kleci skládaný 1x1x2m (2 PRMR)</PRODUCTNAME>
+    <URL>https://demopaliva.example/buk-stipany/</URL>
+    <PRICE_VAT>9990,00</PRICE_VAT>
+    <CATEGORYTEXT>Palivové a stavební dřevo</CATEGORYTEXT>
+    <DELIVERY_DATE>1</DELIVERY_DATE>
+  </SHOPITEM>
+  <SHOPITEM>
+    <ITEM_ID>505</ITEM_ID>
+    <PRODUCTNAME>Buková kulatina</PRODUCTNAME>
+    <URL>https://demopaliva.example/bukova-kulatina/</URL>
+    <PRICE_VAT>2800,00</PRICE_VAT>
+    <CATEGORYTEXT>PALIVOVÉ DŘEVO</CATEGORYTEXT>
+  </SHOPITEM>
+  <SHOPITEM>
+    <ITEM_ID>901</ITEM_ID>
+    <PRODUCTNAME>Dárkový poukaz na nákup pelet a briket. hodnota poukazu: 2 000 Kč</PRODUCTNAME>
+    <URL>https://demopaliva.example/poukaz/</URL>
+    <PRICE_VAT>2000,00</PRICE_VAT>
+    <CATEGORYTEXT>Dřevěné pelety</CATEGORYTEXT>
+  </SHOPITEM>
+  <SHOPITEM>
+    <ITEM_ID>902</ITEM_ID>
+    <PRODUCTNAME>Střešní lať 40x60x4000 mm</PRODUCTNAME>
+    <URL>https://demopaliva.example/lat/</URL>
+    <PRICE_VAT>16,00</PRICE_VAT>
+    <CATEGORYTEXT>Palivové a stavební dřevo</CATEGORYTEXT>
+  </SHOPITEM>
+  <SHOPITEM>
+    <ITEM_ID>903</ITEM_ID>
+    <PRODUCTNAME>Dřevěný podpalovač 32 ks</PRODUCTNAME>
+    <URL>https://demopaliva.example/podpalovac/</URL>
+    <PRICE_VAT>59,00</PRICE_VAT>
+    <CATEGORYTEXT>Podpalovače</CATEGORYTEXT>
+  </SHOPITEM>
+  <SHOPITEM>
+    <ITEM_ID>904</ITEM_ID>
+    <PRODUCTNAME>Položka bez ceny - pelety 15 kg</PRODUCTNAME>
+    <URL>https://demopaliva.example/bez-ceny/</URL>
+    <CATEGORYTEXT>Dřevěné pelety</CATEGORYTEXT>
+  </SHOPITEM>
+</SHOP>

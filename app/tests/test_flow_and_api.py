@@ -33,17 +33,23 @@ def stub_crew(monkeypatch, tmp_path):
 
 
 def test_flow_passes_inputs_and_saves_report(stub_crew):
-    state = run_market_research([FuelType.COAL, FuelType.BRIQUETTES], focus="pricing")
-    assert StubCrew.inputs == {"fuel_types": "coal, briquettes", "region": "CZ", "focus": "pricing"}
+    state = run_market_research([FuelType.BROWN_COAL, FuelType.WOOD_BRIQUETTES], focus="pricing")
+    assert StubCrew.inputs == {
+        "fuel_types": "brown_coal, wood_briquettes",
+        "region": "CZ",
+        "focus": "pricing",
+    }
     assert state.report == "# Stub report"
-    saved = list(stub_crew.glob("*_coal-briquettes.md"))
+    saved = list(stub_crew.glob("*_brown_coal-wood_briquettes.md"))
     assert [str(path) for path in saved] == [state.report_path]
     assert saved[0].read_text(encoding="utf-8") == "# Stub report"
 
 
 def test_flow_defaults_to_all_fuel_types(stub_crew):
     run_market_research()
-    assert StubCrew.inputs["fuel_types"] == "firewood, briquettes, coal"
+    assert StubCrew.inputs["fuel_types"] == (
+        "brown_coal, black_coal, coke, coal_briquettes, wood_pellets, wood_briquettes, firewood"
+    )
     assert StubCrew.inputs["focus"] == "none"
 
 
@@ -60,7 +66,7 @@ def test_api_run_lifecycle():
     client = TestClient(create_app(runner=runner))
     assert client.get("/health").json() == {"status": "ok", "tools_service": "ok"}
 
-    created = client.post("/runs", json={"fuel_types": ["coal"], "focus": "prices"})
+    created = client.post("/runs", json={"fuel_types": ["brown_coal"], "focus": "prices"})
     assert created.status_code == 202
     run_id = created.json()["run_id"]
 
@@ -68,7 +74,7 @@ def test_api_run_lifecycle():
     run = client.get(f"/runs/{run_id}").json()
     assert run["status"] == "completed"
     assert run["report"] == "# Report"
-    assert run["request"] == {"fuel_types": ["coal"], "region": "CZ", "focus": "prices"}
+    assert run["request"] == {"fuel_types": ["brown_coal"], "region": "CZ", "focus": "prices"}
 
     listed = client.get("/runs").json()
     assert [item["run_id"] for item in listed] == [run_id]
@@ -84,11 +90,11 @@ def test_api_records_failed_run():
     run = client.get(f"/runs/{run_id}").json()
     assert run["status"] == "failed"
     assert run["error"] == "LLM quota exceeded"
-    assert run["request"]["fuel_types"] == ["firewood", "briquettes", "coal"]
+    assert run["request"]["fuel_types"] == [fuel.value for fuel in FuelType]
 
 
 def test_api_validation_and_not_found():
     client = TestClient(create_app(runner=lambda request: MarketResearchState()))
-    assert client.post("/runs", json={"fuel_types": ["pellets"]}).status_code == 422
+    assert client.post("/runs", json={"fuel_types": ["peat"]}).status_code == 422
     assert client.post("/runs", json={"fuel_types": []}).status_code == 422
     assert client.get("/runs/missing").status_code == 404

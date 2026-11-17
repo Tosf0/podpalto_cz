@@ -48,6 +48,33 @@ class ToolsClient:
     def call(self, name: str, arguments: dict[str, Any]) -> Any:
         return self._request("POST", f"/tools/{name}", json=arguments)
 
+    # --- collection steps used by the CollectionFlow -------------------------------------
+
+    def sources(self) -> list[dict[str, Any]]:
+        """Registry rows: {source: {...}, entry_url, last_snapshot}."""
+        return self._request("GET", "/sources")
+
+    def collect_source(self, source_id: str) -> dict[str, Any]:
+        """Collect one feed / Shoptet source. Shops read page by page take minutes."""
+        return self._request(
+            "POST", f"/sources/{source_id}/collect", timeout=settings.collect_timeout_s
+        )
+
+    def price_pages(self, source_id: str) -> dict[str, Any]:
+        return self._request(
+            "POST", f"/sources/{source_id}/pages", timeout=settings.collect_timeout_s
+        )
+
+    def submit_extraction(
+        self, source_id: str, pages: list[dict[str, Any]], *, dry_run: bool = False
+    ) -> dict[str, Any]:
+        return self._request(
+            "POST",
+            f"/sources/{source_id}/extraction",
+            params={"dry_run": str(dry_run).lower()},
+            json={"pages": pages},
+        )
+
 
 _default_client: ToolsClient | None = None
 

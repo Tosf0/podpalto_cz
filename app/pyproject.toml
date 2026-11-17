@@ -1,7 +1,7 @@
 [project]
 name = "podpalto-app"
 version = "0.1.0"
-description = "CrewAI agents, crews, flows and the public API for podpalto.cz market intelligence"
+description = "CrewAI agents, crews, flows and the public API for the podpalto.cz market overview"
 requires-python = ">=3.10,<3.14"
 dependencies = [
     "crewai[anthropic]>=1.15,<2",
@@ -11,6 +11,7 @@ dependencies = [
 ]
 
 [project.scripts]
+collect = "podpalto_app.main:collect"
 kickoff = "podpalto_app.main:kickoff"
 plot = "podpalto_app.main:plot"
 

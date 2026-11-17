@@ -42,6 +42,9 @@ desktop.ini
 # *.csv
 # *.xlsx
 
+# Collected data of the tools service (snapshot database, raw feed copies)
+data/
+
 # Generated reports
 outputs/*
 !outputs/.gitkeep

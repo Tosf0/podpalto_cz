@@ -1,12 +1,18 @@
 # Two backend containers that talk only over HTTP:
 #   app   (CrewAI agents + public API, :8000)  --->  tools (data sources, :8001)
 # Start: docker compose up --build
+# First run: fill the snapshot database with the CollectionFlow (feeds, shops, price lists)
+#   docker compose exec app collect                (progress: GET http://localhost:8001/sources)
 
 services:
   tools:
     build:
       context: .
       dockerfile: tools/Dockerfile
+    environment:
+      TOOLS_DATA_DIR: /data
+    volumes:
+      - ./data:/data # snapshot database + raw feed copies survive container restarts
     ports:
       - "8001:8001" # published only for debugging (http://localhost:8001/docs)
     healthcheck:

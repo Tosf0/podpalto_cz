@@ -7,5 +7,6 @@
 .ruff_cache
 **/tests
 outputs
+data
 frontend
 **/node_modules

@@ -1,4 +1,4 @@
-"""MOCK source: customer reviews of competitor sellers."""
+"""MOCK source: customer reviews of solid-fuel sellers."""
 
 from __future__ import annotations
 
@@ -24,7 +24,8 @@ class SellerReviews(BaseModel):
     samples: list[Review]
 
 
-_F, _B, _C = FuelType.FIREWOOD, FuelType.BRIQUETTES, FuelType.COAL
+_F, _B, _C = FuelType.FIREWOOD, FuelType.WOOD_BRIQUETTES, FuelType.BROWN_COAL
+_P, _K = FuelType.WOOD_PELLETS, FuelType.COKE
 SELLERS: list[SellerReviews] = [
     SellerReviews(
         seller="MockPaliva",
@@ -54,6 +55,8 @@ SELLERS: list[SellerReviews] = [
                    text="Waited almost four weeks in October, nobody answered e-mails."),
             Review(rating=4, fuel_type=_C, published="2026-08-19",
                    text="Bagged coal is clean and easy to store."),
+            Review(rating=5, fuel_type=_P, published="2026-09-25",
+                   text="Pellets with almost no dust, the boiler runs without trouble."),
         ],
     ),
     SellerReviews(
@@ -82,6 +85,10 @@ SELLERS: list[SellerReviews] = [
                    text="Ordered oak shown as available, then told it was out of stock."),
             Review(rating=3, fuel_type=_C, published="2026-08-30",
                    text="Good price for hard coal, several bags arrived torn."),
+            Review(rating=4, fuel_type=_K, published="2026-09-08",
+                   text="Coke is hard to find elsewhere, delivery took two weeks."),
+            Review(rating=3, fuel_type=_P, published="2026-10-05",
+                   text="Cheap pellets, but more ash than the certified ones."),
         ],
     ),
 ]  # fmt: skip
@@ -115,7 +122,7 @@ def run(params: CustomerReviewsInput) -> CustomerReviewsOutput:
 TOOL = ToolSpec(
     name="customer_reviews",
     description=(
-        "Customer reviews of competitor sellers: average rating, review count, recurring "
+        "Customer reviews of solid-fuel sellers: average rating, review count, recurring "
         "positive and negative themes and sample reviews. Ratings and themes cover the "
         "whole seller; only the samples are filtered by fuel type."
     ),

@@ -1,111 +1,183 @@
-"""MOCK source: product listings of competitor e-shops.
+"""Seller prices of solid fuels, read from the snapshot database.
 
-Replace ``_CATALOG`` / ``run`` with real scraping or a feed import later; the
-input and output models are the contract the agents rely on.
+The data is collected by ``podpalto_tools.collect`` (feeds, product pages, price lists).
+This module only queries it: nothing is fetched and no price is computed here.
 """
 
 from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from podpalto_tools.registry import ToolSpec
-from podpalto_tools.schemas import FuelType, ToolResult
+from podpalto_tools.collect import SolidFuelPriceRecord, Store, enabled_sources
+from podpalto_tools.registry import ToolError, ToolSpec
+from podpalto_tools.schemas import WEIGHT_FUELS, FuelType, Region, ToolResult
+from podpalto_tools.settings import get_settings
 
-# (sku, seller, fuel, name, package, quantity, unit, price, delivery fee, in stock)
-_ROWS: list[tuple[str, str, FuelType, str, str, float, str, int, int, bool]] = [
-    ("MP-FW-01", "MockPaliva", FuelType.FIREWOOD, "Beech firewood 33 cm, kiln-dried",
-     "pallet 1 prms", 1.0, "prms", 2890, 490, True),
-    ("MP-FW-02", "MockPaliva", FuelType.FIREWOOD, "Spruce firewood 33 cm, air-dried",
-     "pallet 1 prms", 1.0, "prms", 1990, 490, True),
-    ("DT-FW-01", "DemoTopivo", FuelType.FIREWOOD, "Beech firewood 25 cm, kiln-dried",
-     "big bag 1.5 prms", 1.5, "prms", 4470, 0, True),
-    ("SF-FW-01", "SampleFuel", FuelType.FIREWOOD, "Oak firewood 33 cm, air-dried",
-     "pallet 1 prms", 1.0, "prms", 3150, 590, False),
-    ("MP-BR-01", "MockPaliva", FuelType.BRIQUETTES, "RUF hardwood briquettes",
-     "pallet 960 kg", 0.96, "t", 8540, 690, True),
-    ("DT-BR-01", "DemoTopivo", FuelType.BRIQUETTES, "RUF beech briquettes",
-     "pallet 960 kg", 0.96, "t", 8990, 0, True),
-    ("TB-BR-01", "TestBrikety", FuelType.BRIQUETTES, "Nestro cylindrical briquettes",
-     "pallet 900 kg", 0.90, "t", 8370, 590, True),
-    ("TB-BR-02", "TestBrikety", FuelType.BRIQUETTES, "Pini-Kay briquettes",
-     "pallet 960 kg", 0.96, "t", 10460, 590, False),
-    ("SF-BR-01", "SampleFuel", FuelType.BRIQUETTES, "RUF softwood briquettes",
-     "pallet 960 kg", 0.96, "t", 7870, 590, True),
-    ("MP-CO-01", "MockPaliva", FuelType.COAL, "Brown coal, nut 2, bulk",
-     "bulk 1 t", 1.0, "t", 6490, 890, True),
-    ("DT-CO-01", "DemoTopivo", FuelType.COAL, "Brown coal, nut 1, bagged 25 kg",
-     "pallet 1 t", 1.0, "t", 7290, 0, True),
-    ("SF-CO-01", "SampleFuel", FuelType.COAL, "Hard coal, nut, bagged 25 kg",
-     "pallet 1 t", 1.0, "t", 11900, 890, True),
-]  # fmt: skip
+SOURCE_LABEL = "seller feeds, product pages and price lists (snapshot database)"
 
 
 class Product(BaseModel):
     sku: str
+    product_id: str = Field(..., description="Shared by the variants of one product")
     seller: str
+    seller_region: str | None = Field(None, description="Region (kraj) of the seller")
+    price_region: str | None = Field(None, description="Where the price applies; CZ = nationwide")
     fuel_type: FuelType
     name: str
-    package: str
-    price_czk: int = Field(..., description="Price of one package incl. VAT")
-    unit: str = Field(..., description="Comparison unit: 't' (tonne) or 'prms' (loose m3)")
-    unit_price_czk: int = Field(..., description="Price per comparison unit incl. VAT")
-    delivery_fee_czk: int
-    in_stock: bool
-    url: str
-
-
-CATALOG: list[Product] = [
-    Product(
-        sku=sku,
-        seller=seller,
-        fuel_type=fuel,
-        name=name,
-        package=package,
-        price_czk=price,
-        unit=unit,
-        unit_price_czk=round(price / quantity),
-        delivery_fee_czk=delivery,
-        in_stock=in_stock,
-        url=f"https://{seller.lower()}.example/p/{sku.lower()}",
+    quality_standard: str | None = None
+    package: str = Field(..., description="What the price buys, e.g. 'pallet 960 kg', '1 q'")
+    price_czk: float = Field(..., description="Price as published, incl. VAT")
+    unit: str | None = Field(
+        None,
+        description="Comparison unit: 't' (tonne) for fuels sold by weight, 'prms' (loose "
+        "cubic metre) for firewood. Prices in different units are not comparable.",
     )
-    for sku, seller, fuel, name, package, quantity, unit, price, delivery, in_stock in _ROWS
-]
+    unit_price_czk: int | None = Field(
+        None, description="Price per comparison unit incl. VAT; null when it could not be derived"
+    )
+    price_per_kg_czk: float | None = None
+    price_per_kwh_czk: float | None = Field(
+        None, description="Price per kWh of energy in the fuel (boiler efficiency not applied)"
+    )
+    heating_value: str | None = Field(
+        None, description="MJ/kg used for the kWh price and whether the seller stated it"
+    )
+    delivery_included: bool | None = Field(None, description="null when not stated")
+    delivery_fee_czk: float | None = Field(
+        None, description="Lowest delivery price stated; feeds often carry a placeholder"
+    )
+    price_total_delivered_czk: float | None = Field(
+        None, description="Price incl. delivery; null when the delivery cost is unknown"
+    )
+    in_stock: bool | None = Field(None, description="null when the seller does not state it")
+    url: str
+    collected_at: str = Field(..., description="When this price was read from the seller (UTC)")
+    notes: list[str] = Field(default_factory=list, description="Data-quality flags")
+
+
+def _package(record: SolidFuelPriceRecord) -> str:
+    unit, quantity = record.original_unit, record.original_quantity
+    if unit is None:
+        return "unknown"
+    if unit in ("bag", "pallet"):
+        weight = f" {record.package_weight_kg:g} kg" if record.package_weight_kg else ""
+        return f"{unit}{weight}"
+    return f"{quantity:g} {unit}"
+
+
+def _unit(record: SolidFuelPriceRecord) -> tuple[str | None, int | None]:
+    if record.fuel_category in WEIGHT_FUELS:
+        return "t", record.normalized_price_per_ton_vat
+    return "prms", record.normalized_price_per_prms_vat
+
+
+def _heating_value(record: SolidFuelPriceRecord) -> str | None:
+    if record.calorific_value_mj_kg is None or record.energy_price_per_kwh_vat is None:
+        return None
+    origin = "stated by seller" if record.calorific_source == "seller" else "typical value"
+    return f"{record.calorific_value_mj_kg:g} MJ/kg ({origin})"
+
+
+def _product(record: SolidFuelPriceRecord) -> Product:
+    unit, unit_price = _unit(record)
+    return Product(
+        sku=record.item_id,
+        product_id=record.group_id or record.item_id,
+        seller=record.seller_name,
+        seller_region=record.seller_region,
+        price_region=record.target_psc_region,
+        fuel_type=record.fuel_category,
+        name=record.product_name_raw,
+        quality_standard=record.quality_standard,
+        package=_package(record),
+        price_czk=record.original_price_vat,
+        unit=unit if unit_price is not None else None,
+        unit_price_czk=unit_price,
+        price_per_kg_czk=record.normalized_price_per_kg_vat,
+        price_per_kwh_czk=record.energy_price_per_kwh_vat,
+        heating_value=_heating_value(record),
+        delivery_included=record.delivery_included,
+        delivery_fee_czk=record.delivery_fee_czk,
+        price_total_delivered_czk=record.price_total_delivered_vat,
+        in_stock=record.in_stock,
+        url=record.source_url,
+        collected_at=record.scraped_at or "",
+        notes=record.flags,
+    )
+
+
+def serves_region(product: Product, region: Region | None) -> bool:
+    """True for nationwide prices, prices of that region and sellers based there."""
+    if region is None or region is Region.CZ:
+        return True
+    return region.value in (product.price_region, product.seller_region) or (
+        product.price_region == Region.CZ.value
+    )
+
+
+def load_products(fuel_type: FuelType, region: Region | None = None) -> list[Product]:
+    """Current prices of all enabled sources. Raises ToolError when nothing was collected."""
+    source_ids = [source.id for source in enabled_sources()]
+    store = Store(get_settings().db_path)
+    if not store.has_snapshot(source_ids):
+        raise ToolError(
+            "No prices have been collected yet. Run `POST /collect` on the tools service "
+            "(or `podpalto-collect`, or the app's CollectionFlow) first."
+        )
+    products = [_product(record) for record in store.latest_records(source_ids, fuel_type)]
+    return [product for product in products if serves_region(product, region)]
 
 
 class EshopCatalogInput(BaseModel):
     fuel_type: FuelType = Field(..., description="Fuel category to list")
+    region: Region | None = Field(
+        None, description="Only prices valid in this region (kraj); omit or CZ for all"
+    )
     seller: str | None = Field(None, description="Only this seller (exact name); omit for all")
-    in_stock_only: bool = Field(False, description="Skip products that are out of stock")
+    in_stock_only: bool = Field(False, description="Only products the seller marks as in stock")
+    limit: int = Field(
+        60, ge=1, le=200, description="Maximum number of products returned, cheapest first"
+    )
 
 
 class EshopCatalogOutput(ToolResult):
     sellers: list[str]
-    products: list[Product]
+    total_matches: int = Field(..., description="Matching products before `limit` was applied")
+    products: list[Product] = Field(
+        ..., description="Cheapest unit price first; products without a unit price last"
+    )
+    data_collected_at: str | None = Field(None, description="Newest collection time (UTC)")
 
 
 def run(params: EshopCatalogInput) -> EshopCatalogOutput:
     products = [
         p
-        for p in CATALOG
-        if p.fuel_type == params.fuel_type
-        and (params.seller is None or p.seller.lower() == params.seller.lower())
+        for p in load_products(params.fuel_type, params.region)
+        if (params.seller is None or p.seller.lower() == params.seller.lower())
         and (p.in_stock or not params.in_stock_only)
     ]
+    products.sort(key=lambda p: (p.unit_price_czk is None, p.unit or "", p.unit_price_czk or 0))
     return EshopCatalogOutput(
-        source="mock competitor e-shop catalog",
+        source=SOURCE_LABEL,
+        mock=False,
         sellers=sorted({p.seller for p in products}),
-        products=products,
+        total_matches=len(products),
+        products=products[: params.limit],
+        data_collected_at=max((p.collected_at for p in products), default=None),
     )
 
 
 TOOL = ToolSpec(
     name="eshop_catalog",
     description=(
-        "Lists products that competitor e-shops sell for one fuel type: name, package, "
-        "price, unit price, delivery fee and stock status. Use it for product-level "
-        "price and assortment comparison between sellers."
+        "Lists what sellers (e-shops, coal yards, firewood sellers) charge for one fuel "
+        "type: product, package, price, unit price, price per kWh, delivery, region, stock "
+        "status and collection time. Real data collected from seller sites. Use it for "
+        "product-level comparison; narrow it with `seller` or `region`. "
+        "Quote the figures as returned; do not derive prices yourself."
     ),
     input_model=EshopCatalogInput,
     output_model=EshopCatalogOutput,
     handler=run,
+    mock=False,
 )
