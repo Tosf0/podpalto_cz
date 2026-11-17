@@ -154,7 +154,8 @@ def test_price_list_round_trip(api, yard):
     (coal,) = catalog["products"]
     assert (coal["seller"], coal["package"], coal["price_czk"]) == ("DemoSklad", "1 q", 690)
     assert (coal["unit_price_czk"], coal["price_per_kwh_czk"]) == (6900, 1.38)
-    assert (coal["seller_region"], coal["quality_standard"]) == ("Kraj Vysočina", "Bílina")
+    # The quoted "Bílina" is stored in its canonical form.
+    assert (coal["seller_region"], coal["quality_standard"]) == ("Kraj Vysočina", "SD Bílina")
 
     # Same page again: no extraction needed, the records are confirmed with a new date.
     again = api.post("/sources/demosklad/pages").json()
@@ -207,6 +208,107 @@ def test_price_lists_are_not_read_by_the_plain_collector(yard):
     assert yard.requested == []
 
 
+def test_duplicates_are_dropped_and_variants_named(api):
+    page_id = api.post("/sources/demosklad/pages").json()["pages"][0]["page_id"]
+    rows = [
+        row("Koks 20–40 mm", "1 000 Kč/q", "q", "coke", price_includes_vat=True),
+        # the same price again, e.g. from a column that repeats another one
+        row("Koks 20–40 mm", "1 000 Kč/q", "q", "coke", price_includes_vat=True),
+        row("Hnědé uhlí Bílina Ořech 2", "690 Kč/q", "q", "brown_coal", variant_text="Cena za 1 q"),
+    ]
+    assert submit(api, page_id, rows, dry_run=True).json()["accepted"] == 3  # no fix needed
+    stored = submit(api, page_id, rows).json()
+    assert (stored["accepted"], stored["duplicates"], stored["rejected"]) == (2, 1, 0)
+    assert stored["detail"] == "1 duplicate rows dropped"
+    names = [v["record"]["product_name_raw"] for v in stored["verdicts"] if v["accepted"]]
+    assert names == ["Koks 20–40 mm", "Hnědé uhlí Bílina Ořech 2 – Cena za 1 q"]
+
+
+def test_stored_pages_can_be_extracted_again_without_a_download(api, yard):
+    page_id = api.post("/sources/demosklad/pages").json()["pages"][0]["page_id"]
+    assert submit(api, page_id, ROWS).json()["status"] == "ok"
+    yard.requested.clear()
+    again = api.post("/sources/demosklad/pages?reuse_stored=true").json()
+    assert again["status"] == "ok" and [p["page_id"] for p in again["pages"]] == [page_id]
+    assert yard.requested == []  # nothing downloaded
+    assert submit(api, page_id, ROWS).json()["accepted"] == 4
+
+
+def test_variants_count_once_in_the_comparison_and_rules_can_be_reapplied(api, data_dir):
+    from podpalto_tools.collect import Store, load_sources
+    from podpalto_tools.collect.collector import renormalize_source
+    from podpalto_tools.settings import get_settings
+
+    page_id = api.post("/sources/demosklad/pages").json()["pages"][0]["page_id"]
+    # Two variants of one product (the variant texts only need to be on the page).
+    rows = [
+        row("Hnědé uhlí Bílina Ořech 2", "690 Kč/q", "q", "brown_coal", variant_text="Cena za 1 q"),
+        row("Hnědé uhlí Bílina Ořech 2", "690 Kč/q", "q", "brown_coal", variant_text="Druh paliva"),
+    ]
+    stored = submit(api, page_id, rows).json()
+    assert stored["accepted"] == 2
+    comparison = api.post("/tools/price_comparison", json={"fuel_type": "brown_coal"}).json()
+    assert (comparison["offers_count"], comparison["variants_merged"]) == (1, 1)
+
+    settings = get_settings()
+    (source,) = load_sources()
+    first = Store(settings.db_path).last_snapshot("demosklad", ok_only=True)
+    again = renormalize_source(source, Store(settings.db_path), settings)
+    assert (again.status, again.accepted) == ("ok", 2)
+    latest = Store(settings.db_path).last_snapshot("demosklad", ok_only=True)
+    assert latest.id > first.id and latest.fetched_at == first.fetched_at  # time of reading kept
+
+
+def test_outliers_are_listed_but_not_part_of_the_market_level(api, monkeypatch):
+    from podpalto_tools.sources import price_comparison
+    from podpalto_tools.sources.eshop_catalog import Product
+
+    def product(sku, price, notes=()):
+        return Product(sku=sku, product_id=sku, seller=f"s{sku}", fuel_type="coke", name="Koks",
+                       package="1 q", price_czk=price / 10, unit="t", unit_price_czk=price,
+                       url="u", collected_at="2026-11-17", notes=list(notes))  # fmt: skip
+
+    offers = [product("1", 4000, ["outlier_vs_market"]), product("2", 9000), product("3", 10000)]
+    monkeypatch.setattr(price_comparison, "load_products", lambda fuel, region: offers)
+    body = api.post("/tools/price_comparison", json={"fuel_type": "coke"}).json()
+    assert (body["offers_count"], body["outliers_count"]) == (3, 1)
+    assert (body["min_unit_price_czk"], body["avg_unit_price_czk"]) == (9000, 9500)
+    assert body["offers"][0]["flags"] == ["outlier_vs_market"]  # still shown
+
+
+def test_from_prices_are_flagged(api, data_dir):
+    page_id = api.post("/sources/demosklad/pages").json()["pages"][0]["page_id"]
+    rows = [row("Koks 20–40 mm", "1 000 Kč/q", "q", "coke", price_includes_vat=True)]
+    plain = submit(api, page_id, rows, dry_run=True).json()["verdicts"][0]["record"]
+    assert "price_from" not in plain["flags"]
+
+    registry = data_dir.parent / "sources.yaml"
+    registry.write_text(registry.read_text(encoding="utf-8") + "    price_from: true\n",
+                        encoding="utf-8")  # fmt: skip
+    flagged = submit(api, page_id, rows, dry_run=True).json()["verdicts"][0]["record"]
+    assert "price_from" in flagged["flags"]
+
+
+def test_reuse_needs_an_earlier_extraction(api):
+    response = api.post("/sources/demosklad/pages?reuse_stored=true").json()
+    assert (response["status"], response["detail"]) == (
+        "error",
+        "no stored price-list pages to reuse",
+    )
+
+
+def test_failure_of_the_crew_is_recorded_and_old_data_stays(api):
+    page_id = api.post("/sources/demosklad/pages").json()["pages"][0]["page_id"]
+    assert submit(api, page_id, ROWS).json()["status"] == "ok"
+    recorded = api.post("/sources/demosklad/failure", json={"detail": "crew failed: quota"})
+    assert recorded.json()["status"] == "error"
+    sources = {row["source"]["id"]: row for row in api.get("/sources").json()}
+    assert sources["demosklad"]["last_snapshot"]["error"] == "crew failed: quota"
+    coke = api.post("/tools/eshop_catalog", json={"fuel_type": "coke"}).json()
+    assert len(coke["products"]) == 1  # the last successful snapshot is still served
+
+
 def test_step_endpoints_reject_unknown_sources(api):
     assert api.post("/sources/nope/pages").status_code == 404
     assert api.post("/sources/nope/collect").status_code == 404
+    assert api.post("/sources/nope/failure", json={"detail": "x"}).status_code == 404

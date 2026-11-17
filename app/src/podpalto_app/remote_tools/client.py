@@ -60,9 +60,17 @@ class ToolsClient:
             "POST", f"/sources/{source_id}/collect", timeout=settings.collect_timeout_s
         )
 
-    def price_pages(self, source_id: str) -> dict[str, Any]:
+    def price_pages(self, source_id: str, *, reuse_stored: bool = False) -> dict[str, Any]:
         return self._request(
-            "POST", f"/sources/{source_id}/pages", timeout=settings.collect_timeout_s
+            "POST",
+            f"/sources/{source_id}/pages",
+            params={"reuse_stored": str(reuse_stored).lower()},
+            timeout=settings.collect_timeout_s,
+        )
+
+    def report_failure(self, source_id: str, detail: str) -> dict[str, Any]:
+        return self._request(
+            "POST", f"/sources/{source_id}/failure", json={"detail": detail[:2000]}
         )
 
     def submit_extraction(

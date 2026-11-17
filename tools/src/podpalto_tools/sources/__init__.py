@@ -4,6 +4,7 @@ from podpalto_tools.registry import ToolSpec
 from podpalto_tools.sources import (
     customer_reviews,
     eshop_catalog,
+    heating_demand,
     market_statistics,
     news_search,
     page_text,
@@ -13,6 +14,7 @@ from podpalto_tools.sources import (
 ALL_TOOLS: list[ToolSpec] = [
     eshop_catalog.TOOL,
     price_comparison.TOOL,
+    heating_demand.TOOL,
     market_statistics.TOOL,
     news_search.TOOL,
     customer_reviews.TOOL,

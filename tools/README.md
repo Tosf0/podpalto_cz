@@ -21,11 +21,14 @@ src/podpalto_tools/
 │   ├── normalize.py         # SolidFuelPriceRecord: druh paliva, jednotky, Kč/t, Kč/prms, Kč/kWh
 │   ├── store.py             # SQLite: snímky a záznamy cen
 │   ├── collector.py         # robots.txt → feed / stránky / ceník → normalizace → uložení
-│   └── cli.py               # příkaz podpalto-collect (jen strukturované zdroje)
+│   ├── ares.py              # IČO ze stránek prodejce + ověření v ARES (sídlo, kraj, zánik)
+│   ├── opendata.py          # otevřená data ČSÚ (Sčítání 2021: vytápění podle krajů)
+│   └── cli.py               # příkazy podpalto-collect, -verify-sellers, -load-opendata
 └── sources/                 # NÁSTROJE pro agenty: jeden modul = jeden nástroj
     ├── __init__.py          # ALL_TOOLS: seznam registrovaných nástrojů
     ├── eshop_catalog.py     # REAL  ceny prodejců (čte databázi snímků), filtr podle kraje
     ├── price_comparison.py  # REAL  cenová hladina: min / průměr / max, Kč/kWh, odlehlé ceny
+    ├── heating_demand.py    # REAL  kolik bytů v kraji topí uhlím, dřevem, peletami (ČSÚ 2021)
     ├── market_statistics.py # MOCK  roční řady cen a spotřeby
     ├── news_search.py       # MOCK  zprávy: regulace, dotace, ceny, dodávky
     ├── customer_reviews.py  # MOCK  recenze prodejců
@@ -69,7 +72,18 @@ uv run podpalto-collect palivos      # jen vybraný zdroj
 ```
 
 Ceníky tímto příkazem sebrat nejdou (vrátí `needs_extraction`); spouští je `uv run collect`
-ve službě `app`. Dokud neproběhl žádný sběr, vrací `eshop_catalog` a `price_comparison`
+ve službě `app`.
+
+Když se změní pravidla, není potřeba nic stahovat znovu:
+
+```bash
+uv run podpalto-renormalize               # uložené řádky od crew znovu ověří a přepočítá (bez LLM)
+uv run collect --reextract stefl havelka  # (služba app) uložené stránky znovu projdou crew
+```
+
+`podpalto-renormalize` stačí při změně normalizace (jednotky, převody, kontroly).
+`--reextract` je potřeba při změně pokynů pro crew; stojí volání LLM, ale ne požadavek
+na web. Oba zachovají původní čas stažení ceníku. Dokud neproběhl žádný sběr, vrací `eshop_catalog` a `price_comparison`
 chybu 502 s návodem.
 
 ## API
@@ -84,6 +98,7 @@ chybu 502 s návodem.
 | `POST` | `/sources/{id}/collect` | krok flow: hned sebere jeden feed nebo Shoptet obchod |
 | `POST` | `/sources/{id}/pages` | krok flow: stáhne ceník a vrátí jeho text (`unchanged` = beze změny) |
 | `POST` | `/sources/{id}/extraction` | krok flow: ověří, přepočítá a uloží řádky od crew; `?dry_run=true` jen ověří |
+| `POST` | `/sources/{id}/failure` | krok flow: zapíše selhání crew jako snímek `error` (starší data dál platí) |
 
 Současně běží jen jeden sběr; další požadavek na sběr dostane `409`.
 
@@ -95,13 +110,28 @@ Vše jde vyzkoušet ručně na <http://localhost:8001/docs>.
 
 ## Registr zdrojů a pravidla sběru
 
-`collect/sources.yaml` obsahuje 22 zdrojů ze tří pilířů PDF:
+`collect/sources.yaml` obsahuje 30 zdrojů ze čtyř pilířů PDF (29 zapnutých):
 
 | `kind` | Pilíř PDF | Zdroje | Co se stahuje |
 |---|---|---|---|
 | `heureka_feed` | 1 e-shopy | 5 | `robots.txt` a XML feed (2 požadavky) |
 | `shoptet_html` | 1 e-shopy | 5 | `robots.txt`, sitemapa a veřejné produktové stránky (nejvýš `COLLECT_MAX_PAGES`) |
-| `static_html` | 2 uhelné sklady, 4 lesy a dřevo | 8 + 4 | `robots.txt` a stránky ceníku z `page_paths` |
+| `static_html` | 1 výrobce, 2 uhelné sklady, 3 hobby markety, 4 lesy a dřevo | 1 + 10 + 4 + 4 | `robots.txt` a stránky ceníku z `page_paths` (HTML nebo PDF) |
+
+`static_html` čte i PDF ceníky. U ZNZ se adresa PDF mění s každým ceníkem, proto má zdroj
+`document_link`: regulární výraz odkazu, který sběr najde na stránce z `page_paths` a stáhne
+(pokud ho povoluje `robots.txt`). PDF se převádí na text knihovnou `pypdf` a široké mezery
+mezi sloupci se značí `|` stejně jako buňky HTML tabulek.
+
+Nezařazené zdroje z PDF a druhého návrhu (ověřeno 17. 11. 2026):
+
+| Zdroj | Stav | Proč |
+|---|---|---|
+| Bauhaus | v registru vypnutý | ceny vykresluje až JavaScript |
+| Hornbach | neobsazen | místo stránek i `robots.txt` vrací ochranu proti botům; podle pravidel se neobchází |
+| alsol.cz | neobsazen | ceníky jsou obrázky PNG; čeká na rozhodnutí o OCR |
+| Zboží.cz | neobsazen | obsah vykresluje JavaScript, podmínky užití neověřeny |
+| Firmy.cz | neobsazen | `robots.txt` stránky tagů ostatním robotům než Googlebotu zakazuje |
 
 Pět e-shopů feed zpřístupňuje, druhých pět na něj vrací 403 (ověřeno 16. 11. 2026), proto se
 čtou ze stránek, které uvádí jejich sitemapa a nezakazuje `robots.txt`. Dvanáct ceníků z PDF
@@ -110,7 +140,8 @@ z PDF a je potřeba je ověřit; IČO zatím doplněné není.
 
 Pole registru: `pillar`, `ico`, `region` (kraj prodejce), `price_region` (kde cena platí, `CZ`
 = celostátně), `price_includes_vat` (výchozí, když ceník DPH neuvádí), `delivery_included`,
-`page_paths`, `url_filter`, `max_pages`, `enabled`, `consent`, `notes`.
+`price_from` (všechny ceny jsou „od“, záznamy dostanou příznak `price_from`), `page_paths`,
+`document_link`, `url_filter`, `max_pages`, `enabled`, `consent`, `notes`.
 
 - Sběr navštíví jen weby z registru a v nich jen adresy, které povoluje `robots.txt`.
 - Mezi dvěma stránkami téhož webu je pauza (`COLLECT_PAGE_DELAY_S`, nebo delší
@@ -122,6 +153,39 @@ Pole registru: `pillar`, `ico`, `region` (kraj prodejce), `price_region` (kde ce
 - Vypnutím zdroje (`enabled: false`) se jeho uložené záznamy přestanou podávat agentům.
 - Pole `consent` eviduje, zda prodejce souhlasil se zobrazováním svých cen. Pro interní vývoj
   souhlas potřeba není, pro veřejné zobrazení ano. Kód ho zatím nevynucuje.
+
+## Otevřená statistická data (pilíř 5)
+
+```bash
+uv run podpalto-load-opendata    # stáhne CSV Sčítání 2021 (12 MB) a uloží souhrn za kraje
+```
+
+Nástroj `heating_demand` z něj vrací počet a podíl obydlených bytů, které v kraji topí
+hlavně uhlím, koksem nebo uhelnými briketami, dřevem nebo dřevěnými briketami a peletami
+(stav k 26. 3. 2021). Je to poptávka, ne prodeje.
+
+ČSÚ průměrné spotřebitelské ceny pevných paliv neposkytuje: terénní šetření
+průměrných cen skončilo v lednu 2026, scanner data pokrývají zboží obchodních řetězců
+a sada CEN0101E má jen indexy do skupiny „Elektřina, plyn a ostatní paliva“. PDF tu
+přeceňuje, co ČSÚ nabízí. Ceny proto pochází od prodejců a `market_statistics`
+zůstává mock.
+
+## Ověření prodejců (IČO a ARES)
+
+PDF chce, aby QA auditor ověřil existenci IČO každého prodejce (existují podvodné e-shopy
+s vymyšleným IČO). Dělá to deterministický kód:
+
+```bash
+uv run podpalto-verify-sellers            # všechny povolené zdroje
+uv run podpalto-verify-sellers stefl      # jen vybraný
+```
+
+Na stránkách prodejce (ceník, úvodní stránka, `/kontakt/`, `/kontakty/`,
+`/obchodni-podminky/`; jen co povoluje `robots.txt`) najde IČO s platnou kontrolní číslicí,
+ověří ho v [ARES](https://ares.gov.cz) a porovná kraj sídla s krajem v registru. Výsledek
+vypíše a uloží do `data/sellers.json`. Registr sám nemění: ověřené IČO a kraje se do
+`sources.yaml` přepisují po kontrole. Pozor: sídlo firmy nemusí být kraj, kde prodává
+(sklad bývá jinde).
 
 ## Normalizace (PDF, sekce 3)
 
@@ -138,6 +202,8 @@ doprava a kraj. Pole se stejnými názvy jako v PDF se ukládají do tabulky `re
   1 prmr = 1,6 prms, 1 m³ plného dřeva ≈ 2,22 prms. U e-shopů znamená samotné „m³“ bez
   „sypané/rovnané“ cokoli, takže se nepřevádí (`volume_stacking_unknown`). U ceníků lesů
   je m³ plnometr.
+- Metrové a delší dřevo („1 m“, „100 cm“, „2–4 m“, klády) se na prms nepřevádí: koeficient
+  z PDF platí pro krátká polena (`long_wood_not_comparable`).
 - Hmotnost dřeva: tvrdé 337 kg/prms, měkké 227 kg/prms (20 % vlhkosti). Dřevina se pozná
   z názvu; bříza, směs a neuvedená dřevina se na kg nepřevádí (`wood_species_unknown`).
   Čerstvé/syrové dřevo nedostane Kč/kWh (`fresh_wood_no_energy_value`).
@@ -164,11 +230,15 @@ ze středu rozpětí tabulky v PDF:
 
 **Kontroly**
 
-- Jednotková cena mimo pásmo 3 000–40 000 Kč/t nebo 300–6 000 Kč/prms se zahodí
+- Jednotková cena mimo pásmo 2 000–40 000 Kč/t nebo 300–6 000 Kč/prms se zahodí
   (`unit_price_implausible`): nejspíš je špatně přečtená velikost balení.
 - Cena pod polovinou nebo nad dvojnásobkem mediánu ostatních prodejců téže kategorie
-  (aspoň 3) dostane `outlier_vs_market`. Je to deterministická část QA auditora z PDF;
-  `price_comparison` vrací jejich počet v `outliers_count`.
+  (aspoň 3) dostane `outlier_vs_market`. Je to deterministická část QA auditora z PDF.
+  `price_comparison` takové nabídky vypíše, ale do min/průměr/max nepočítá
+  (`outliers_count`).
+- Ceník: stejná cena dvakrát (bez DPH a s DPH, opakující se sloupec) se uloží jednou
+  (`duplicates`). Varianty jednoho produktu (délka, množstevní nebo cenové pásmo) nesou
+  citovaný `variant_text` v názvu a sdílí `group_id`, takže se ve srovnání počítají jednou.
 - Když velikost balení nejde určit, záznam si ponechá cenu bez jednotkové ceny
   (`package_size_unknown`) a do statistik se nepočítá.
 - Kamna, kotle, krbové vložky, kouřovody, náhradní díly, poukazy a štěpka se vyřazují podle
@@ -219,9 +289,10 @@ se stránkou ceníku, `pillar`, `region`, `price_region` a u cen bez DPH
 Po přidání spusť sběr a zkontroluj v `/tools/eshop_catalog` druh paliva, jednotku a cenu.
 Chybné případy doplň do `tests/test_normalize.py` nebo `tests/test_pricelist.py`.
 
-**Jiný typ zdroje (PDF ceník, ceník jako obrázek, stránka vyžadující JavaScript):** nový
-`SourceKind`, cesta v `collector.py` a větev v `CollectionFlow`. PDF ani OCR zatím
-implementované nejsou.
+**PDF ceník:** `static_html` se stránkou, na které je odkaz, a `document_link`.
+
+**Jiný typ zdroje (ceník jako obrázek, stránka vyžadující JavaScript):** nový `SourceKind`,
+cesta v `collector.py` a větev v `CollectionFlow`. Zatím implementované nejsou.
 
 **Nový nástroj pro agenty:**
 

@@ -47,6 +47,9 @@ class SourceRun(BaseModel):
 
 class FuelPipelineState(BaseModel):
     only: list[str] = Field(default_factory=list, description="Source ids; empty = all enabled")
+    reextract: bool = Field(
+        False, description="Price lists: extract the stored pages again, download nothing"
+    )
     queue: list[dict[str, Any]] = Field(default_factory=list)
     current: dict[str, Any] | None = None
     results: list[SourceRun] = Field(default_factory=list)
@@ -151,7 +154,7 @@ class CollectionFlow(Flow[FuelPipelineState]):
     def extract_price_list(self) -> str:
         source = self.state.current
         try:
-            pages = self._client.price_pages(source["id"])
+            pages = self._client.price_pages(source["id"], reuse_stored=self.state.reextract)
         except ToolsServiceError as exc:
             self._record("extraction", "error", str(exc))
             return "source_done"
@@ -164,7 +167,12 @@ class CollectionFlow(Flow[FuelPipelineState]):
         for page in pages["pages"]:
             extraction, error = self._extract_page(source, page)
             if extraction is None:
-                self._record("extraction", "error", f"crew failed on {page['url']}: {error}")
+                detail = f"crew failed on {page['url']}: {error}"
+                self._record("extraction", "error", detail)
+                try:  # so that GET /sources shows it, like a failed download
+                    self._client.report_failure(source["id"], detail)
+                except ToolsServiceError as exc:
+                    log.warning("could not record the failure: %s", exc)
                 return "source_done"
             extractions.append(
                 {"page_id": page["page_id"], "extraction": extraction.model_dump(mode="json")}
@@ -220,8 +228,15 @@ class CollectionFlow(Flow[FuelPipelineState]):
         return self.state.summary_path
 
 
-def run_collection(source_ids: list[str] | None = None) -> FuelPipelineState:
-    """Run the collection flow synchronously (CLI and API)."""
+def run_collection(
+    source_ids: list[str] | None = None, *, reextract: bool = False
+) -> FuelPipelineState:
+    """Run the collection flow synchronously (CLI and API).
+
+    ``reextract`` sends the stored pages of price lists through the crew again (after the
+    extraction rules changed) without downloading anything; other sources are collected
+    as usual, so combine it with ``source_ids`` of price lists.
+    """
     flow = CollectionFlow()
-    flow.kickoff(inputs={"only": source_ids or []})
+    flow.kickoff(inputs={"only": source_ids or [], "reextract": reextract})
     return flow.state

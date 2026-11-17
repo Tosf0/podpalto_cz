@@ -114,9 +114,10 @@ def quality_standard(name: str) -> str | None:
 _N = r"(\d+(?:[.,]\d+)?)"
 # "975kg", "1050 Kg", "975 kg/paleta"; not densities such as "650 kg/rm".
 _KG = re.compile(_N + r"\s*kg\b(?!\s*/\s*(?:p?rm|m3|m³|l\b))", re.I)
-# "70 ks po 15 kg", "96 x balení 10 kg", "40x pytel 25 kg"
+# "70 ks po 15 kg", "96 x balení 10 kg", "40x pytel 25 kg", "90 kusů balení x 10 kg"
 _PACKS = re.compile(
-    r"(\d+)\s*(?:ks|x|×)\s*(?:po\s+|balen\w*\s+|pyt\w*\s+)*" + _N + r"\s*kg\b", re.I
+    r"(\d+)\s*(?:ks|kus\w*|x|×)\s*(?:po\s+|balen\w*\s+|pyt\w*\s+|x\s*|×\s*)*" + _N + r"\s*kg\b",
+    re.I,
 )
 _COUNT = re.compile(r"\s*(\d+)\s*(?:ks|pyt)", re.I)
 _VOLUME = re.compile(_N + r"\s*(prms|prmr|prm|sprm|m3|m³)(?![a-z0-9])", re.I)
@@ -216,6 +217,12 @@ PRMS_PER_M3_SOLID = 1 / 0.45  # one loose metre holds about 0.45 m3 of solid woo
 _HARDWOOD = re.compile(r"\bbuk|\bdub|\bhabr|\bjasan|\bakat|\bjavor|tvrd")
 _SOFTWOOD = re.compile(r"\bsmrk|\bborov|\bjedl|\bmodrin|\bjehlic|mekk|\btopol|\bols|\bvrb|\blip")
 _FRESH_WOOD = re.compile(r"cerstv|syrov|surov|kulatin|nastojato|samovyrob")
+# Metre-long or longer pieces ("1 m", "2-4 m", "metrové", logs): the prmr -> prms factor
+# of the report is for short split logs, so such prices are not converted.
+_LONG_WOOD = re.compile(
+    r"\b\d+(?:[.,]\d+)?\s*(?:-\s*\d+\s*)?m\b|\b[1-9]\d\d\s*cm\b"  # "1 m", "2-4 m", "100 cm"
+    r"|metrov|\bklad(?:a|y|ach)?\b|\bkmen|kulatin"
+)  # "klada/klady" are logs; "skladany" (stacked) must not match
 
 
 def wood_class(name: str) -> str | None:
@@ -246,7 +253,8 @@ def stated_calorific_mj(params: dict[str, str]) -> float | None:
 
 # Sanity bands for unit prices incl. VAT. Outside them the size or unit was most likely
 # misread, so the unit price is dropped instead of being published.
-_PLAUSIBLE_CZK_PER_TONNE = (3_000, 40_000)
+# Coal dust (hruboprach) really sells at about 2 500-3 000 CZK/t, hence the low floor.
+_PLAUSIBLE_CZK_PER_TONNE = (2_000, 40_000)
 _PLAUSIBLE_CZK_PER_PRMS = (300, 6_000)
 
 
@@ -356,6 +364,8 @@ def price_metrics(raw: RawPrice) -> dict:
 
     mass = _mass_kg(raw)
     if raw.fuel is FuelType.FIREWOOD and mass is None:
+        if raw.unit in ("prmr", "prms") and _LONG_WOOD.search(fold(raw.name)):
+            return metrics | {"flags": [*flags, "long_wood_not_comparable"]}
         prms, volume_flags = _loose_volume_prms(raw)
         flags += volume_flags
         if prms is None:
@@ -500,6 +510,7 @@ def normalize_extracted(
     source: Source,
     *,
     item_id: str,
+    group_id: str | None = None,
     url: str,
     scraped_at: str | None,
     quality: str | None,
@@ -511,9 +522,13 @@ def normalize_extracted(
         raw,
         source,
         item_id=item_id,
+        group_id=group_id,
         url=url,
         scraped_at=scraped_at,
-        quality_standard=quality or quality_standard(raw.name),
+        # A quoted grade is stored in its canonical form ("Severočeské Doly Bílina" ->
+        # "SD Bílina") when the rules know it, otherwise as quoted.
+        quality_standard=(quality and (quality_standard(quality) or quality))
+        or quality_standard(raw.name),
         delivery_fee_note=delivery_note,
         delivery_included=(
             delivery_included if delivery_included is not None else source.delivery_included

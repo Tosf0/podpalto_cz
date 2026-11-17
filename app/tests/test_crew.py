@@ -44,7 +44,7 @@ def test_specialists_get_their_remote_tools():
     tools_by_role = {agent.role: [tool.name for tool in agent.tools] for agent in crew.agents}
     assert tools_by_role == {
         "Solid Fuel Pricing Analyst": ["eshop_catalog", "price_comparison"],
-        "Solid Fuel Market Trends Analyst": ["market_statistics"],
+        "Solid Fuel Market Trends Analyst": ["heating_demand", "market_statistics"],
         "Energy Regulation and News Analyst": ["news_search"],
         "Customer Insights Analyst": ["customer_reviews"],
         "Market Intelligence Report Writer": [],

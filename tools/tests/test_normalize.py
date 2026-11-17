@@ -102,6 +102,8 @@ def test_quality_standard(name, expected):
         (item("BRIKETY – VÁLCE", **{"Hmotnost palety": "1000 kg", "Hmotnost balení": "10 kg"}),
          1000),
         (item("Brikety Piny Kay", **{"Balení v 10kg PE folích - na paletě": "96ks"}), 960),
+        (item("Brikety Rekord - paleta 90 kusů balení x 10 kg"), 900),
+        (item("Pelety Premium A1 paleta 66 kusů balení x 15 kg"), 990),
         # Density and heating-value parameters must not be read as a package weight.
         (item("Pelety Big Bag", **{"Objemová hmotnost": "> 650 kg/rm", "Výhřevnost": "2 kg = 1 l"}),
          None),
@@ -252,6 +254,29 @@ def test_price_list_units_and_vat():
     wrong_unit = price_metrics(RawPrice(fuel=FuelType.WOOD_PELLETS, name="Pelety", price=900,
                                         unit="prms"))  # fmt: skip
     assert wrong_unit["flags"] == ["unit_not_by_weight"]
+
+    # Coal dust is cheap but real: 299 CZK/q = 2 990 CZK/t is kept.
+    dust = price_metrics(RawPrice(fuel=FuelType.BROWN_COAL, name="Hruboprach", price=299,
+                                  unit="q"))  # fmt: skip
+    assert dust["normalized_price_per_ton_vat"] == 2990
+
+
+@pytest.mark.parametrize(
+    ("name", "comparable"),
+    [
+        ("jehličnaté (borovice, smrk) - standardně 2-4 m - vč. dopravy", False),
+        ("jehličnaté – 1 m rovnané", False),
+        ("Metrové dříví buk", False),
+        ("Ceník tvrdé dřevo – Rovnaný 1 PRMR o délce 100 cm", False),
+        ("Ceník tvrdé dřevo – Délka polene - 40 - 50 cm", True),
+        ("tvrdé (dub, jasan, habr) - 33 cm", True),
+        ("Buk štípaný v kleci skládaný 1x1x2m", True),
+    ],
+)
+def test_metre_long_wood_is_not_converted_to_loose_metres(name, comparable):
+    metrics = price_metrics(RawPrice(fuel=FuelType.FIREWOOD, name=name, price=1600, unit="prmr"))
+    assert ("normalized_price_per_prms_vat" in metrics) is comparable
+    assert ("long_wood_not_comparable" in metrics["flags"]) is not comparable
 
 
 def test_delivery_and_region_come_from_the_registry_and_the_feed():

@@ -24,10 +24,15 @@ def collect() -> None:
         description="Collect seller prices source by source (CollectionFlow)."
     )
     parser.add_argument("source_ids", nargs="*", help="sources to collect (default: all enabled)")
+    parser.add_argument(
+        "--reextract",
+        action="store_true",
+        help="price lists: run the crew again on the stored pages, download nothing",
+    )
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
-    state = run_collection(args.source_ids or None)
+    state = run_collection(args.source_ids or None, reextract=args.reextract)
     for run in state.results:
         counts = f"{run.records} records" if run.records is not None else ""
         if run.rejected_rows:

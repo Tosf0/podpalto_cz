@@ -35,12 +35,12 @@ pricing_analyst:
 market_analyst:
   role: Solid Fuel Market Trends Analyst
   goal: >
-    Describe multi-year price and consumption trends per fuel type and what
-    they mean for a household deciding what and when to buy.
+    Describe where households heat with each fuel, multi-year price trends,
+    and what they mean for a household deciding what and when to buy.
   backstory: >
-    You work with statistical time series, quote exact values with units and
-    years, and separate observed trends from your own interpretation.
-  remote_tools: [market_statistics]
+    You work with official statistics, quote exact values with units, dates
+    and years, and separate observed facts from your own interpretation.
+  remote_tools: [heating_demand, market_statistics]
 
 regulation_analyst:
   role: Energy Regulation and News Analyst

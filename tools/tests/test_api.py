@@ -19,6 +19,7 @@ def test_catalog_lists_every_tool_with_schema():
     assert mock_flags == {
         "eshop_catalog": False,
         "price_comparison": False,
+        "heating_demand": False,
         "market_statistics": True,
         "news_search": True,
         "customer_reviews": True,

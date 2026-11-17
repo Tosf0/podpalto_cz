@@ -78,9 +78,13 @@ price_list_extractor ──▶ market_qa_auditor          Process.sequential
    ┌────────────────┬───────────────────┼───────────────────┬──────────────────┐
 pricing_analyst  market_analyst  regulation_analyst  customer_insights_   report_writer
                                                      analyst
-eshop_catalog    market_         news_search         customer_reviews     (bez nástrojů)
-price_comparison statistics
+eshop_catalog    heating_demand  news_search         customer_reviews     (bez nástrojů)
+price_comparison market_
+                 statistics
 ```
+
+`heating_demand` (Sčítání 2021, ČSÚ) a oba cenové nástroje jsou skutečná data,
+`market_statistics`, `news_search` a `customer_reviews` jsou zatím mock.
 
 Úlohy v `tasks.yaml` záměrně nemají přiřazeného agenta. Každou dostane manažer a sám
 rozhodne, kterému specialistovi ji deleguje. Poslední úloha `final_report` dostává výstupy
@@ -92,14 +96,14 @@ analytik nástrojům jako filtr.
 
 Výstupem je přehled pro domácnosti, ne doporučení pro prodejce: platforma sama nic neprodává
 a žádného prodejce nezvýhodňuje. Agenti ceny nepočítají ani nepřevádějí. Citují čísla,
-jednotky a čas sběru tak, jak je vrátí nástroje `eshop_catalog` a `price_comparison`.
-Zbylé tři nástroje jsou zatím mock.
+jednotky a čas sběru tak, jak je vrátí nástroje.
 
 ## Spuštění
 
 ```bash
 uv run collect                       # sběr všech povolených zdrojů (feedy, Shoptet, ceníky)
 uv run collect stefl drevopraha      # jen vybrané zdroje
+uv run collect --reextract stefl     # uložené stránky ceníku znovu přes crew, nic nestahuje
 uv run kickoff wood_pellets firewood --region "Kraj Vysočina" --focus "nejlevnější teplo"
 uv run plot                          # HTML diagramy obou flows
 ```

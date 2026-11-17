@@ -18,11 +18,15 @@ can correct its rows before anything is stored.
 
 from __future__ import annotations
 
+import io
 import re
+from html import unescape
 from html.parser import HTMLParser
 from typing import Literal
+from urllib.parse import urljoin
 
 from pydantic import BaseModel, Field
+from pypdf import PdfReader
 
 from podpalto_tools.collect.normalize import (
     OriginalUnit,
@@ -84,6 +88,42 @@ def page_to_text(html: str) -> str:
     parser.close()
     parser._flush()
     return "\n".join(parser.lines)
+
+
+_COLUMN_GAP = re.compile(r" {3,}")
+
+
+def pdf_to_text(content: bytes) -> str:
+    """Text of a PDF price list, line by line. Wide gaps between words become ' | ', so
+    a PDF table reads like an HTML one."""
+    reader = PdfReader(io.BytesIO(content))
+    lines = []
+    for page in reader.pages:
+        for line in page.extract_text(extraction_mode="layout").splitlines():
+            line = _COLUMN_GAP.sub(" | ", line.strip())
+            if line.strip(" |-"):
+                lines.append(line)
+    return "\n".join(lines)
+
+
+def document_to_text(content: bytes) -> str:
+    """Visible text of a downloaded price list: PDF or HTML."""
+    if content.lstrip()[:5] == b"%PDF-":
+        return pdf_to_text(content)
+    return page_to_text(content.decode("utf-8", errors="replace"))
+
+
+_HREF = re.compile(r"""<a\b[^>]*\bhref\s*=\s*["']([^"']+)["']""", re.I)
+
+
+def find_document_link(html: str, base_url: str, pattern: str) -> str | None:
+    """First link on the page whose absolute URL matches ``pattern`` (e.g. the current
+    PDF price list, whose file name changes with every new list)."""
+    for href in _HREF.findall(html):
+        url = urljoin(base_url, unescape(href))
+        if re.search(pattern, url, re.I):
+            return url
+    return None
 
 
 _SPACES = re.compile(r"[\s   |]+")
@@ -153,6 +193,11 @@ class ExtractedPriceRow(BaseModel):
     """
 
     product_name: str = Field(..., description="Product name, copied exactly from the page")
+    variant_text: str | None = Field(
+        None,
+        description="What tells this price apart from other prices of the same product "
+        "(log length, quantity tier, price zone, packaging), copied exactly",
+    )
     price_text: str = Field(
         ..., description="The text holding ONE price, copied exactly, e.g. '690 Kč/q'"
     )
@@ -189,7 +234,7 @@ class RowVerdict(BaseModel):
 
 def _quotes(row: ExtractedPriceRow) -> dict[str, str]:
     fields = {"product_name": row.product_name, "price_text": row.price_text}
-    for name in ("unit_text", "package_text", "quality_standard", "delivery_note"):
+    for name in ("variant_text", "unit_text", "package_text", "quality_standard", "delivery_note"):
         if value := getattr(row, name):
             fields[name] = value
     return fields
@@ -235,13 +280,16 @@ def verify_row(
         return verdict
 
     flags = [] if stated_unit else ["unit_judged_by_extractor"]
+    if source.price_from or re.search(r"\bod\b", fold(row.price_text)):
+        flags.append("price_from")  # "Cena od 12,20 Kč/kg": the cheapest variant or region
     includes_vat = row.price_includes_vat
     if includes_vat is None:
         includes_vat = source.price_includes_vat
         flags.append("vat_assumed_from_registry")
+    name = f"{row.product_name} – {row.variant_text}" if row.variant_text else row.product_name
     raw = RawPrice(
         fuel=row.fuel_category,
-        name=row.product_name,
+        name=name,
         price=price,
         unit=row.original_unit,
         package_weight_kg=weight,
@@ -253,6 +301,9 @@ def verify_row(
         raw,
         source,
         item_id=f"{page_url}#{index}",
+        # Variants of one product (lengths, quantity tiers, price zones) share the group,
+        # so the comparison counts the product once, at its cheapest variant.
+        group_id=f"{page_url}#{fold(' '.join(row.product_name.split()))}",
         url=page_url,
         scraped_at=scraped_at,
         quality=row.quality_standard,
@@ -275,3 +326,25 @@ def verify_rows(
         for index, row in enumerate(extraction.rows)
         if row.qa_status == "accepted"
     ]
+
+
+def drop_duplicates(verdicts: list[RowVerdict]) -> int:
+    """Reject accepted rows that repeat an earlier price: same product, unit and price incl.
+    VAT. Pages often show one price twice (without and with VAT, or in a column that
+    repeats another), which would count one offer twice. Returns how many were dropped."""
+    seen: set[tuple] = set()
+    dropped = 0
+    for verdict in verdicts:
+        record = verdict.record
+        if not verdict.accepted or record is None:
+            continue
+        key = (
+            record.fuel_category, fold(record.product_name_raw), record.original_unit,
+            record.original_quantity, record.package_weight_kg, round(record.original_price_vat),
+        )  # fmt: skip
+        if key in seen:
+            verdict.accepted, verdict.record = False, None
+            verdict.reasons.append("duplicate of an earlier row (same product, unit and price)")
+            dropped += 1
+        seen.add(key)
+    return dropped

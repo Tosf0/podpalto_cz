@@ -52,8 +52,9 @@ class PriceComparisonOutput(ToolResult):
     )
     outliers_count: int = Field(
         0,
-        description="Included offers flagged 'outlier_vs_market' (below half / above double "
-        "the median of the other sellers); check them before quoting",
+        description="Offers flagged 'outlier_vs_market' (below half / above double the "
+        "median of the other sellers). They are listed but left out of the min/avg/max and "
+        "kWh statistics; mention them separately",
     )
     min_unit_price_czk: int | None = None
     avg_unit_price_czk: int | None = None
@@ -91,8 +92,10 @@ def run(params: PriceComparisonInput) -> PriceComparisonOutput:
     for product in priced:
         cheapest.setdefault((product.seller, product.product_id), product)
     included = list(cheapest.values())
-    prices = [p.unit_price_czk for p in included]
-    per_kwh = [p.price_per_kwh_czk for p in included if p.price_per_kwh_czk is not None]
+    # The market level is computed without the flagged outliers (unless all are flagged).
+    regular = [p for p in included if "outlier_vs_market" not in p.notes] or included
+    prices = [p.unit_price_czk for p in regular]
+    per_kwh = [p.price_per_kwh_czk for p in regular if p.price_per_kwh_czk is not None]
 
     result.offers_count = len(included)
     result.excluded_count = len(matches) - len(priced)

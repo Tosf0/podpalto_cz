@@ -37,6 +37,12 @@ class ExtractedPriceRow(BaseModel):
     """
 
     product_name: str = Field(..., description="Product name, copied exactly from the page")
+    variant_text: str | None = Field(
+        None,
+        description="What tells this price apart from other prices of the same product on "
+        "the page (log length, quantity tier, price zone, packaging), copied exactly, "
+        "e.g. '25 cm' or 'nad 30 q'",
+    )
     price_text: str = Field(
         ...,
         description="The text holding exactly ONE price, copied exactly, e.g. '690 Kč/q'. "

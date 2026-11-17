@@ -30,6 +30,7 @@ from statistics import median
 
 import httpx
 from pydantic import BaseModel, Field
+from pypdf.errors import PyPdfError as PdfError
 
 from podpalto_tools.collect.heureka import FeedError, FeedItem, parse_feed
 from podpalto_tools.collect.normalize import SolidFuelPriceRecord, normalize
@@ -37,7 +38,9 @@ from podpalto_tools.collect.pricelist import (
     MAX_PAGE_CHARS,
     RowVerdict,
     SellerPriceExtractionList,
-    page_to_text,
+    document_to_text,
+    drop_duplicates,
+    find_document_link,
     verify_rows,
 )
 from podpalto_tools.collect.shoptet import parse_product_page, parse_sitemap, product_candidates
@@ -398,6 +401,7 @@ class ExtractionResult(BaseModel):
     """ok | rejected | dry_run | error"""
     accepted: int = 0
     rejected: int = 0
+    duplicates: int = Field(0, description="Rows dropped as repeats of an earlier price")
     verdicts: list[RowVerdict] = Field(default_factory=list)
     detail: str = ""
 
@@ -410,6 +414,30 @@ def _combined_digest(page_ids: Iterable[str]) -> str:
     return hashlib.sha256("".join(sorted(page_ids)).encode()).hexdigest()
 
 
+def stored_price_pages(source: Source, store: Store, settings: Settings) -> PagesResult:
+    """The pages behind the newest successful snapshot, read from disk (no download).
+
+    Used to extract a price list again after the extraction rules changed.
+    """
+    last_ok = store.last_snapshot(source.id, ok_only=True)
+    if not last_ok or not (last_ok.raw_path or "").endswith(".extraction.json"):
+        return PagesResult(
+            source_id=source.id, status="error", detail="no stored price-list pages to reuse"
+        )
+    saved = json.loads((settings.data_dir / last_ok.raw_path).read_text(encoding="utf-8"))
+    folder = _pages_dir(settings, source)
+    pages = [
+        PriceListPage.model_validate_json(
+            (folder / f"{part['page_id']}.json").read_text(encoding="utf-8")
+        )
+        for part in saved["extractions"]
+    ]
+    return PagesResult(
+        source_id=source.id, status="ok", fetched_at=last_ok.fetched_at, http_status=200,
+        pages=pages, detail="stored pages, nothing downloaded",
+    )  # fmt: skip
+
+
 def fetch_price_pages(
     source: Source,
     store: Store,
@@ -417,16 +445,21 @@ def fetch_price_pages(
     settings: Settings,
     now: datetime | None = None,
     sleep: Callable[[float], None] = time.sleep,
+    *,
+    reuse_stored: bool = False,
 ) -> PagesResult:
     """Download the price-list pages of a ``static_html`` source and return their text.
 
     Unchanged pages need no extraction: the previous records are confirmed as still
-    valid in a new snapshot and the status is ``unchanged``.
+    valid in a new snapshot and the status is ``unchanged``. ``reuse_stored`` returns the
+    stored pages of the last successful snapshot instead, without any request.
     """
     now = now or datetime.now(timezone.utc)
     fetched_at = now.isoformat(timespec="seconds")
     if not source.kind.needs_extraction:
         return PagesResult(source_id=source.id, status="not_a_price_list_source")
+    if reuse_stored:
+        return stored_price_pages(source, store, settings)
     if skipped := _skip_if_recent(source, store, settings, now):
         return PagesResult(
             source_id=source.id, status=skipped.status, fetched_at=skipped.fetched_at,
@@ -441,8 +474,21 @@ def fetch_price_pages(
                 raise _Failure("blocked_by_robots", f"robots.txt disallows {url}")
             if number:
                 sleep(max(settings.page_delay_s, crawl_delay))
-            html = _get(fetch, url, f"page {url}").decode("utf-8", errors="replace")
-            text = page_to_text(html)
+            content = _get(fetch, url, f"page {url}")
+            if source.document_link:
+                link = find_document_link(
+                    content.decode("utf-8", errors="replace"), url, source.document_link
+                )
+                if link is None:
+                    raise _Failure("error", f"no link matching {source.document_link!r} on {url}")
+                if not allowed(link):
+                    raise _Failure("blocked_by_robots", f"robots.txt disallows {link}")
+                sleep(max(settings.page_delay_s, crawl_delay))
+                url, content = link, _get(fetch, link, f"document {link}")
+            try:
+                text = document_to_text(content)
+            except PdfError as exc:
+                raise _Failure("error", f"{url} is not a readable PDF: {exc}", 200) from exc
             if not text.strip():
                 raise _Failure("error", f"page {url} has no visible text", 200)
             page_id = hashlib.sha256(text.encode("utf-8")).hexdigest()
@@ -489,6 +535,38 @@ def fetch_price_pages(
     )
 
 
+def renormalize_source(
+    source: Source, store: Store, settings: Settings, now: datetime | None = None
+) -> ExtractionResult:
+    """Verify and normalise the crew's stored rows again with the current rules.
+
+    No download and no LLM: the rows of the newest successful extraction are read from
+    disk and go through ``ingest_extraction`` as if the crew had just sent them.
+    """
+    last_ok = store.last_snapshot(source.id, ok_only=True)
+    if not last_ok or not (last_ok.raw_path or "").endswith(".extraction.json"):
+        return ExtractionResult(
+            source_id=source.id, status="error", detail="no stored extraction to renormalise"
+        )
+    saved = json.loads((settings.data_dir / last_ok.raw_path).read_text(encoding="utf-8"))
+    parts = [PageExtraction.model_validate(part) for part in saved["extractions"]]
+    # Keep the time the prices were read: a new rule does not make the prices newer.
+    when = now or datetime.fromisoformat(last_ok.fetched_at)
+    return ingest_extraction(source, parts, store, settings, now=when)
+
+
+def record_failure(
+    source: Source, store: Store, detail: str, now: datetime | None = None
+) -> CollectResult:
+    """Record a failure that happened outside this service (e.g. the extraction crew).
+
+    It shows in GET /sources like any other failed collection; older records stay served.
+    """
+    fetched_at = (now or datetime.now(timezone.utc)).isoformat(timespec="seconds")
+    store.add_snapshot(source_id=source.id, fetched_at=fetched_at, status="error", error=detail)
+    return CollectResult(source_id=source.id, status="error", fetched_at=fetched_at, detail=detail)
+
+
 def ingest_extraction(
     source: Source,
     extractions: list[PageExtraction],
@@ -521,14 +599,18 @@ def ingest_extraction(
         for verdict in verify_rows(part.extraction, page.text, page.url, source, fetched_at):
             verdict.index = len(verdicts)
             verdicts.append(verdict)
+    # Not in the dry run: a duplicate is not something the crew has to fix.
+    duplicates = 0 if dry_run else drop_duplicates(verdicts)
 
     accepted = [v for v in verdicts if v.accepted]
     result = ExtractionResult(
         source_id=source.id,
         status="dry_run" if dry_run else "ok",
         accepted=len(accepted),
-        rejected=len(verdicts) - len(accepted),
+        rejected=len(verdicts) - len(accepted) - duplicates,
+        duplicates=duplicates,
         verdicts=verdicts,
+        detail=f"{duplicates} duplicate rows dropped" if duplicates else "",
     )
     if dry_run:
         return result

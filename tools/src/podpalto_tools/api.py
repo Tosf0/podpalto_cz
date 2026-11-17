@@ -12,6 +12,7 @@ POST /sources/{id}/collect           collect one feed / Shoptet source now (no L
 POST /sources/{id}/pages             download a price-list source; returns the page text
 POST /sources/{id}/extraction        verify, normalise and store the crew's quoted rows
                                      (?dry_run=true only verifies: the crew's guardrail)
+POST /sources/{id}/failure           record that the crew failed on this source
 
 Run locally: ``uv run uvicorn podpalto_tools.api:app --port 8001``
 """
@@ -39,7 +40,13 @@ from podpalto_tools.collect import (
     ingest_extraction,
     load_sources,
 )
-from podpalto_tools.collect.collector import Fetch, collect_source, http_fetch, resolve_sources
+from podpalto_tools.collect.collector import (
+    Fetch,
+    collect_source,
+    http_fetch,
+    record_failure,
+    resolve_sources,
+)
 from podpalto_tools.registry import ToolError, ToolSpec
 from podpalto_tools.settings import get_settings
 from podpalto_tools.sources import ALL_TOOLS
@@ -66,6 +73,10 @@ class CollectStarted(BaseModel):
     status: str = "started"
     source_ids: list[str]
     follow: str = "GET /sources shows the result of every source in last_snapshot"
+
+
+class FailureReport(BaseModel):
+    detail: str = Field(..., max_length=2000, description="What went wrong, for GET /sources")
 
 
 class ExtractionSubmission(BaseModel):
@@ -192,14 +203,16 @@ def create_app(
         )  # fmt: skip
 
     @app.post("/sources/{source_id}/pages", tags=["collection"])
-    def price_pages(source_id: str) -> PagesResult:
-        """Download a price-list source. Unchanged pages are confirmed without extraction."""
+    def price_pages(source_id: str, reuse_stored: bool = False) -> PagesResult:
+        """Download a price-list source. Unchanged pages are confirmed without extraction.
+        ``reuse_stored=true`` returns the pages of the last successful snapshot from disk,
+        so a price list can be extracted again without any request to the seller."""
         source = enabled_source(source_id)
         settings = get_settings()
         return exclusively(
             lambda: fetch_price_pages(
                 source, Store(settings.db_path), fetch or http_fetch(settings), settings,
-                sleep=sleep,
+                sleep=sleep, reuse_stored=reuse_stored,
             )
         )  # fmt: skip
 
@@ -216,6 +229,12 @@ def create_app(
         if result.status == "error":
             raise HTTPException(status_code=422, detail=result.detail)
         return result
+
+    @app.post("/sources/{source_id}/failure", tags=["collection"])
+    def failure(source_id: str, report: FailureReport) -> CollectResult:
+        """Record a failed step that ran outside this service (the extraction crew)."""
+        source = enabled_source(source_id)
+        return record_failure(source, Store(get_settings().db_path), report.detail)
 
     return app
 

@@ -23,12 +23,15 @@ pricing_research:
 
 market_trends_research:
   description: >
-    Analyse multi-year trends for these fuel types: {fuel_types} (region:
-    {region}). Cover both average retail price and household consumption.
+    For these fuel types: {fuel_types} (region: {region}), describe the
+    regional demand with heating_demand (how many dwellings heat mainly with
+    the fuel, by region, official census data) and the multi-year price trend
+    with market_statistics. Say which figures are official and which are mock.
   expected_output: >
-    Per fuel type: the yearly values with units, the overall change in
-    percent, and a short interpretation of where prices and demand are
-    heading. Name the data source.
+    Per fuel group: the number and share of dwellings heating with it in the
+    whole country and in the requested region (or the top regions), with the
+    census date; then yearly price values with units and the overall change in
+    percent. A short interpretation, and the name of each data source.
 
 regulation_research:
   description: >

@@ -65,6 +65,11 @@ class Source(BaseModel):
     delivery_included: bool | None = Field(
         None, description="Delivery included in the price by default; None = not known"
     )
+    price_from: bool = Field(
+        False,
+        description="All listed prices are 'from' prices (cheapest variant or region); every "
+        "record gets the flag price_from",
+    )
     feed_path: str | None = Field(None, pattern=r"^/", description="heureka_feed only")
     sitemap_path: str = Field("/sitemap.xml", pattern=r"^/", description="shoptet_html only")
     url_filter: str | None = Field(
@@ -73,6 +78,11 @@ class Source(BaseModel):
     max_pages: int | None = Field(None, ge=1, description="shoptet_html: overrides the default")
     page_paths: list[str] = Field(
         default_factory=list, description="static_html: price-list pages, e.g. ['/cenik/']"
+    )
+    document_link: str | None = Field(
+        None,
+        description="static_html: regex of a link on each page to follow, e.g. 'cenik-uhli.*\\.pdf'"
+        " for a PDF price list whose file name changes; the linked document is read instead",
     )
     enabled: bool = True
     consent: Consent = Consent.NONE
@@ -91,8 +101,9 @@ class Source(BaseModel):
                 raise ValueError("a static_html source needs page_paths")
             if any(not path.startswith("/") for path in self.page_paths):
                 raise ValueError("page_paths must start with '/'")
-        if self.url_filter:
-            re.compile(self.url_filter)
+        for pattern in (self.url_filter, self.document_link):
+            if pattern:
+                re.compile(pattern)
         return self
 
     @property

@@ -140,6 +140,15 @@ def test_unchanged_price_list_needs_no_crew(stub_crew):
     assert StubExtractionCrew.calls == []  # no LLM call for a page that did not change
 
 
+def test_reextract_runs_the_crew_on_stored_pages(stub_crew):
+    assert by_source(run_collection(["demosklad"]))["demosklad"].status == "ok"
+    StubExtractionCrew.calls.clear()
+    # Unchanged pages would normally skip the crew; reextract sends them through again.
+    state = run_collection(["demosklad"], reextract=True)
+    assert by_source(state)["demosklad"].status == "ok"
+    assert len(StubExtractionCrew.calls) == 1
+
+
 def test_guardrail_sends_the_reasons_back(stub_crew, client):
     (page,) = client.price_pages("demosklad")["pages"]
     check = make_guardrail(client, "demosklad", page["page_id"])
@@ -158,6 +167,9 @@ def test_failed_crew_is_retried_then_recorded(stub_crew, client):
     run = by_source(run_collection(["demosklad"]))["demosklad"]
     assert run.status == "error" and "LLM quota exceeded" in run.detail
     assert len(StubExtractionCrew.calls) == collection.MAX_CREW_ATTEMPTS
+    # The failure is also in the database, so GET /sources shows it.
+    snapshot = {row["source"]["id"]: row for row in client.sources()}["demosklad"]["last_snapshot"]
+    assert snapshot["status"] == "error" and "LLM quota exceeded" in snapshot["error"]
     # Nothing was stored, so the next run still sees a changed page and tries again.
     StubExtractionCrew.fail = False
     assert by_source(run_collection(["demosklad"]))["demosklad"].status == "ok"
