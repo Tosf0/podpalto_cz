@@ -1,0 +1,44 @@
+# Two backend containers that talk only over HTTP:
+#   app   (CrewAI agents + public API, :8000)  --->  tools (data sources, :8001)
+# Start: docker compose up --build
+# First run: fill the snapshot database with the CollectionFlow (feeds, shops, price lists)
+#   docker compose exec app collect                (progress: GET http://localhost:8001/sources)
+
+services:
+  tools:
+    build:
+      context: .
+      dockerfile: tools/Dockerfile
+    environment:
+      TOOLS_DATA_DIR: /data
+    volumes:
+      - ./data:/data # snapshot database + raw feed copies survive container restarts
+    ports:
+      - "8001:8001" # published only for debugging (http://localhost:8001/docs)
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    env_file:
+      - path: .env # MANAGER_MODEL, AGENT_MODEL, MODEL, ANTHROPIC_API_KEY
+        required: false
+    environment:
+      TOOLS_API_URL: http://tools:8001
+      OUTPUT_DIR: /data/outputs
+    volumes:
+      - ./outputs:/data/outputs
+    ports:
+      - "8000:8000"
+    depends_on:
+      tools:
+        condition: service_healthy

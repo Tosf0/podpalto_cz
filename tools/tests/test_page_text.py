@@ -1,4 +1,4 @@
-from podpalto_tools.web.page_text import html_to_text
+from podpalto_tools.sources.page_text import html_to_text
 
 
 def test_html_to_text_strips_markup_and_scripts():

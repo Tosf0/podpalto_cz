@@ -1,0 +1,84 @@
+# Inputs: {seller}, {page_url}, {fuel_categories}, {page_text}.
+# Both tasks return SellerPriceExtractionList (output_pydantic). The audit task also has a
+# guardrail: the tools service checks every quote against the page (dry run) and sends
+# the reasons back when a row fails, up to 3 times.
+
+extract_price_rows:
+  description: >
+    Below is the visible text of a price-list page of the seller {seller}
+    ({page_url}). Table cells are separated by " | ".
+
+    Create one row per fuel price on the page. For every row:
+    - product_name: the product as written on the page (if the name sits in a
+      heading above the table, combine nothing; copy one continuous piece of text).
+    - variant_text: when the same product has several prices (log lengths,
+      quantity tiers such as "nad 30 q", price zones, bag or loose), the text that
+      tells this price apart, copied exactly from the column header or the row,
+      e.g. "25 cm". Every price of the same product needs its own variant_text.
+    - price_text: the text holding exactly ONE price, copied exactly, e.g.
+      "690 Kč/q" or "7 100". If a cell lists several prices (quantity tiers,
+      lengths), make one row per price and quote only that price.
+    - unit_text: only when the unit is not in price_text, the text that names it
+      (often the table header), copied exactly.
+    - original_unit: what one price buys: kg, q (metrák, 100 kg), t, bag, pallet,
+      m3 (solid wood, plnometr), prmr (stacked cubic metre, also "prm"), prms
+      (loose cubic metre, also "sprm", "sypaný").
+    - package_text: required for bag and pallet: the text giving its weight in kg.
+    - fuel_category: one of {fuel_categories}. Brown coal (hnědé, Bílina, ořech,
+      kostka) is brown_coal; Rekord and other coal briquettes are coal_briquettes.
+    - price_includes_vat: true or false only when the page says so (s DPH, bez
+      DPH, vč. DPH); otherwise null.
+    - quality_standard: the grade, certificate or origin (ENplus A1, Rekord 4",
+      the mine such as "Bílina"), copied exactly. It may come from a heading
+      above the table when that heading applies to the row.
+    - delivery_note: delivery or unloading terms, copied exactly when present.
+
+    Each price appears once: when the page shows the same price without and with
+    VAT, report only the price with VAT; skip a column that repeats the prices of
+    another column (for example the same price for delivery in crates).
+
+    The text may come from OCR of an image: it can contain garbled words, and a
+    table cell that could not be read reliably shows "?". Never report a price for
+    a "?" cell and never correct or complete digits; copy what is there.
+
+    Do not calculate, convert, round or translate anything. Copy text exactly as
+    it appears, including spaces inside numbers. If the page has no price list,
+    return price_list_found = false and no rows.
+
+    PAGE TEXT:
+    {page_text}
+  expected_output: >
+    A SellerPriceExtractionList with one row per price on the page, every text
+    field copied exactly from the page.
+
+audit_price_rows:
+  description: >
+    Review the rows extracted from the price list of {seller} ({page_url})
+    against the page text at the end of this task.
+
+    For each row decide:
+    - Is it a fuel price at all? Delivery fees, unloading (skládání pásem),
+      deposits, services and self-harvesting permits (samovýroba) are not:
+      set qa_status = "rejected" and say why in qa_note. Neither are struck-through
+      or recommended prices (doporučená cena, původní cena, běžná cena): when a
+      product shows such a price next to its selling price, keep only the selling
+      price.
+    - Is fuel_category right? Is original_unit right (q is 100 kg; a price
+      "za prms" is prms)? Correct it and note the correction in qa_note.
+    - Does the page state whether prices include VAT? Set price_includes_vat
+      accordingly for every row, or leave null when the page does not say.
+    - Is every quoted field still exactly as on the page? Fix copy errors by
+      copying again from the page; never paraphrase.
+    - Do two accepted rows have the same product_name? Then each needs a
+      variant_text that tells them apart (length, quantity tier, zone). Is a
+      price reported twice (without and with VAT, or a repeating column)? Keep
+      the one with VAT and reject the other.
+    Add rows the extractor missed. Do not calculate, convert or estimate prices.
+
+    PAGE TEXT:
+    {page_text}
+  expected_output: >
+    The final SellerPriceExtractionList: every row with qa_status set, corrected
+    where needed, and quotes exactly as on the page.
+  context:
+    - extract_price_rows

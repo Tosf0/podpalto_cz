@@ -1,0 +1,72 @@
+# Inputs: {fuel_types} (comma-separated), {region}, {focus}.
+# Tasks have no `agent:` on purpose: the manager picks the specialist.
+# Adding `agent: <name>` restricts the manager to delegating to that agent.
+#
+# Rule repeated in the price tasks on purpose: figures come from tools, never from the LLM.
+
+pricing_research:
+  description: >
+    Collect current seller offers for these fuel types: {fuel_types}
+    (region: {region}). When the region is not CZ, pass it to the tools as
+    `region`. For each fuel type report the price level (min, average, max
+    unit price and price per kWh) and compare sellers on unit price, package
+    size, price incl. delivery, region and stock availability.
+    Quote every figure exactly as the tools return it. Do not calculate,
+    convert or estimate prices. Fuels sold by weight are compared in CZK/t,
+    firewood in CZK/prms; keep the two apart. Mention offers flagged
+    `outlier_vs_market` separately instead of treating them as the market level.
+  expected_output: >
+    Per fuel type: a table of offers (seller, region, product, package, unit
+    price with unit, price per kWh, price incl. delivery, in stock) and 3-5
+    bullet findings. State when the data was collected, how many offers were
+    excluded and why, and name the data source.
+
+market_trends_research:
+  description: >
+    For these fuel types: {fuel_types} (region: {region}), describe the
+    regional demand with heating_demand (how many dwellings heat mainly with
+    the fuel, by region, official census data) and the multi-year price trend
+    with market_statistics. Say which figures are official and which are mock.
+  expected_output: >
+    Per fuel group: the number and share of dwellings heating with it in the
+    whole country and in the requested region (or the top regions), with the
+    census date; then yearly price values with units and the overall change in
+    percent. A short interpretation, and the name of each data source.
+
+regulation_research:
+  description: >
+    Find recent regulation, subsidy, price and supply news relevant to these
+    fuel types: {fuel_types} (region: {region}).
+  expected_output: >
+    A list of events, each with date, source, affected fuel types, a
+    one-sentence summary and expected impact on households that heat with
+    the fuel (positive / negative / neutral, with reason).
+
+customer_sentiment_research:
+  description: >
+    Analyse customer reviews of sellers of these fuel types: {fuel_types}.
+    Identify recurring strengths and weaknesses of each seller.
+  expected_output: >
+    Per seller: average rating, review count, main positive and negative
+    themes with a supporting quote. Then 3-5 things a buyer should check
+    before ordering. Name the data source.
+
+final_report:
+  description: >
+    Write the market overview for households on these fuel types:
+    {fuel_types} (region: {region}). Base it only on the findings of the
+    previous tasks and keep every figure, unit and date unchanged. Stay
+    neutral: describe offers, do not promote a seller. Special focus
+    requested by the user (may be empty): {focus}
+  expected_output: >
+    A Markdown report with sections: Summary for Buyers, Prices and Sellers,
+    Cost of Heat (price per kWh across fuel types), Market Trends,
+    Regulation and Subsidies, Seller Reviews, Buying Tips (each tied to a
+    finding), Data Sources and Limitations. In the last section state when
+    the prices were collected and which data was mock/synthetic (tool
+    responses carry a `mock` flag).
+  context:
+    - pricing_research
+    - market_trends_research
+    - regulation_research
+    - customer_sentiment_research

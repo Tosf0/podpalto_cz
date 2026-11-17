@@ -1,5 +1,21 @@
-"""Flows orchestrate crews (and plain Python steps) into end-to-end pipelines."""
+"""Flows orchestrate crews (and plain Python steps) into end-to-end pipelines.
 
-from podpalto_app.flows.competitor_analysis import CompetitorAnalysisFlow, CompetitorAnalysisState
+CollectionFlow      collects prices source by source (PDF, section 4.1)
+MarketResearchFlow  turns the collected data into a report for households
+"""
 
-__all__ = ["CompetitorAnalysisFlow", "CompetitorAnalysisState"]
+from podpalto_app.flows.collection import CollectionFlow, FuelPipelineState, run_collection
+from podpalto_app.flows.market_research import (
+    MarketResearchFlow,
+    MarketResearchState,
+    run_market_research,
+)
+
+__all__ = [
+    "CollectionFlow",
+    "FuelPipelineState",
+    "MarketResearchFlow",
+    "MarketResearchState",
+    "run_collection",
+    "run_market_research",
+]

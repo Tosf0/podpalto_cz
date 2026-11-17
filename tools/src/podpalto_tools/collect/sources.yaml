@@ -1,0 +1,394 @@
+# Source registry: every site the collector may visit. Nothing outside this file is fetched.
+#
+# kind      heureka_feed = Heureka-format XML product feed (two requests per run)
+#           shoptet_html = sitemap + public product pages of a Shoptet shop, read from their
+#                          schema.org microdata (one request per page, paused, page limit)
+#           static_html  = price-list pages (page_paths). The app's CollectionFlow sends
+#                          their text to the extraction crew; the tools service verifies
+#                          the quoted rows against the page and does all arithmetic.
+# pillar    1 e-shops | 2 coal yards | 3 DIY stores | 4 forests, firewood | 5 statistics
+#           (the five source groups of the PDF report, section 2)
+# region    region (kraj) of the seller; price_region = where its prices apply (CZ =
+#           nationwide). Both feed the region filter of the report tools.
+# price_includes_vat  default when a price list does not say (forestry often excludes VAT)
+# delivery_included   true when the price includes delivery; omit when not known
+# enabled   false = never fetched, and its stored records are no longer served
+# consent   none | requested | granted: has the seller agreed to its prices being shown?
+#           Nothing enforces it yet; it records where each seller stands.
+# url_filter (shoptet_html) regex a sitemap URL path must match; use it for shops whose
+#           range is mostly something other than fuel.
+#
+# Checked on 2026-11-16/17: the first five shops serve the feed; the other five answer
+# 403 on the feed, so they are read from the pages their robots.txt allows and their
+# sitemap lists. The feed block itself is not worked around.
+# Checked on 2026-11-17: the twelve price lists of pillars 2 and 4 (taken from the PDF
+# report) are allowed by robots.txt and served as plain HTML with prices in the page.
+
+sources:
+  - id: drevosrot
+    seller: eshop.drevosrot.cz
+    ico: "27602231"
+    base_url: https://eshop.drevosrot.cz
+    kind: heureka_feed
+    region: Hlavní město Praha
+    feed_path: /heureka/export/products.xml
+    enabled: true
+    consent: none
+
+  - id: peletynovybor
+    seller: peletynovybor.cz
+    ico: "09371788"
+    base_url: https://www.peletynovybor.cz
+    kind: heureka_feed
+    region: Liberecký kraj
+    feed_path: /heureka/export/products.xml
+    enabled: true
+    consent: none
+
+  - id: briketymelnik
+    seller: briketymelnik.cz
+    ico: "08693676"
+    base_url: https://www.briketymelnik.cz
+    kind: heureka_feed
+    region: Hlavní město Praha
+    feed_path: /heureka/export/products.xml
+    enabled: true
+    consent: none
+
+  - id: palivazdemar
+    seller: palivazdemar.cz
+    ico: "25025589"
+    base_url: https://www.palivazdemar.cz
+    kind: heureka_feed
+    region: Ústecký kraj
+    feed_path: /heureka/export/products.xml
+    enabled: true
+    consent: none
+    notes: Variants encode the delivery mode (pickup vs delivery), so one product has several prices.
+
+  - id: palivos
+    seller: palivos.cz
+    ico: "04423046"
+    base_url: https://www.palivos.cz
+    kind: heureka_feed
+    region: Ústecký kraj
+    feed_path: /heureka/export/products.xml
+    enabled: true
+    consent: none
+
+  - id: a1pelety
+    seller: a1pelety.cz
+    ico: "25839586"
+    base_url: https://www.a1pelety.cz
+    kind: shoptet_html
+    region: Zlínský kraj
+    enabled: true
+    consent: none
+
+  - id: bkpaliva
+    seller: bkpaliva.cz
+    ico: "72124016"
+    base_url: https://www.bkpaliva.cz
+    kind: shoptet_html
+    region: Kraj Vysočina
+    enabled: true
+    consent: none
+    notes: Variants encode the delivery mode (delivery included vs pickup).
+
+  - id: valdex
+    seller: valdex.cz
+    ico: "17842794"
+    base_url: https://www.valdex.cz
+    kind: shoptet_html
+    region: Hlavní město Praha
+    enabled: true
+    consent: none
+    notes: Also sells timber; non-fuel pages are fetched and dropped by the classifier.
+
+  - id: woodhell
+    seller: woodhell.cz
+    ico: "07645121"
+    base_url: https://www.woodhell.cz
+    kind: shoptet_html
+    region: Ústecký kraj
+    enabled: true
+    consent: none
+    notes: Also sells timber; firewood has many variants (length, cut, moisture).
+
+  - id: latop
+    seller: latop.cz
+    ico: "45022747"
+    base_url: https://www.latop.cz
+    kind: shoptet_html
+    region: Jihočeský kraj
+    url_filter: pelet|briket|uhli|drev|koks
+    enabled: true
+    consent: none
+    notes: About 6900 pages, mostly stoves and accessories; the filter keeps it to fuel-like URLs.
+
+  # --- pillar 2: coal yards (price lists, read by the extraction crew) ----------------------
+  # IČO checked in ARES on 2026-11-17 (podpalto-verify-sellers); regions match the company
+  # seat except where a note says otherwise. E-shops above carry the region of their seat.
+  # kvalitniuhli.cz and drevopraha.cz name no IČO on the pages robots.txt allows.
+
+  - id: stefl
+    seller: uhelnesklady-stefl.cz
+    ico: "19240538"
+    base_url: https://www.uhelnesklady-stefl.cz
+    kind: static_html
+    pillar: 2
+    page_paths: [/cz/cenik]
+    region: Kraj Vysočina
+    price_region: Kraj Vysočina
+    consent: none
+    notes: Pelhřimov. Prices incl. VAT and delivery from 30 q; unloading by belt extra.
+
+  - id: unikom
+    seller: prodejuhli.unikom.cz
+    ico: "46355821"
+    base_url: https://prodejuhli.unikom.cz
+    kind: static_html
+    pillar: 2
+    page_paths: [/cenik]
+    region: Středočeský kraj
+    price_region: Středočeský kraj
+    consent: none
+    notes: Kutná Hora (Čáslav, Uhlířské Janovice, Zbraslavice). Bulk per q and 25 kg bags.
+
+  - id: korbicka
+    seller: uhlikorbicka.cz
+    ico: "18533973"
+    base_url: https://www.uhlikorbicka.cz
+    kind: static_html
+    pillar: 2
+    page_paths: [/cenik-uhli/]
+    region: Kraj Vysočina
+    price_region: Kraj Vysočina
+    consent: none
+    notes: Nové Město na Moravě, Bystřice nad Pernštejnem.
+
+  - id: kb_uhli
+    seller: kb-uhli.cz
+    ico: "41609638"
+    base_url: https://kb-uhli.cz
+    kind: static_html
+    pillar: 2
+    page_paths: [/cenik/]
+    region: Jihomoravský kraj
+    price_region: Jihomoravský kraj
+    consent: none
+    notes: Region per the PDF report (Blanné); delivery priced per q within 45 km.
+
+  - id: havelka
+    seller: havelka.cz
+    ico: "07772815"
+    base_url: https://www.havelka.cz
+    kind: static_html
+    pillar: 2
+    page_paths: [/]
+    consent: none
+    notes: 14 yards in central and eastern Bohemia and Vysočina with price zones 0-III, so no single region.
+
+  - id: olvan
+    seller: olvannachod.cz
+    ico: "27464547"
+    base_url: https://www.olvannachod.cz
+    kind: static_html
+    pillar: 2
+    page_paths: [/paliva/uhelne-sklady]
+    region: Královéhradecký kraj
+    price_region: Královéhradecký kraj
+    consent: none
+    notes: Náchod. Prices tiered by quantity (up to 15 q, over 15 q, over 30 q).
+
+  - id: alvepal
+    seller: alvepal.cz
+    ico: "26057778"
+    base_url: https://alvepal.cz
+    kind: static_html
+    pillar: 2
+    page_paths: [/cenik/]
+    region: Jihočeský kraj
+    price_region: Jihočeský kraj
+    consent: none
+    notes: Yard and price list in Vimperk; the company seat (ARES) is in Prague.
+
+  - id: kvalitniuhli
+    seller: kvalitniuhli.cz
+    base_url: https://kvalitniuhli.cz
+    kind: static_html
+    pillar: 2
+    page_paths: [/cenik.html]
+    region: Středočeský kraj
+    price_region: Středočeský kraj
+    consent: none
+    notes: Jílové u Prahy. No robots.txt (404), which allows everything.
+
+  - id: znz
+    seller: znz.cz
+    ico: "49790757"
+    base_url: https://www.znz.cz
+    kind: static_html
+    pillar: 2
+    page_paths: [/paliva-pisky-sterky]
+    document_link: cenik-uhli.*\.pdf
+    region: Plzeňský kraj
+    price_region: Plzeňský kraj
+    consent: none
+    notes: >-
+      Přeštice. The price list is a PDF whose file name carries its date; the collector
+      follows the link from the fuels page. Delivery over 2 t up to 8 t.
+
+  - id: ridepal
+    seller: ridepal.eu
+    ico: "26847833"
+    base_url: https://ridepal.eu
+    kind: static_html
+    region: Moravskoslezský kraj
+    pillar: 2
+    page_paths: [/]
+    price_region: CZ
+    delivery_included: true
+    consent: none
+    notes: >-
+      E-shop of Ridera Bohemia (coal yards in Ostrava, Malé Březno and others). Pallets
+      delivered across CZ; black coal from Ostrava to Bohemia has a postcode surcharge in
+      the basket, which is not read.
+
+  # --- pillar 1 (continued): producer with prices from ("od") -----------------------------
+
+  - id: waldera
+    seller: waldera.cz
+    base_url: https://www.waldera.cz
+    kind: static_html
+    pillar: 1
+    page_paths: [/brikety, /pelety]
+    delivery_included: true
+    price_from: true
+    consent: none
+    notes: >-
+      Pellet and briquette producer (Brumov-Bylnice). Listings show "Cena od ... Kč/kg"
+      with delivery included; the final price and availability depend on the postcode,
+      which is not entered. Rows carry the flag price_from.
+
+  # --- pillar 3: DIY chains and builders' merchants (category pages, nationwide prices) ----
+  # Checked on 2026-11-17: robots.txt allows the category pages; prices are in the HTML,
+  # except at Bauhaus, which renders them with JavaScript.
+
+  - id: baumax
+    seller: baumax.cz
+    base_url: https://www.baumax.cz
+    kind: static_html
+    pillar: 3
+    page_paths: [/brikety-pelety-palivove-drevo-a-dalsi-paliva/]
+    price_region: CZ
+    consent: none
+    notes: Single bags and whole pallets side by side; the page also carries JSON-LD Product data.
+
+  - id: unihobby
+    seller: unihobby.cz
+    ico: "24711594"
+    base_url: https://unihobby.cz
+    kind: static_html
+    pillar: 3
+    page_paths: [/paliva]
+    price_region: CZ
+    consent: none
+    notes: Each product shows the bag price and the price per kg.
+
+  - id: mountfield
+    seller: mountfield.cz
+    ico: "25620991"
+    base_url: https://www.mountfield.cz
+    kind: static_html
+    pillar: 3
+    page_paths: [/brikety-a-pelety]
+    price_region: CZ
+    consent: none
+    notes: Shows a struck-through "Doporučená cena od výrobce" next to the real price; only the real price counts.
+
+  - id: dek
+    seller: dek.cz
+    base_url: https://www.dek.cz
+    kind: static_html
+    pillar: 3
+    page_paths: [/produkty/vypis/16178-drevene-brikety-a-pelety]
+    price_region: CZ
+    consent: none
+    notes: Builders' merchant; check whether listed prices include VAT.
+
+  - id: bauhaus
+    seller: bauhaus.cz
+    base_url: https://www.bauhaus.cz
+    kind: rendered_html
+    pillar: 3
+    page_paths: [/palivove-drevo-brikety-a-pelety-245491]
+    price_region: CZ
+    consent: none
+    notes: >-
+      Prices are rendered by JavaScript, so the page is read in a headless browser. They
+      show as "184,-" without "Kč", plus a unit price "(1 Kilogram = 12,27)".
+
+  # --- pillar 4: forests and firewood sellers -----------------------------------------------
+
+  - id: deblicelesy
+    seller: deblicelesy.cz
+    ico: "27103803"
+    base_url: https://www.deblicelesy.cz
+    kind: static_html
+    region: Středočeský kraj
+    price_region: Středočeský kraj
+    pillar: 4
+    page_paths: [/cenik]
+    consent: none
+    notes: Dymokury (seat per ARES). Logs, loose and stacked firewood in several lengths, bags of chips.
+
+  - id: alsol
+    seller: alsol.cz
+    ico: "01559109"
+    base_url: https://alsol.cz
+    kind: image_ocr
+    region: Olomoucký kraj
+    pillar: 4
+    page_paths: [/palivo]
+    document_link: palivo_stipane/stipana_polinka_\w+\.png
+    consent: none
+    notes: >-
+      Arcibiskupské lesy a statky Olomouc. Three firewood centres (Písečná, Zlechov,
+      Chropyně) publish their price lists as images; the full-size originals are linked
+      as "ceník ke stažení" and read by OCR (records flagged read_by_ocr). Several regions.
+
+  - id: lesy_liberec
+    seller: mestske-lesy-liberec.cz
+    ico: "72053984"
+    base_url: https://www.mestske-lesy-liberec.cz
+    kind: static_html
+    pillar: 4
+    page_paths: [/cenik-s16CZ]
+    region: Liberecký kraj
+    price_region: Liberecký kraj
+    consent: none
+    notes: Municipal forests; columns without and with 21 % VAT, prm and m3.
+
+  - id: drevopraha
+    seller: drevopraha.cz
+    base_url: https://www.drevopraha.cz
+    kind: static_html
+    pillar: 4
+    page_paths: [/CENIK-PALIVOVEHO-DREVA-a4_0.htm]
+    region: Hlavní město Praha
+    price_region: Hlavní město Praha
+    consent: none
+    notes: Loose (prms) and stacked (prm) prices side by side.
+
+  - id: palivapolice
+    seller: palivapolice.cz
+    ico: "15047881"
+    base_url: https://www.palivapolice.cz
+    kind: static_html
+    pillar: 4
+    page_paths: [/palivove-drevo-cenik/]
+    region: Královéhradecký kraj
+    price_region: Královéhradecký kraj
+    consent: none
+    notes: Police nad Metují. Prices per log length (25 / 30-38 / 40-50 cm).

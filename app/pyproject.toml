@@ -1,19 +1,19 @@
 [project]
 name = "podpalto-app"
 version = "0.1.0"
-description = "CrewAI agents, crews and flows for podpalto.cz competitive intelligence"
+description = "CrewAI agents, crews, flows and the public API for the podpalto.cz market overview"
 requires-python = ">=3.10,<3.14"
 dependencies = [
-    "crewai[anthropic,tools]>=1.15,<2",
-    "podpalto-tools",
+    "crewai[anthropic]>=1.15,<2",
+    "fastapi>=0.115",
+    "httpx>=0.28",
+    "uvicorn>=0.30",
 ]
 
 [project.scripts]
+collect = "podpalto_app.main:collect"
 kickoff = "podpalto_app.main:kickoff"
 plot = "podpalto_app.main:plot"
-
-[tool.uv.sources]
-podpalto-tools = { workspace = true }
 
 [tool.crewai]
 type = "flow"

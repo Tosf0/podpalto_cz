@@ -1,9 +1,5 @@
-"""Custom CrewAI tools for the podpalto.cz agents.
+"""Tools service: data sources for the podpalto.cz agents, exposed over HTTP.
 
-Every tool is a ``crewai.tools.BaseTool`` subclass and is re-exported here,
-so the app can simply ``from podpalto_tools import PageTextTool``.
+The service has no dependency on CrewAI. Agents reach it only through its API
+(see ``podpalto_tools.api``), so it can run in its own container.
 """
-
-from podpalto_tools.web import PageTextTool
-
-__all__ = ["PageTextTool"]

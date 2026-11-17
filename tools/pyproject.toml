@@ -1,11 +1,26 @@
 [project]
 name = "podpalto-tools"
 version = "0.1.0"
-description = "Custom CrewAI tools shared by the podpalto.cz agents"
+description = "Tools service (FastAPI): data sources used by the podpalto.cz agents"
 requires-python = ">=3.10,<3.14"
 dependencies = [
-    "crewai>=1.15,<2",
+    "defusedxml>=0.7",  # feeds are untrusted XML
+    "fastapi>=0.115",
+    "httpx>=0.28",
+    "pillow>=11.0",
+    "playwright>=1.48",
+    "pydantic>=2.11",
+    "pypdf>=5.0",
+    "pytesseract>=0.3.13",
+    "pyyaml>=6.0",
+    "uvicorn>=0.30",
 ]
+
+[project.scripts]
+podpalto-collect = "podpalto_tools.collect.cli:main"
+podpalto-verify-sellers = "podpalto_tools.collect.cli:verify_sellers"
+podpalto-load-opendata = "podpalto_tools.collect.cli:load_opendata"
+podpalto-renormalize = "podpalto_tools.collect.cli:renormalize"
 
 [build-system]
 requires = ["hatchling"]
