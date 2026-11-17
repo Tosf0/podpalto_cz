@@ -197,6 +197,13 @@ rozhodnutí:** nechat přísně podle PDF, nebo např. klece brát jako sypané 
 - [ ] **Crew pro report** (MarketResearchFlow) zatím neproběhla naostro nad skutečnými
       daty; ověřit výstup a cenu běhu.
 - [ ] **Plánování sběru** a **PostgreSQL/TimescaleDB**: viz stage 2.
+- [ ] **Sjednotit API mezi frontendem a backendem** (zapsáno 18. 11. 2026, po merge do
+      `dev`): frontend (`frontend/README.md`, kap. 5 „REST API kontrakt pro CrewAI backend“,
+      typy v `frontend/src/types/index.ts`) očekává např. `GET /api/sellers`,
+      `GET /api/sellers/{slug}`, `GET /api/reports/{id}`; služba `app` dnes nabízí jen
+      `POST/GET /runs` a `/health`. Data pro mapu a prodejce jsou ve službě `tools`
+      (`prices.sqlite`, nástroje `eshop_catalog`, `price_comparison`, `heating_demand`),
+      ale veřejné API nad nimi není. Frontend zatím běží v mock režimu nebo nad Supabase.
 - [ ] **Mapa/dashboard po krajích** z druhého návrhu (GeoJSON krajů, PSČ → kraj) zatím
       není; data mají kraj prodejce a oblast platnosti ceny.
 - [ ] **Sledování nákladů na LLM** (extrakce a report) zatím žádné.

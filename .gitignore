@@ -37,15 +37,10 @@ desktop.ini
 *.log
 *.tmp
 
-# Data (odkomentuj, pokud nechceš verzovat datové soubory)
-# data/
-# *.csv
-# *.xlsx
-
 # Collected data of the tools service (snapshot database, raw feed copies)
 data/
-# Archives of that data (shared outside git)
-data.rar
+# *.csv
+# *.xlsx
 
 # Generated reports
 outputs/*
