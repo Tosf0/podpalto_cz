@@ -55,6 +55,9 @@ cp .env.example .env.local      # Windows PowerShell: copy .env.example .env.loc
 | `NEXT_PUBLIC_MAP_TILE_URL` | *(prázdné)* | Vlastní zdroj mapových dlaždic. Prázdné = OpenStreetMap bez klíče. |
 | `NEXT_PUBLIC_MAP_TILE_ATTRIBUTION` | *(prázdné)* | Text atribuce k dlaždicím (HTML). |
 | `NEXT_PUBLIC_GEOCODER_URL` | `https://photon.komoot.io/api/` | Geokodér pro našeptávač adres nad mapou (Photon, data OpenStreetMap, omezeno na ČR). `off` = jen lokální shody (PSČ, města). Pro produkci vlastní instance Photonu nebo komerční API. |
+| `NEXT_PUBLIC_SITE_URL` | `https://podpalto.cz` | Veřejná adresa webu pro kanonické URL, `sitemap.xml`, `robots.txt` a Open Graph. |
+| `NEXT_PUBLIC_SUPABASE_URL` | *(prázdné)* | Supabase projekt pro blog. **Zatím nenapojeno** – prázdné = ukázkové články ze `src/data/blog.ts`. |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | *(prázdné)* | Veřejný (publishable/anon) klíč Supabase. Čtení článků hlídá RLS – anonym vidí jen publikované. |
 | `NEXT_PUBLIC_EUR_CZK_RATE` | `24.43` | Kurz Kč za 1 € pro zobrazení cen v eurech (Nastavení → Měna). Výchozí kurz ČNB z 16. 11. 2026. Data i API zůstávají v Kč. |
 | `NEXT_PUBLIC_REGIONS_GEOJSON_URL` | *(prázdné)* | Volitelné GeoJSON hranic 14 krajů (vlastnost `kod` = `PHA`/`STC`/… nebo `nazev`) pro choropleth. Bez něj se vykreslí plynulá heat mapa celé ČR (oříznutá hranicí státu). |
 
@@ -71,6 +74,9 @@ Všechny proměnné začínají `NEXT_PUBLIC_`, takže se **zapékají do buildu
 | `/prodejci` | `src/app/prodejci/page.tsx` → `SellersCatalog` | **Katalog prodejců.** Přepínání tabulka / mřížka. Filtry: fulltext, kraj, velikost, šířka sortimentu, typ dopravy (vlastní, hydraulická ruka, zdarma v okolí, osobní odběr), palivo. Řazení podle názvu, hodnocení, nejlevnějšího tvrdého dřeva, šíře sortimentu nebo poslední aktualizace. Sloupec „CI hrozba“ z CI analýzy. |
 | `/prodejci/[slug]` | `src/app/prodejci/[slug]/page.tsx` → `SellerDetail` | **Profil prodejce.** Kontakty a adresa, tlačítko „Porovnat“ (sdíleno s kalkulačkou). Kompletní ceník s přepočtem Kč/kWh a sloupcem změny za 12 měsíců. Graf vývoje ceny vybraného produktu s čárkovanou čárou průměru ČR. Odhad dopravy pro zvolenou polohu. Sekce **Competitive Intelligence** (positioning, tón, USP, SWOT matice, cenové srovnání s krajem a ČR) nebo výzva ke spuštění analýzy v CI Studiu. |
 | `/trendy` | `src/app/trendy/page.tsx` → `TrendsView` | **Trh a trendy.** KPI karty čtyř komodit se sparkline, automaticky generovaný krátký komentář, měsíční vývoj cen za 12 měsíců, srovnání krajů, náklady na kWh podle paliva (včetně účinnosti kotle) a sezónnost. |
+| `/blog` | `src/app/blog/page.tsx` → `BlogIndex` | **Blog (SEO).** Renderuje se na serveru. Doporučený článek, rubriky (Rady a návody / Ceny a trh / Průvodce), hledání, mřížka článků a výzva k mapě cen. JSON-LD `Blog`. |
+| `/blog/[slug]` | `src/app/blog/[slug]/page.tsx` → `BlogArticle` + `BlogProse` | **Článek.** Tělo v Markdownu (nadpisy s kotvami, fotky s popiskem, tipy, tabulky), obsah článku se zvýrazněním při scrollu, sdílení, štítky, autor, související články. `generateMetadata` (title, description, canonical, Open Graph, Twitter), JSON-LD `BlogPosting`, `generateStaticParams`. |
+| `/blog/novy` | `src/app/blog/novy/page.tsx` → `BlogEditor` | **Editor článku** (noindex). Nadpis, slug, perex, rubrika, štítky, úvodní fotka s alt textem, Markdown s lištou nástrojů (nadpisy, tučně, odkaz, seznamy, tip, **vložení fotky**, tabulka), náhled vedle sebe, stav a datum publikace, náhled ve vyhledávači. Zatím ukládá koncept jen do `localStorage`. |
 | `/ci-studio` | `src/app/ci-studio/page.tsx` → `CiStudio` | **CI Studio (CrewAI).** Schéma flow `CompetitorAnalysisFlow`. Formulář pro URL konkurenta s validací a příklady. Průběh běhu: stav kroků, progress bar, konzole `crew.log` s úrovněmi INFO / TOOL / THINK / OK / ERR. Archiv reportů z `outputs/` s filtry (kraj, palivo, řazení, fulltext). Prohlížeč reportu s taby (Summary, Offering & Pricing, Positioning, SWOT, Recommendations), SWOT maticí, metadaty, stažením `.md` a kopírováním. Parametry `?url=` (předvyplní URL) a `?report=` (otevře report). |
 
 Společné prvky: **levý navigační panel** (~1/5 šířky, tmavé jehličí) s logem a položkami menu (ikona + název + popis); dole widget s přepínačem světlého/tmavého režimu a **Nastavením** (zobrazení cen, výchozí poloha, vzhled, porovnání), pod ním účet a „Odhlásit se“ (zatím jen připraveno – přihlašování není napojené). Na mobilu horní lišta s menu. Patička (mimo mapu), stránka 404 a chybová stránka. Upozornění na ukázková data jen v mock režimu.
@@ -140,6 +146,7 @@ frontend/
 │   │   ├── calculator/       WoodConverter, SeasonCalculator, SellerComparison, Methodology, RawWoodExplainer
 │   │   ├── sellers/          SellersCatalog, SellerDetail, seller-utils.ts
 │   │   ├── trends/           TrendsView, PriceTrendChart, RegionComparison, EnergyCostChart, Seasonality
+│   │   ├── blog/             BlogIndex, BlogArticle, BlogProse (Markdown → HTML), BlogEditor, blog-parts
 │   │   ├── ci/               CiStudio, RunPanel, ReportArchive, ReportViewer, SwotMatrix, Markdown
 │   │   ├── common/           PageHeader, EmptyState, FuelBadge, FuelIcon, PriceTag, PriceDelta,
 │   │   │                     StockBadge, StarRating, Sparkline, KpiCard, RegionSelect, SellerTags,
@@ -585,6 +592,21 @@ Další detaily mock režimu:
 - Každá mock odpověď prochází `mockResolve()` (`client.ts`). Ta data **klonuje** (`structuredClone`) a přidá latenci. UI tak nemůže data omylem zmutovat.
 - Běhy a vygenerované reporty drží modul v paměti prohlížeče (`Map`). Po obnovení stránky zmizí, statické reporty zůstanou.
 - Stránka `/prodejci/[slug]` se pre-renderuje podle slugů mock prodejců (`generateStaticParams`). I při připojeném backendu, viz omezení v ARCHITECTURE.md.
+
+---
+
+## 6a. Blog a napojení na Supabase
+
+Blog je zatím **čistě UI s ukázkovými články** (`src/data/blog.ts`, ilustrace v `public/blog/`). Napojení je připravené takto:
+
+1. **Schéma:** `supabase/migrations/20261117000000_blog.sql` – tabulka `blog_posts` (Markdown obsah, obálka, rubrika, štítky, autor, stav, SEO pole), tabulka `blog_editors` (kdo smí psát), RLS (veřejnost čte jen publikované, redaktoři vše) a veřejný bucket `blog-images` pro fotky. Spustit v Supabase SQL Editoru nebo `supabase db push`.
+2. **Proměnné:** vyplnit `NEXT_PUBLIC_SUPABASE_URL` a `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Jakmile jsou nastavené, `src/lib/api/blog.ts` čte publikované články přes REST (`fetchPublishedPosts` v `src/lib/blog/supabase.ts`) – bez další závislosti. *Netestováno proti reálnému projektu.*
+3. **Editor:** doinstalovat `@supabase/supabase-js` + `@supabase/ssr`, přidat přihlášení redaktora a doplnit `saveBlogPost` / `uploadBlogImage` (návrh v `src/lib/blog/supabase.ts`). Fotky vložené v editoru mají v textu dočasnou adresu `upload:<id>`, kterou upload nahradí veřejnou URL z bucketu.
+4. **Cache:** čtení je v `"use cache"` s tagem `blog`. Po uložení článku zavolat `revalidateTag("blog")` (server action), aby se změna hned projevila.
+
+Mapování řádku tabulky na typ `BlogPost` je v `rowToPost` / `postToRow`. Obsah článků se nepřekládá (je česky), UI blogu ano.
+
+SEO: `src/app/sitemap.ts` (hlavní stránky, články, prodejci) a `src/app/robots.ts` (neindexuje `/ci-studio` a `/blog/novy`).
 
 ---
 

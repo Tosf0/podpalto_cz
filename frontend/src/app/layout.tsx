@@ -5,6 +5,7 @@ import "./globals.css";
 import { AppProviders } from "@/components/providers/app-providers";
 import { AppShell } from "@/components/layout/app-shell";
 import { SiteFooter } from "@/components/layout/site-footer";
+import { SITE_URL } from "@/lib/blog/utils";
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -23,6 +24,7 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "podpalto.cz – Cenová mapa tuhých paliv v ČR",
     template: "%s | podpalto.cz",

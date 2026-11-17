@@ -396,3 +396,55 @@ export interface UserLocation extends GeoPoint {
   zip?: string;
   region?: RegionCode;
 }
+
+/* ------------------------------------------------------------------ */
+/* Blog                                                                */
+/* ------------------------------------------------------------------ */
+
+/** Rubrika článku (popisky jsou v překladech `blog.categories.*`). */
+export type BlogCategory = "rady" | "trh" | "pruvodce";
+
+export type BlogPostStatus = "draft" | "published";
+
+/** Obrázek článku – URL může mířit do /public nebo do Supabase Storage (bucket `blog-images`). */
+export interface BlogImage {
+  url: string;
+  alt: string;
+  /** Autor / zdroj fotky, zobrazí se pod obrázkem. */
+  credit?: string;
+}
+
+export interface BlogAuthor {
+  name: string;
+  role?: string;
+  avatar_url?: string;
+}
+
+/**
+ * Článek blogu. Tvar odpovídá tabulce `blog_posts` v Supabase
+ * (viz `supabase/migrations/*_blog.sql` a mapování v `src/lib/blog/supabase.ts`).
+ */
+export interface BlogPost {
+  id: string;
+  slug: string;
+  title: string;
+  /** Perex – krátké shrnutí pod nadpisem a v kartách (zároveň výchozí meta description). */
+  excerpt: string;
+  /** Tělo článku v Markdownu (GFM: nadpisy, seznamy, tabulky, obrázky `![alt](url "popisek")`). */
+  content: string;
+  cover: BlogImage | null;
+  category: BlogCategory;
+  tags: string[];
+  author: BlogAuthor;
+  status: BlogPostStatus;
+  /** ISO datum publikace (null = koncept). */
+  published_at: string | null;
+  updated_at: string;
+  reading_minutes: number;
+  /** Volitelné přepsání titulku a popisu pro vyhledávače. */
+  seo_title?: string | null;
+  seo_description?: string | null;
+}
+
+/** Článek bez těla – pro výpisy. */
+export type BlogPostSummary = Omit<BlogPost, "content">;

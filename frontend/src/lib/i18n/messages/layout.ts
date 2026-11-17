@@ -12,6 +12,7 @@ export const layout = defineMessages({
       calculator: { label: "Kalkulačka", hint: "Převody, sezóna, srovnání" },
       sellers: { label: "Prodejci", hint: "Katalog dodavatelů v ČR" },
       trends: { label: "Trh a trendy", hint: "Vývoj cen a kraje" },
+      blog: { label: "Blog", hint: "Rady a novinky o topení" },
       ci: { label: "CI Studio", hint: "AI analýza konkurence" },
     },
     theme: {
@@ -90,6 +91,7 @@ export const layout = defineMessages({
       calculator: { label: "Rechner", hint: "Umrechnung, Saison, Vergleich" },
       sellers: { label: "Händler", hint: "Lieferantenkatalog in Tschechien" },
       trends: { label: "Markt & Trends", hint: "Preisentwicklung und Regionen" },
+      blog: { label: "Blog", hint: "Tipps und News rund ums Heizen" },
       ci: { label: "CI Studio", hint: "KI-Wettbewerbsanalyse" },
     },
     theme: {
@@ -169,6 +171,7 @@ export const layout = defineMessages({
       calculator: { label: "Calculator", hint: "Conversions, season, comparison" },
       sellers: { label: "Sellers", hint: "Supplier directory in Czechia" },
       trends: { label: "Market & trends", hint: "Price trends and regions" },
+      blog: { label: "Blog", hint: "Heating tips and news" },
       ci: { label: "CI Studio", hint: "AI competitor analysis" },
     },
     theme: {

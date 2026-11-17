@@ -1,3 +1,4 @@
+import { blog } from "./blog";
 import { calculator } from "./calculator";
 import { ci } from "./ci";
 import { common } from "./common";
@@ -18,6 +19,7 @@ export const MESSAGES = {
     sellers: sellers.cs,
     trends: trends.cs,
     ci: ci.cs,
+    blog: blog.cs,
   },
   de: {
     common: common.de,
@@ -28,6 +30,7 @@ export const MESSAGES = {
     sellers: sellers.de,
     trends: trends.de,
     ci: ci.de,
+    blog: blog.de,
   },
   en: {
     common: common.en,
@@ -38,6 +41,7 @@ export const MESSAGES = {
     sellers: sellers.en,
     trends: trends.en,
     ci: ci.en,
+    blog: blog.en,
   },
 };
 

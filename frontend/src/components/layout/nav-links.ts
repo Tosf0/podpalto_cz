@@ -1,6 +1,6 @@
-import { Bot, Calculator, Map as MapIcon, Store, TrendingUp, type LucideIcon } from "lucide-react";
+import { Bot, Calculator, Map as MapIcon, Newspaper, Store, TrendingUp, type LucideIcon } from "lucide-react";
 
-export type NavKey = "map" | "calculator" | "sellers" | "trends" | "ci";
+export type NavKey = "map" | "calculator" | "sellers" | "trends" | "blog" | "ci";
 
 export interface NavLink {
   href: string;
@@ -17,6 +17,7 @@ export const NAV_LINKS: NavLink[] = [
   { href: "/kalkulacka", key: "calculator", icon: Calculator },
   { href: "/prodejci", key: "sellers", icon: Store },
   { href: "/trendy", key: "trends", icon: TrendingUp },
+  { href: "/blog", key: "blog", icon: Newspaper },
   { href: "/ci-studio", key: "ci", icon: Bot, badge: "AI" },
 ];
 
