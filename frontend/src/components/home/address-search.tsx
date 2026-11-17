@@ -176,7 +176,7 @@ export function AddressSearch({
 
   return (
     <div ref={wrapRef} className={cn("relative", className)}>
-      <div className="flex h-11 items-center gap-2 rounded-full bg-muted pr-1.5 pl-4 transition-colors focus-within:bg-card focus-within:ring-2 focus-within:ring-primary/25">
+      <div className="flex h-11 items-center gap-2 rounded-full bg-card pr-1.5 pl-4 shadow-soft transition-colors focus-within:ring-2 focus-within:ring-primary/25">
         <Search aria-hidden className="size-[18px] shrink-0 text-moss-strong" />
         <input
           ref={inputRef}

@@ -39,7 +39,7 @@ function PillIconButton({ label, onClick, pressed, children }: { label: string; 
       aria-pressed={pressed}
       className={cn(
         "flex h-9 flex-1 items-center justify-center rounded-full transition-colors [&_svg]:size-[18px]",
-        pressed ? "bg-primary text-primary-foreground shadow-soft" : "text-foreground/75 hover:bg-card hover:text-foreground",
+        pressed ? "bg-primary text-primary-foreground shadow-soft" : "text-foreground/75 hover:bg-muted hover:text-foreground",
       )}
     >
       {children}
@@ -56,7 +56,7 @@ export function PriceModePill({ className }: { className?: string }) {
     { value: "kwh", label: moneyUnit("kWh") },
   ];
   return (
-    <div role="radiogroup" aria-label={t("home.overlays.priceMode")} className={cn("grid h-11 shrink-0 grid-cols-2 gap-1 rounded-full bg-muted/70 p-1", TOP_SIDE_WIDTH, className)}>
+    <div role="radiogroup" aria-label={t("home.overlays.priceMode")} className={cn("grid h-11 shrink-0 grid-cols-2 gap-1 rounded-full bg-card p-1 shadow-soft", TOP_SIDE_WIDTH, className)}>
       {options.map((o) => (
         <button
           key={o.value}
@@ -66,7 +66,7 @@ export function PriceModePill({ className }: { className?: string }) {
           onClick={() => setPriceMode(o.value)}
           className={cn(
             "rounded-full text-xs font-semibold transition-colors",
-            priceMode === o.value ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:bg-card hover:text-foreground",
+            priceMode === o.value ? "bg-primary text-primary-foreground shadow-soft" : "text-muted-foreground hover:bg-muted hover:text-foreground",
           )}
         >
           {o.label}
@@ -92,7 +92,7 @@ export function MapControlsPill({
 }) {
   const { t } = useI18n();
   return (
-    <div className={cn("flex h-11 shrink-0 items-center gap-0.5 rounded-full bg-muted/70 p-1", TOP_SIDE_WIDTH, className)}>
+    <div className={cn("flex h-11 shrink-0 items-center gap-0.5 rounded-full bg-card p-1 shadow-soft", TOP_SIDE_WIDTH, className)}>
       <PillIconButton label={t("home.overlays.regionsMap")} onClick={onToggleRegions} pressed={showRegions}>
         <Layers aria-hidden />
       </PillIconButton>
@@ -182,7 +182,7 @@ export function MarketStrip({ className }: { className?: string }) {
           loading || !item ? (
             <Skeleton key={i} className="h-[52px] rounded-xl @3xl:h-[58px]" />
           ) : (
-            <div key={item.key} className="flex h-[52px] min-w-0 flex-col justify-center rounded-xl bg-muted/55 px-3 @3xl:h-[58px]">
+            <div key={item.key} className="flex h-[52px] min-w-0 flex-col justify-center rounded-xl bg-card px-3 shadow-soft @3xl:h-[58px]">
               <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground [&_svg]:size-3.5">
                 <FuelIcon category={PULSE_FUEL[item.key]} className="shrink-0 text-wood" />
                 <span className="truncate">{COMMODITY_META[item.key].label}</span>
