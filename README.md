@@ -14,6 +14,10 @@ z nich sestaví přehled pro kupující. Všechna čísla počítá obyčejný k
 
 > Tuto sekci doplň: konkrétní cíle a rozsah sledovaných prodejců.
 
+Dokumentace: [architektura](docs/architecture.md), [zdroje dat](docs/sources.md),
+[databáze a formáty dat](docs/database.md). Otevřené úkoly a dočasná rozhodnutí jsou
+v [docs/TODO.md](docs/TODO.md).
+
 ## Architektura
 
 Architektura vychází z rešerše „Zdroje dat o pevných palivech“ (PDF, sekce 4): deterministický

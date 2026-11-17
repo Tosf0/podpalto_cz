@@ -320,13 +320,14 @@ sources:
   - id: bauhaus
     seller: bauhaus.cz
     base_url: https://www.bauhaus.cz
-    kind: static_html
+    kind: rendered_html
     pillar: 3
     page_paths: [/palivove-drevo-brikety-a-pelety-245491]
     price_region: CZ
-    enabled: false
     consent: none
-    notes: Prices are rendered by JavaScript (none in the HTML); needs a browser-based kind.
+    notes: >-
+      Prices are rendered by JavaScript, so the page is read in a headless browser. They
+      show as "184,-" without "Kč", plus a unit price "(1 Kilogram = 12,27)".
 
   # --- pillar 4: forests and firewood sellers -----------------------------------------------
 
@@ -341,6 +342,21 @@ sources:
     page_paths: [/cenik]
     consent: none
     notes: Dymokury (seat per ARES). Logs, loose and stacked firewood in several lengths, bags of chips.
+
+  - id: alsol
+    seller: alsol.cz
+    ico: "01559109"
+    base_url: https://alsol.cz
+    kind: image_ocr
+    region: Olomoucký kraj
+    pillar: 4
+    page_paths: [/palivo]
+    document_link: palivo_stipane/stipana_polinka_\w+\.png
+    consent: none
+    notes: >-
+      Arcibiskupské lesy a statky Olomouc. Three firewood centres (Písečná, Zlechov,
+      Chropyně) publish their price lists as images; the full-size originals are linked
+      as "ceník ke stažení" and read by OCR (records flagged read_by_ocr). Several regions.
 
   - id: lesy_liberec
     seller: mestske-lesy-liberec.cz

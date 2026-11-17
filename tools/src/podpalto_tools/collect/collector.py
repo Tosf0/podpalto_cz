@@ -34,6 +34,7 @@ from pypdf.errors import PyPdfError as PdfError
 
 from podpalto_tools.collect.heureka import FeedError, FeedItem, parse_feed
 from podpalto_tools.collect.normalize import SolidFuelPriceRecord, normalize
+from podpalto_tools.collect.ocr import OcrError
 from podpalto_tools.collect.pricelist import (
     MAX_PAGE_CHARS,
     RowVerdict,
@@ -41,6 +42,7 @@ from podpalto_tools.collect.pricelist import (
     document_to_text,
     drop_duplicates,
     find_document_link,
+    find_document_links,
     verify_rows,
 )
 from podpalto_tools.collect.shoptet import parse_product_page, parse_sitemap, product_candidates
@@ -378,6 +380,7 @@ class PriceListPage(BaseModel):
     url: str
     text: str
     truncated: bool = False
+    read_by: str = Field("text", description="'text' (HTML, PDF) or 'ocr' (an image)")
 
 
 class PagesResult(BaseModel):
@@ -447,8 +450,15 @@ def fetch_price_pages(
     sleep: Callable[[float], None] = time.sleep,
     *,
     reuse_stored: bool = False,
+    render: Fetch | None = None,
+    ocr: Callable[[bytes], str] | None = None,
 ) -> PagesResult:
-    """Download the price-list pages of a ``static_html`` source and return their text.
+    """Download the price-list pages of a source that needs extraction; return their text.
+
+    static_html    the page (or the first document it links to, e.g. a PDF)
+    rendered_html  the page after JavaScript has run (``render``, a headless browser)
+    image_ocr      every image the page links to that matches ``document_link``, read by
+                   ``ocr``; such pages are marked ``read_by="ocr"``
 
     Unchanged pages need no extraction: the previous records are confirmed as still
     valid in a new snapshot and the status is ``unchanged``. ``reuse_stored`` returns the
@@ -469,37 +479,65 @@ def fetch_price_pages(
     pages: list[PriceListPage] = []
     try:
         allowed, crawl_delay = _load_robots(source, fetch, settings.user_agent)
+
+        def pause() -> None:
+            sleep(max(settings.page_delay_s, crawl_delay))
+
+        def add(url: str, text: str, read_by: str = "text") -> None:
+            if not text.strip():
+                raise _Failure("error", f"{url} has no readable text", 200)
+            pages.append(
+                PriceListPage(
+                    page_id=hashlib.sha256(text.encode("utf-8")).hexdigest(),
+                    url=url,
+                    text=text[:MAX_PAGE_CHARS],
+                    truncated=len(text) > MAX_PAGE_CHARS,
+                    read_by=read_by,
+                )
+            )
+
         for number, url in enumerate(source.page_urls):
             if not allowed(url):
                 raise _Failure("blocked_by_robots", f"robots.txt disallows {url}")
             if number:
-                sleep(max(settings.page_delay_s, crawl_delay))
+                pause()
+            if source.kind is SourceKind.RENDERED_HTML:
+                if render is None:
+                    raise _Failure("error", "no browser configured for rendered_html sources")
+                add(url, document_to_text(_get(render, url, f"rendered page {url}")))
+                continue
+
             content = _get(fetch, url, f"page {url}")
+            html = content.decode("utf-8", errors="replace")
+            if source.kind is SourceKind.IMAGE_OCR:
+                if ocr is None:
+                    raise _Failure("error", "no OCR configured for image_ocr sources")
+                images = find_document_links(html, url, source.document_link or "")
+                if not images:
+                    raise _Failure("error", f"no image matching {source.document_link!r} on {url}")
+                for image_url in images:
+                    if not allowed(image_url):
+                        raise _Failure("blocked_by_robots", f"robots.txt disallows {image_url}")
+                    pause()
+                    image = _get(fetch, image_url, f"image {image_url}")
+                    try:
+                        add(image_url, ocr(image), read_by="ocr")
+                    except OcrError as exc:
+                        raise _Failure("error", f"OCR of {image_url}: {exc}", 200) from exc
+                continue
+
             if source.document_link:
-                link = find_document_link(
-                    content.decode("utf-8", errors="replace"), url, source.document_link
-                )
+                link = find_document_link(html, url, source.document_link)
                 if link is None:
                     raise _Failure("error", f"no link matching {source.document_link!r} on {url}")
                 if not allowed(link):
                     raise _Failure("blocked_by_robots", f"robots.txt disallows {link}")
-                sleep(max(settings.page_delay_s, crawl_delay))
+                pause()
                 url, content = link, _get(fetch, link, f"document {link}")
             try:
-                text = document_to_text(content)
+                add(url, document_to_text(content))
             except PdfError as exc:
                 raise _Failure("error", f"{url} is not a readable PDF: {exc}", 200) from exc
-            if not text.strip():
-                raise _Failure("error", f"page {url} has no visible text", 200)
-            page_id = hashlib.sha256(text.encode("utf-8")).hexdigest()
-            pages.append(
-                PriceListPage(
-                    page_id=page_id,
-                    url=url,
-                    text=text[:MAX_PAGE_CHARS],
-                    truncated=len(text) > MAX_PAGE_CHARS,
-                )
-            )
     except _Failure as failure:
         store.add_snapshot(
             source_id=source.id, fetched_at=fetched_at, status=failure.status,
@@ -596,7 +634,10 @@ def ingest_extraction(
                 detail=f"unknown page_id {part.page_id!r}; fetch the pages first",
             )  # fmt: skip
         page = PriceListPage.model_validate_json(stored.read_text(encoding="utf-8"))
-        for verdict in verify_rows(part.extraction, page.text, page.url, source, fetched_at):
+        extra_flags = ("read_by_ocr",) if page.read_by == "ocr" else ()
+        for verdict in verify_rows(
+            part.extraction, page.text, page.url, source, fetched_at, extra_flags
+        ):
             verdict.index = len(verdicts)
             verdicts.append(verdict)
     # Not in the dry run: a duplicate is not something the crew has to fix.

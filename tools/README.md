@@ -17,7 +17,9 @@ src/podpalto_tools/
 │   ├── source_registry.py   # načtení a validace registru (kind, pilíř, kraj, DPH, doprava)
 │   ├── heureka.py           # parser XML feedu ve formátu Heureka
 │   ├── shoptet.py           # obchody bez feedu: sitemapa → produktové stránky → mikrodata
-│   ├── pricelist.py         # ceníky: text stránky pro crew a kontrola řádků, které vrátí
+│   ├── pricelist.py         # ceníky: text stránky (HTML, PDF) pro crew a kontrola řádků
+│   ├── browser.py           # vykreslení stránek s JavaScriptem (Playwright, rendered_html)
+│   ├── ocr.py               # ceníky v obrázcích: Tesseract, tabulky po buňkách (image_ocr)
 │   ├── normalize.py         # SolidFuelPriceRecord: druh paliva, jednotky, Kč/t, Kč/prms, Kč/kWh
 │   ├── store.py             # SQLite: snímky a záznamy cen
 │   ├── collector.py         # robots.txt → feed / stránky / ceník → normalizace → uložení
@@ -110,13 +112,21 @@ Vše jde vyzkoušet ručně na <http://localhost:8001/docs>.
 
 ## Registr zdrojů a pravidla sběru
 
-`collect/sources.yaml` obsahuje 30 zdrojů ze čtyř pilířů PDF (29 zapnutých):
+`collect/sources.yaml` obsahuje 31 zapnutých zdrojů ze čtyř pilířů PDF:
 
 | `kind` | Pilíř PDF | Zdroje | Co se stahuje |
 |---|---|---|---|
 | `heureka_feed` | 1 e-shopy | 5 | `robots.txt` a XML feed (2 požadavky) |
 | `shoptet_html` | 1 e-shopy | 5 | `robots.txt`, sitemapa a veřejné produktové stránky (nejvýš `COLLECT_MAX_PAGES`) |
 | `static_html` | 1 výrobce, 2 uhelné sklady, 3 hobby markety, 4 lesy a dřevo | 1 + 10 + 4 + 4 | `robots.txt` a stránky ceníku z `page_paths` (HTML nebo PDF) |
+| `rendered_html` | 3 hobby markety | 1 (Bauhaus) | jako `static_html`, ale stránka se vykreslí v headless Chromiu (Playwright) |
+| `image_ocr` | 4 lesy a dřevo | 1 (ALSOL) | obrázky ceníků z odkazů na stránce (`document_link`), čtené Tesseract OCR |
+
+Prohlížeč je obyčejný headless Chromium s User-Agentem sběru: žádné „stealth“ úpravy ani
+řešení výzev. Web, který automatizovaný prohlížeč odmítne (Zboží.cz), se neobchází.
+OCR čte tabulky po buňkách a každou buňku dvakrát; nečitelná buňka je „?“ a cena se z ní
+nevytěží. Záznamy z OCR mají příznak `read_by_ocr`. Proč OCR a co je alternativa, popisuje
+[docs/TODO.md](../docs/TODO.md).
 
 `static_html` čte i PDF ceníky. U ZNZ se adresa PDF mění s každým ceníkem, proto má zdroj
 `document_link`: regulární výraz odkazu, který sběr najde na stránce z `page_paths` a stáhne
@@ -127,10 +137,8 @@ Nezařazené zdroje z PDF a druhého návrhu (ověřeno 17. 11. 2026):
 
 | Zdroj | Stav | Proč |
 |---|---|---|
-| Bauhaus | v registru vypnutý | ceny vykresluje až JavaScript |
 | Hornbach | neobsazen | místo stránek i `robots.txt` vrací ochranu proti botům; podle pravidel se neobchází |
-| alsol.cz | neobsazen | ceníky jsou obrázky PNG; čeká na rozhodnutí o OCR |
-| Zboží.cz | neobsazen | obsah vykresluje JavaScript, podmínky užití neověřeny |
+| Zboží.cz | neobsazen | automatizovaný prohlížeč odmítá („Něco nám brání v načtení stránky“); neobchází se |
 | Firmy.cz | neobsazen | `robots.txt` stránky tagů ostatním robotům než Googlebotu zakazuje |
 
 Pět e-shopů feed zpřístupňuje, druhých pět na něj vrací 403 (ověřeno 16. 11. 2026), proto se
@@ -266,6 +274,19 @@ odporovat zvolené `original_unit`; `bag`/`pallet` musí mít citovanou váhu ba
 | `COLLECT_MIN_INTERVAL_S` | `3600` | minimální odstup dvou sběrů téhož zdroje (0 = vypnuto) |
 | `COLLECT_PAGE_DELAY_S` | `1.5` | pauza mezi stránkami téhož webu |
 | `COLLECT_MAX_PAGES` | `150` | nejvyšší počet stránek z jednoho obchodu za běh (`max_pages` v registru má přednost) |
+| `TESSERACT_CMD` | `tesseract` z PATH, na Windows `C:\Program Files\Tesseract-OCR\tesseract.exe` | cesta k Tesseractu (`image_ocr`) |
+| `TESSDATA_DIR` | `data/ocr/tessdata`, pokud obsahuje `ces.traineddata` | složka s jazykovými daty Tesseractu (potřebuje češtinu) |
+
+Instalace pro `rendered_html` a `image_ocr` mimo Docker:
+
+```bash
+uv run playwright install chromium     # headless Chromium (~150 MB)
+winget install UB-Mannheim.TesseractOCR  # Windows; Debian: apt install tesseract-ocr tesseract-ocr-ces
+```
+
+Na Windows instalátor obsahuje jen angličtinu: `ces.traineddata` z
+<https://github.com/tesseract-ocr/tessdata> ulož do `data/ocr/tessdata` (spolu s
+`eng.traineddata`).
 
 Databáze se kvůli novému kontraktu jmenuje `prices.sqlite`. Starší `podpalto.sqlite` se už
 nečte; data stačí sebrat znovu.
@@ -291,8 +312,13 @@ Chybné případy doplň do `tests/test_normalize.py` nebo `tests/test_pricelist
 
 **PDF ceník:** `static_html` se stránkou, na které je odkaz, a `document_link`.
 
-**Jiný typ zdroje (ceník jako obrázek, stránka vyžadující JavaScript):** nový `SourceKind`,
-cesta v `collector.py` a větev v `CollectionFlow`. Zatím implementované nejsou.
+**Ceník, který potřebuje JavaScript:** `kind: rendered_html` (nejdřív ověř, že ceny po
+vykreslení opravdu jsou v textu a web prohlížeč neodmítá).
+
+**Ceník jako obrázek:** `kind: image_ocr` a `document_link` s regulárním výrazem adres
+obrázků (raději odkazů na originály než zmenšených náhledů).
+
+**Jiný typ zdroje:** nový `SourceKind`, cesta v `collector.py` a větev v `CollectionFlow`.
 
 **Nový nástroj pro agenty:**
 

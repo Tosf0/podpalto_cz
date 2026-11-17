@@ -44,6 +44,8 @@ desktop.ini
 
 # Collected data of the tools service (snapshot database, raw feed copies)
 data/
+# Archives of that data (shared outside git)
+data.rar
 
 # Generated reports
 outputs/*

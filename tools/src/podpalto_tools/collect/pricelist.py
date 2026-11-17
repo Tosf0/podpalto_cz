@@ -113,17 +113,23 @@ def document_to_text(content: bytes) -> str:
     return page_to_text(content.decode("utf-8", errors="replace"))
 
 
-_HREF = re.compile(r"""<a\b[^>]*\bhref\s*=\s*["']([^"']+)["']""", re.I)
+_LINK = re.compile(r"""<(?:a|img)\b[^>]*\b(?:href|src)\s*=\s*["']([^"']+)["']""", re.I)
+
+
+def find_document_links(html: str, base_url: str, pattern: str) -> list[str]:
+    """Absolute URLs of links and images on the page that match ``pattern``, in page order."""
+    found: list[str] = []
+    for href in _LINK.findall(html):
+        url = urljoin(base_url, unescape(href))
+        if re.search(pattern, url, re.I) and url not in found:
+            found.append(url)
+    return found
 
 
 def find_document_link(html: str, base_url: str, pattern: str) -> str | None:
-    """First link on the page whose absolute URL matches ``pattern`` (e.g. the current
-    PDF price list, whose file name changes with every new list)."""
-    for href in _HREF.findall(html):
-        url = urljoin(base_url, unescape(href))
-        if re.search(pattern, url, re.I):
-            return url
-    return None
+    """First matching link (e.g. the current PDF price list, whose file name changes)."""
+    links = find_document_links(html, base_url, pattern)
+    return links[0] if links else None
 
 
 _SPACES = re.compile(r"[\s   |]+")
@@ -319,13 +325,18 @@ def verify_rows(
     page_url: str,
     source: Source,
     scraped_at: str | None = None,
+    extra_flags: tuple[str, ...] = (),
 ) -> list[RowVerdict]:
     """Verdicts for the rows the QA auditor accepted; rows it rejected are not checked."""
-    return [
+    verdicts = [
         verify_row(index, row, page_text, page_url, source, scraped_at)
         for index, row in enumerate(extraction.rows)
         if row.qa_status == "accepted"
     ]
+    for verdict in verdicts:
+        if verdict.record is not None:
+            verdict.record.flags.extend(extra_flags)
+    return verdicts
 
 
 def drop_duplicates(verdicts: list[RowVerdict]) -> int:

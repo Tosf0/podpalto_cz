@@ -31,7 +31,7 @@ from podpalto_app.settings import settings
 log = logging.getLogger(__name__)
 
 STRUCTURED_KINDS = {"heureka_feed", "shoptet_html"}
-EXTRACTION_KINDS = {"static_html"}
+EXTRACTION_KINDS = {"static_html", "rendered_html", "image_ocr"}
 MAX_CREW_ATTEMPTS = 2
 
 

@@ -40,6 +40,7 @@ from podpalto_tools.collect import (
     ingest_extraction,
     load_sources,
 )
+from podpalto_tools.collect.browser import browser_render
 from podpalto_tools.collect.collector import (
     Fetch,
     collect_source,
@@ -47,6 +48,7 @@ from podpalto_tools.collect.collector import (
     record_failure,
     resolve_sources,
 )
+from podpalto_tools.collect.ocr import Ocr, tesseract_ocr
 from podpalto_tools.registry import ToolError, ToolSpec
 from podpalto_tools.settings import get_settings
 from podpalto_tools.sources import ALL_TOOLS
@@ -102,8 +104,11 @@ def create_app(
     tools: Sequence[ToolSpec] = ALL_TOOLS,
     fetch: Fetch | None = None,
     sleep: Callable[[float], None] = time.sleep,
+    render: Fetch | None = None,
+    ocr: Ocr | None = None,
 ) -> FastAPI:
-    """``fetch`` and ``sleep`` replace the collector's HTTP client and pauses (tests)."""
+    """``fetch``, ``sleep``, ``render`` (browser) and ``ocr`` replace the real HTTP client,
+    pauses, headless browser and Tesseract (tests)."""
     names = [spec.name for spec in tools]
     if len(names) != len(set(names)):
         raise ValueError(f"duplicate tool names: {names}")
@@ -213,6 +218,7 @@ def create_app(
             lambda: fetch_price_pages(
                 source, Store(settings.db_path), fetch or http_fetch(settings), settings,
                 sleep=sleep, reuse_stored=reuse_stored,
+                render=render or browser_render(settings), ocr=ocr or tesseract_ocr(settings),
             )
         )  # fmt: skip
 

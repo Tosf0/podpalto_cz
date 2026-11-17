@@ -37,6 +37,10 @@ extract_price_rows:
     VAT, report only the price with VAT; skip a column that repeats the prices of
     another column (for example the same price for delivery in crates).
 
+    The text may come from OCR of an image: it can contain garbled words, and a
+    table cell that could not be read reliably shows "?". Never report a price for
+    a "?" cell and never correct or complete digits; copy what is there.
+
     Do not calculate, convert, round or translate anything. Copy text exactly as
     it appears, including spaces inside numbers. If the page has no price list,
     return price_list_found = false and no rows.

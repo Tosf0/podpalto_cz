@@ -25,10 +25,12 @@ class SourceKind(str, Enum):
     HEUREKA_FEED = "heureka_feed"  # XML product feed
     SHOPTET_HTML = "shoptet_html"  # sitemap + public product pages (schema.org microdata)
     STATIC_HTML = "static_html"  # price-list pages without structure (coal yards, forests)
+    RENDERED_HTML = "rendered_html"  # like static_html, but the page needs JavaScript
+    IMAGE_OCR = "image_ocr"  # price lists published as images, read by OCR
 
     @property
     def needs_extraction(self) -> bool:
-        return self is SourceKind.STATIC_HTML
+        return self in (SourceKind.STATIC_HTML, SourceKind.RENDERED_HTML, SourceKind.IMAGE_OCR)
 
 
 class Pillar(IntEnum):
@@ -81,8 +83,9 @@ class Source(BaseModel):
     )
     document_link: str | None = Field(
         None,
-        description="static_html: regex of a link on each page to follow, e.g. 'cenik-uhli.*\\.pdf'"
-        " for a PDF price list whose file name changes; the linked document is read instead",
+        description="Regex of a link (href or img src) on each page. static_html follows the "
+        "first match, e.g. 'cenik-uhli.*\\.pdf' for a PDF whose file name changes; "
+        "image_ocr reads every matching image",
     )
     enabled: bool = True
     consent: Consent = Consent.NONE
@@ -96,11 +99,13 @@ class Source(BaseModel):
     def _check_kind(self) -> Source:
         if self.kind is SourceKind.HEUREKA_FEED and not self.feed_path:
             raise ValueError("a heureka_feed source needs feed_path")
-        if self.kind is SourceKind.STATIC_HTML:
+        if self.kind.needs_extraction:
             if not self.page_paths:
-                raise ValueError("a static_html source needs page_paths")
+                raise ValueError(f"a {self.kind.value} source needs page_paths")
             if any(not path.startswith("/") for path in self.page_paths):
                 raise ValueError("page_paths must start with '/'")
+        if self.kind is SourceKind.IMAGE_OCR and not self.document_link:
+            raise ValueError("an image_ocr source needs document_link (regex of the images)")
         for pattern in (self.url_filter, self.document_link):
             if pattern:
                 re.compile(pattern)
@@ -111,7 +116,7 @@ class Source(BaseModel):
         """First URL the collector reads: the feed, the sitemap or the first price list."""
         if self.kind is SourceKind.HEUREKA_FEED:
             return self.origin + (self.feed_path or "")
-        if self.kind is SourceKind.STATIC_HTML:
+        if self.kind.needs_extraction:
             return self.origin + self.page_paths[0]
         return self.origin + self.sitemap_path
 
