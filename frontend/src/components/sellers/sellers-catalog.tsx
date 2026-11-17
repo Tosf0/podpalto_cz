@@ -19,7 +19,8 @@ import {
 } from "lucide-react";
 import type { FuelCategory, RegionCode, Seller, SellerSize } from "@/types";
 import { FUEL_CATEGORIES, FUEL_META, REGION_CODES, REGIONS } from "@/lib/constants";
-import { formatCzk, formatNumber, formatRelative, plural } from "@/lib/format";
+import { formatCzk, formatNumber, formatRelative, moneyUnit } from "@/lib/format";
+import { t } from "@/lib/i18n/translate";
 import { getSellers } from "@/lib/api/sellers";
 import { useApi } from "@/hooks/use-api";
 import { cn } from "@/lib/utils";
@@ -39,41 +40,32 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { cheapestHardWood, cheapestPellets, deliveryShort, SIZE_LABEL, THREAT_META } from "./seller-utils";
+import { cheapestHardWood, cheapestPellets, deliveryShort, sizeLabel, THREAT_META } from "./seller-utils";
 
 type SortKey = "name" | "rating" | "hardwood" | "breadth" | "updated";
 type DeliveryKey = "own" | "arm" | "free" | "pickup";
 type BreadthKey = "all" | "1" | "2" | "3+";
 type SizeKey = SellerSize | "all";
 
-const SORT_LABEL: Record<SortKey, string> = {
-  name: "Název",
-  rating: "Hodnocení",
-  hardwood: "Nejlevnější dřevo",
-  breadth: "Šíře sortimentu",
-  updated: "Aktualizace",
-};
+const SORT_KEYS: SortKey[] = ["name", "rating", "hardwood", "breadth", "updated"];
+const DELIVERY_KEYS: DeliveryKey[] = ["own", "arm", "free", "pickup"];
+const BREADTH_KEYS: BreadthKey[] = ["all", "1", "2", "3+"];
+const SIZE_KEYS: SizeKey[] = ["all", "small", "medium", "large"];
 
-const DELIVERY_LABEL: Record<DeliveryKey, string> = {
-  own: "Vlastní doprava",
-  arm: "Hydraulická ruka",
-  free: "Doprava zdarma v okolí",
-  pickup: "Osobní odběr",
-};
+const BREADTH_MSG = { all: "all", "1": "one", "2": "two", "3+": "three" } as const;
 
-const BREADTH_LABEL: Record<BreadthKey, string> = {
-  all: "Libovolný",
-  "1": "1 palivo",
-  "2": "2 paliva",
-  "3+": "3 a více paliv",
-};
-
-const SIZE_OPTIONS: Record<SizeKey, string> = {
-  all: "Všechny",
-  small: "Malý",
-  medium: "Střední",
-  large: "Velký",
-};
+function sortLabel(k: SortKey): string {
+  return t(`sellers.catalog.sort.${k}`);
+}
+function deliveryLabel(k: DeliveryKey): string {
+  return t(`sellers.catalog.deliveryOpts.${k}`);
+}
+function breadthLabel(k: BreadthKey): string {
+  return t(`sellers.catalog.breadth.${BREADTH_MSG[k]}`);
+}
+function sizeOption(k: SizeKey): string {
+  return k === "all" ? t("sellers.catalog.sizeAll") : sizeLabel(k);
+}
 
 function matchesDelivery(s: Seller, k: DeliveryKey): boolean {
   const d = s.delivery;
@@ -203,7 +195,7 @@ function AppliedChip({ label, onRemove }: { label: string; onRemove: () => void 
     <button
       type="button"
       onClick={onRemove}
-      aria-label={`Zrušit filtr ${label}`}
+      aria-label={t("sellers.catalog.removeFilter", { label })}
       className="group inline-flex h-8 items-center gap-1.5 rounded-xl border border-primary/40 bg-accent px-2.5 text-xs font-medium whitespace-nowrap text-accent-foreground transition-colors outline-none hover:border-primary focus-visible:ring-3 focus-visible:ring-ring/50"
     >
       {label}
@@ -214,11 +206,11 @@ function AppliedChip({ label, onRemove }: { label: string; onRemove: () => void 
 
 function ViewToggle({ value, onChange }: { value: "table" | "grid"; onChange: (v: "table" | "grid") => void }) {
   const items = [
-    { v: "table" as const, label: "Tabulka", Icon: Table2 },
-    { v: "grid" as const, label: "Mřížka", Icon: LayoutGrid },
+    { v: "table" as const, label: t("sellers.catalog.viewTable"), Icon: Table2 },
+    { v: "grid" as const, label: t("sellers.catalog.viewGrid"), Icon: LayoutGrid },
   ];
   return (
-    <div role="radiogroup" aria-label="Zobrazení" className="inline-flex rounded-full bg-muted p-1">
+    <div role="radiogroup" aria-label={t("sellers.catalog.viewAria")} className="inline-flex rounded-full bg-muted p-1">
       {items.map(({ v, label, Icon }) => (
         <button
           key={v}
@@ -269,11 +261,11 @@ function DeliveryLine({ seller, truck = true }: { seller: Seller; truck?: boolea
       {seller.delivery.hydraulicArm && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <span className="inline-flex text-foreground" aria-label="Hydraulická ruka">
+            <span className="inline-flex text-foreground" aria-label={t("sellers.catalog.hydraulicArm")}>
               <Forklift aria-hidden="true" className="size-3.5" />
             </span>
           </TooltipTrigger>
-          <TooltipContent>Hydraulická ruka</TooltipContent>
+          <TooltipContent>{t("sellers.catalog.hydraulicArm")}</TooltipContent>
         </Tooltip>
       )}
     </span>
@@ -382,14 +374,14 @@ function SellerCard({ seller }: { seller: Seller }) {
         ))}
       </div>
       <dl className="grid grid-cols-2 gap-2">
-        <PriceStat label="Tvrdé dřevo od" unit="PRMS" value={cheapestHardWood(seller)} />
-        <PriceStat label="Pelety od" unit="t" value={cheapestPellets(seller)} />
+        <PriceStat label={t("sellers.catalog.card.hardFrom")} unit="PRMS" value={cheapestHardWood(seller)} />
+        <PriceStat label={t("sellers.catalog.card.pelletsFrom")} unit="t" value={cheapestPellets(seller)} />
       </dl>
       <DeliveryLine seller={seller} />
       <div className="relative flex items-center justify-between gap-2 self-end border-t border-border pt-3 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1.5">
           <Clock aria-hidden="true" className="size-3.5" />
-          Aktualizace {formatRelative(seller.lastScrapedAt)}
+          {t("sellers.catalog.card.updated", { when: formatRelative(seller.lastScrapedAt) })}
         </span>
         <ThreatIcon seller={seller} />
       </div>
@@ -460,13 +452,13 @@ export function SellersCatalog() {
   return (
     <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
       <PageHeader
-        title="Prodejci paliv"
+        title={t("sellers.catalog.title")}
         icon={<Store />}
-        description="Ceny, doprava a hodnocení na jednom místě."
+        description={t("sellers.catalog.description")}
         actions={<MockModeBadge />}
       />
 
-      <section aria-label="Filtry" className="space-y-3">
+      <section aria-label={t("sellers.catalog.filtersAria")} className="space-y-3">
         <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
           <div className="relative min-w-0 lg:max-w-sm lg:flex-1">
             <Search
@@ -476,17 +468,17 @@ export function SellersCatalog() {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Hledat prodejce nebo město"
-              aria-label="Hledat prodejce"
+              placeholder={t("sellers.catalog.searchPlaceholder")}
+              aria-label={t("sellers.catalog.searchAria")}
               className="h-10 rounded-xl bg-card pl-9"
             />
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <FilterPill label="Kraj" value={region === "all" ? undefined : REGIONS[region].short} width="w-60">
-              <div role="radiogroup" aria-label="Kraj" className="max-h-72 space-y-0.5 overflow-y-auto">
+            <FilterPill label={t("sellers.catalog.region")} value={region === "all" ? undefined : REGIONS[region].short} width="w-60">
+              <div role="radiogroup" aria-label={t("sellers.catalog.region")} className="max-h-72 space-y-0.5 overflow-y-auto">
                 <RadioOption selected={region === "all"} onSelect={() => setRegion("all")}>
-                  Všechny kraje
+                  {t("sellers.catalog.allRegions")}
                 </RadioOption>
                 {REGION_CODES.map((code) => (
                   <RadioOption key={code} selected={region === code} onSelect={() => setRegion(code)}>
@@ -496,7 +488,7 @@ export function SellersCatalog() {
               </div>
             </FilterPill>
 
-            <FilterPill label="Palivo" count={fuels.length}>
+            <FilterPill label={t("sellers.catalog.fuel")} count={fuels.length}>
               {FUEL_CATEGORIES.map((c) => (
                 <CheckOption key={c} checked={fuels.includes(c)} onChange={() => setFuels(toggleIn(fuels, c))}>
                   <FuelIcon category={c} className="size-4 shrink-0 text-muted-foreground" />
@@ -505,34 +497,34 @@ export function SellersCatalog() {
               ))}
             </FilterPill>
 
-            <FilterPill label="Doprava" count={delivery.length} width="w-64">
-              {(Object.keys(DELIVERY_LABEL) as DeliveryKey[]).map((k) => (
+            <FilterPill label={t("sellers.catalog.delivery")} count={delivery.length} width="w-64">
+              {DELIVERY_KEYS.map((k) => (
                 <CheckOption key={k} checked={delivery.includes(k)} onChange={() => setDelivery(toggleIn(delivery, k))}>
-                  {DELIVERY_LABEL[k]}
+                  {deliveryLabel(k)}
                 </CheckOption>
               ))}
             </FilterPill>
 
             <FilterPill
-              label="Další filtry"
+              label={t("sellers.catalog.moreFilters")}
               icon={<SlidersHorizontal aria-hidden="true" className="size-4 text-muted-foreground" />}
               count={moreCount}
               width="w-64"
             >
-              <GroupLabel>Velikost prodejce</GroupLabel>
-              <div role="radiogroup" aria-label="Velikost prodejce" className="space-y-0.5">
-                {(Object.keys(SIZE_OPTIONS) as SizeKey[]).map((k) => (
+              <GroupLabel>{t("sellers.catalog.sizeTitle")}</GroupLabel>
+              <div role="radiogroup" aria-label={t("sellers.catalog.sizeTitle")} className="space-y-0.5">
+                {SIZE_KEYS.map((k) => (
                   <RadioOption key={k} selected={size === k} onSelect={() => setSize(k)}>
-                    {SIZE_OPTIONS[k]}
+                    {sizeOption(k)}
                   </RadioOption>
                 ))}
               </div>
               <div className="my-1 h-px bg-border" />
-              <GroupLabel>Šíře sortimentu</GroupLabel>
-              <div role="radiogroup" aria-label="Šíře sortimentu" className="space-y-0.5">
-                {(Object.keys(BREADTH_LABEL) as BreadthKey[]).map((k) => (
+              <GroupLabel>{t("sellers.catalog.breadthTitle")}</GroupLabel>
+              <div role="radiogroup" aria-label={t("sellers.catalog.breadthTitle")} className="space-y-0.5">
+                {BREADTH_KEYS.map((k) => (
                   <RadioOption key={k} selected={breadth === k} onSelect={() => setBreadth(k)}>
-                    {BREADTH_LABEL[k]}
+                    {breadthLabel(k)}
                   </RadioOption>
                 ))}
               </div>
@@ -541,20 +533,20 @@ export function SellersCatalog() {
         </div>
 
         {hasChips && (
-          <div className="flex flex-wrap items-center gap-2" aria-label="Aktivní filtry">
+          <div className="flex flex-wrap items-center gap-2" aria-label={t("sellers.catalog.activeFilters")}>
             {region !== "all" && <AppliedChip label={REGIONS[region].name} onRemove={() => setRegion("all")} />}
             {fuels.map((f) => (
               <AppliedChip key={f} label={FUEL_META[f].label} onRemove={() => setFuels(toggleIn(fuels, f))} />
             ))}
             {delivery.map((k) => (
-              <AppliedChip key={k} label={DELIVERY_LABEL[k]} onRemove={() => setDelivery(toggleIn(delivery, k))} />
+              <AppliedChip key={k} label={deliveryLabel(k)} onRemove={() => setDelivery(toggleIn(delivery, k))} />
             ))}
-            {size !== "all" && <AppliedChip label={`Velikost: ${SIZE_LABEL[size]}`} onRemove={() => setSize("all")} />}
+            {size !== "all" && <AppliedChip label={t("sellers.catalog.chipSize", { value: sizeLabel(size) })} onRemove={() => setSize("all")} />}
             {breadth !== "all" && (
-              <AppliedChip label={`Sortiment: ${BREADTH_LABEL[breadth]}`} onRemove={() => setBreadth("all")} />
+              <AppliedChip label={t("sellers.catalog.chipBreadth", { value: breadthLabel(breadth) })} onRemove={() => setBreadth("all")} />
             )}
             <Button variant="ghost" size="sm" onClick={reset} className="text-muted-foreground">
-              Zrušit vše
+              {t("common.actions.clearAll")}
             </Button>
           </div>
         )}
@@ -563,27 +555,27 @@ export function SellersCatalog() {
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
         <p className="text-sm text-muted-foreground" aria-live="polite">
           {loading ? (
-            "Načítání…"
+            t("common.states.loading")
           ) : (
             <>
               <span className="num text-base font-semibold text-foreground">{formatNumber(filtered.length)}</span>
-              {filtered.length !== total && <span className="num"> z {formatNumber(total)}</span>}{" "}
-              {plural(filtered.length, "prodejce", "prodejci", "prodejců")}
+              {filtered.length !== total && <span className="num"> {t("sellers.catalog.ofTotal", { total: formatNumber(total) })}</span>}{" "}
+              {t("common.sellersNoun", { count: filtered.length })}
             </>
           )}
         </p>
         <div className="flex flex-wrap items-center gap-3">
           <Select value={sort} onValueChange={(v) => setSort(v as SortKey)}>
-            <SelectTrigger aria-label="Řazení" className="h-10 w-auto min-w-52 gap-2 rounded-xl bg-card px-3">
+            <SelectTrigger aria-label={t("sellers.catalog.sortAria")} className="h-10 w-auto min-w-52 gap-2 rounded-xl bg-card px-3">
               <span className="flex items-center gap-1.5">
-                <span className="text-muted-foreground">Řadit:</span>
+                <span className="text-muted-foreground">{t("sellers.catalog.sortLabel")}</span>
                 <SelectValue />
               </span>
             </SelectTrigger>
             <SelectContent align="end">
-              {(Object.keys(SORT_LABEL) as SortKey[]).map((k) => (
+              {SORT_KEYS.map((k) => (
                 <SelectItem key={k} value={k}>
-                  {SORT_LABEL[k]}
+                  {sortLabel(k)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -596,19 +588,19 @@ export function SellersCatalog() {
         <ListSkeleton count={6} />
       ) : error ? (
         <EmptyState
-          title="Katalog se nepodařilo načíst"
+          title={t("sellers.catalog.loadError")}
           description={error.message}
-          action={<Button onClick={reload}>Zkusit znovu</Button>}
+          action={<Button onClick={reload}>{t("common.actions.retry")}</Button>}
         />
       ) : filtered.length === 0 ? (
         <EmptyState
           icon={<Search />}
-          title="Nic nenalezeno"
-          description="Zkuste upravit hledání nebo zrušit filtry."
+          title={t("sellers.catalog.emptyTitle")}
+          description={t("sellers.catalog.emptyDescription")}
           action={
             hasFilters ? (
               <Button variant="outline" onClick={reset}>
-                Zrušit vše
+                {t("common.actions.clearAll")}
               </Button>
             ) : undefined
           }
@@ -620,18 +612,22 @@ export function SellersCatalog() {
               <Table className="table-fixed">
                 <TableHeader>
                   <TableRow className="h-12 bg-secondary/50 hover:bg-secondary/50">
-                    <TableHead>Prodejce</TableHead>
-                    <TableHead className="w-22">Paliva</TableHead>
+                    <TableHead>{t("sellers.catalog.table.seller")}</TableHead>
+                    <TableHead className="w-22">{t("sellers.catalog.table.fuels")}</TableHead>
                     <TableHead className="w-24 text-right">
-                      <div className="leading-tight">Tvrdé dřevo</div>
-                      <div className="text-[11px] font-normal text-muted-foreground">od, Kč/PRMS</div>
+                      <div className="leading-tight">{t("sellers.catalog.table.hardWood")}</div>
+                      <div className="text-[11px] font-normal text-muted-foreground">
+                        {t("sellers.catalog.table.from", { unit: moneyUnit("PRMS") })}
+                      </div>
                     </TableHead>
                     <TableHead className="w-20 text-right">
-                      <div className="leading-tight">Pelety</div>
-                      <div className="text-[11px] font-normal text-muted-foreground">od, Kč/t</div>
+                      <div className="leading-tight">{t("sellers.catalog.table.pellets")}</div>
+                      <div className="text-[11px] font-normal text-muted-foreground">
+                        {t("sellers.catalog.table.from", { unit: moneyUnit("t") })}
+                      </div>
                     </TableHead>
-                    <TableHead className="w-36">Doprava</TableHead>
-                    <TableHead className="w-32">Hodnocení</TableHead>
+                    <TableHead className="w-36">{t("sellers.catalog.table.delivery")}</TableHead>
+                    <TableHead className="w-32">{t("sellers.catalog.table.rating")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

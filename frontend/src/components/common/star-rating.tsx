@@ -1,4 +1,5 @@
 import { Star } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +15,7 @@ export function StarRating({
   size?: "sm" | "md";
   className?: string;
 }) {
+  const { t } = useI18n();
   const textSize = size === "md" ? "text-sm" : "text-xs";
   const iconSize = size === "md" ? "size-4" : "size-3.5";
 
@@ -26,8 +28,8 @@ export function StarRating({
       )}
       <span className="sr-only">
         {reviewCount !== undefined
-          ? `, ${formatNumber(rating, 1)} z 5 hvězdiček, ${formatNumber(reviewCount)} recenzí`
-          : `, hodnocení ${formatNumber(rating, 1)} z 5`}
+          ? `, ${t("common.rating", { rating: formatNumber(rating, 1), count: formatNumber(reviewCount) })}`
+          : `, ${t("map.ui.ratingOnly", { rating: formatNumber(rating, 1) })}`}
       </span>
     </span>
   );

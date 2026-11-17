@@ -2,6 +2,7 @@
 
 import { usePreferences } from "@/components/providers/preferences-provider";
 import type { FuelProduct, PriceMode } from "@/types";
+import { unitLabel } from "./unit-label";
 import { formatCzkPerUnit, formatKwhPrice, formatNumber, NBSP } from "@/lib/format";
 import { pricePerKwh } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
@@ -15,8 +16,8 @@ const SIZE_CLASS = {
 /** Hmotnost balení (paleta / pytel) pro doplňující řádek, např. „paleta 975 kg“. */
 function packageWeight(product: FuelProduct): string | null {
   if (product.unit !== "paleta" && product.unit !== "pytel") return null;
-  if (product.packageKg) return `${product.unit} ${formatNumber(product.packageKg)}${NBSP}kg`;
-  if (product.packagePrm) return `${product.unit} ${formatNumber(product.packagePrm, 1)}${NBSP}PRM`;
+  if (product.packageKg) return `${unitLabel(product.unit)} ${formatNumber(product.packageKg)}${NBSP}kg`;
+  if (product.packagePrm) return `${unitLabel(product.unit)} ${formatNumber(product.packagePrm, 1)}${NBSP}PRM`;
   return null;
 }
 

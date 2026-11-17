@@ -6,8 +6,10 @@ import { ArrowRight, Calculator, Trophy } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import type { EnergyCostItem } from "@/types";
 import { Button } from "@/components/ui/button";
-import { FUEL_META } from "@/lib/constants";
-import { formatKwhPrice, formatNumber } from "@/lib/format";
+import { BOILER_EFFICIENCY, FUEL_META } from "@/lib/constants";
+import { currencySymbol, formatKwhNumber, formatKwhPrice } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
+import { t as tt } from "@/lib/i18n/translate";
 import {
   AXIS_LINE,
   AXIS_TICK,
@@ -19,6 +21,21 @@ import {
 } from "./chart-parts";
 
 type Mode = "fuel" | "heat";
+
+type ItemId = "buk-suchy" | "buk-syrovy" | "smrk-suchy" | "pelety-a1" | "brikety-ruf" | "uhli-hnede";
+
+/** Přeložený název položky (mock data nesou český název; neznámé id se nechá beze změny). */
+function itemLabel(i: { id: string; label: string }): string {
+  return i.id in ITEM_IDS ? tt(`trends.energy.items.${i.id as ItemId}`) : i.label;
+}
+const ITEM_IDS: Record<ItemId, true> = {
+  "buk-suchy": true,
+  "buk-syrovy": true,
+  "smrk-suchy": true,
+  "pelety-a1": true,
+  "brikety-ruf": true,
+  "uhli-hnede": true,
+};
 
 interface Datum extends EnergyCostItem {
   value: number;
@@ -46,7 +63,7 @@ function FuelTick({
       </text>
       {mode === "heat" && item && (
         <text x={-8} y={11} textAnchor="end" fontSize={11} fill="var(--muted-foreground)">
-          {`účinnost ${Math.round(item.efficiency * 100)} %`}
+          {tt("trends.energy.efficiency", { pct: Math.round(item.efficiency * 100) })}
         </text>
       )}
     </g>
@@ -54,12 +71,13 @@ function FuelTick({
 }
 
 export function EnergyCostChart({ items }: { items: EnergyCostItem[] }) {
+  const { t, lang } = useI18n();
   const [mode, setMode] = useState<Mode>("heat");
 
   const data = useMemo<Datum[]>(
     () =>
       items
-        .map((i) => ({ ...i, value: mode === "fuel" ? i.kcPerKwh : i.kcPerKwhHeat }))
+        .map((i) => ({ ...i, label: itemLabel(i), value: mode === "fuel" ? i.kcPerKwh : i.kcPerKwhHeat }))
         .sort((a, b) => a.value - b.value),
     [items, mode],
   );
@@ -71,22 +89,22 @@ export function EnergyCostChart({ items }: { items: EnergyCostItem[] }) {
   return (
     <Section
       id="kwh"
-      title="Srovnání ceny za 1 kWh tepla"
-      description="Paliva přepočtená na společnou jednotku"
-      info={
-        <>
-          „Energie v palivu“ vychází z výhřevnosti a vlhkosti paliva. „Dodané teplo“ navíc počítá s účinností spalování
-          (dřevo 78 %, pelety 90 %, brikety 80 %, uhlí 72 %) – to skutečně zaplatíte za teplo v domě.
-        </>
-      }
+      title={t("trends.energy.title")}
+      description={t("trends.energy.description")}
+      info={t("trends.energy.info", {
+        wood: Math.round(BOILER_EFFICIENCY.wood * 100),
+        pellets: Math.round(BOILER_EFFICIENCY.pellets * 100),
+        briquettes: Math.round(BOILER_EFFICIENCY.briquettes * 100),
+        coal: Math.round(BOILER_EFFICIENCY.coal * 100),
+      })}
       actions={
         <Segmented<Mode>
-          label="Způsob výpočtu"
+          label={t("trends.energy.modeLabel")}
           value={mode}
           onChange={setMode}
           options={[
-            { value: "heat", label: "Dodané teplo" },
-            { value: "fuel", label: "Energie v palivu" },
+            { value: "heat", label: t("trends.energy.modeHeat") },
+            { value: "fuel", label: t("trends.energy.modeFuel") },
           ]}
         />
       }
@@ -97,25 +115,23 @@ export function EnergyCostChart({ items }: { items: EnergyCostItem[] }) {
             <Trophy aria-hidden="true" className="size-4" />
           </span>
           <p className="text-foreground">
-            <strong className="font-semibold">{cheapest.label}</strong> je nejlevnější:{" "}
+            <strong className="font-semibold">{cheapest.label}</strong>
+            {t("trends.energy.isCheapest")}{" "}
             <span className="num font-medium">{formatKwhPrice(cheapest.value)}</span>
-            {savingPct > 0 && (
-              <>
-                , o <span className="num font-medium">{savingPct} %</span> méně než {max.label.toLowerCase()}.
-              </>
-            )}
+            {savingPct > 0 &&
+              t("trends.energy.lessThan", { pct: savingPct, fuel: lang === "de" ? max.label : max.label.toLowerCase() })}
           </p>
         </div>
         <Button asChild className="shrink-0">
           <Link href="/kalkulacka#sezona">
             <Calculator aria-hidden="true" />
-            Spočítat pro můj dům
+            {t("trends.energy.cta")}
             <ArrowRight aria-hidden="true" />
           </Link>
         </Button>
       </div>
 
-      <div className="h-80 w-full" role="img" aria-label="Sloupcový graf ceny za kilowatthodinu podle paliva">
+      <div className="h-80 w-full" role="img" aria-label={t("trends.energy.chartAria")}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} layout="vertical" margin={{ top: 8, right: 64, left: 0, bottom: 0 }}>
             <CartesianGrid stroke={GRID_STROKE} strokeDasharray="3 3" horizontal={false} />
@@ -125,8 +141,8 @@ export function EnergyCostChart({ items }: { items: EnergyCostItem[] }) {
               tick={AXIS_TICK}
               axisLine={AXIS_LINE}
               tickLine={false}
-              tickFormatter={(v: number) => formatNumber(v, 1)}
-              unit=" Kč"
+              tickFormatter={(v: number) => formatKwhNumber(v)}
+              unit={` ${currencySymbol()}`}
             />
             <YAxis
               type="category"
@@ -144,9 +160,9 @@ export function EnergyCostChart({ items }: { items: EnergyCostItem[] }) {
                 const d = p.payload[0].payload as Datum;
                 return (
                   <ChartTooltipFrame title={d.label}>
-                    <ChartTooltipRow color={FUEL_META[d.category].color} label="Energie v palivu" value={formatKwhPrice(d.kcPerKwh)} />
-                    <ChartTooltipRow label="Dodané teplo" value={formatKwhPrice(d.kcPerKwhHeat)} />
-                    <ChartTooltipRow label="Účinnost kotle" value={`${Math.round(d.efficiency * 100)} %`} />
+                    <ChartTooltipRow color={FUEL_META[d.category].color} label={t("trends.energy.modeFuel")} value={formatKwhPrice(d.kcPerKwh)} />
+                    <ChartTooltipRow label={t("trends.energy.modeHeat")} value={formatKwhPrice(d.kcPerKwhHeat)} />
+                    <ChartTooltipRow label={t("trends.energy.boilerEfficiency")} value={`${Math.round(d.efficiency * 100)} %`} />
                   </ChartTooltipFrame>
                 );
               }}
@@ -158,7 +174,7 @@ export function EnergyCostChart({ items }: { items: EnergyCostItem[] }) {
               <LabelList
                 dataKey="value"
                 position="right"
-                formatter={(v: unknown) => formatNumber(Number(v), 2)}
+                formatter={(v: unknown) => formatKwhNumber(Number(v))}
                 fill="var(--foreground)"
                 fontSize={12}
               />

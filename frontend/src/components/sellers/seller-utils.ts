@@ -1,26 +1,31 @@
 import type { FuelProduct, Seller, SellerSize } from "@/types";
-import { formatCzk, formatKm, NBSP } from "@/lib/format";
+import { formatCzk, formatKm } from "@/lib/format";
+import { t } from "@/lib/i18n/translate";
 import { pricePerBaseUnit, productWoodGroup } from "@/lib/pricing";
 
-export const SIZE_LABEL: Record<SellerSize, string> = {
-  small: "Malý",
-  medium: "Střední",
-  large: "Velký",
-};
+export function sizeLabel(size: SellerSize): string {
+  return t(`common.sizes.${size}`);
+}
 
 export const THREAT_META = {
   low: {
-    label: "Nízká hrozba",
+    get label() {
+      return t("sellers.threat.low");
+    },
     rank: 1,
     className: "border-moss/30 bg-moss-soft text-moss-strong",
   },
   medium: {
-    label: "Střední hrozba",
+    get label() {
+      return t("sellers.threat.medium");
+    },
     rank: 2,
     className: "border-wood/30 bg-wood-soft text-wood-strong",
   },
   high: {
-    label: "Vysoká hrozba",
+    get label() {
+      return t("sellers.threat.high");
+    },
     rank: 3,
     className: "border-clay/30 bg-clay-soft text-clay-strong",
   },
@@ -48,13 +53,17 @@ export function deliverySummary(s: Seller): string {
   const d = s.delivery;
   const parts: string[] = [];
   if (d.ownDelivery) {
-    parts.push(d.freeRadiusKm > 0 ? `zdarma do${NBSP}${formatKm(d.freeRadiusKm)}` : `do${NBSP}${formatKm(d.maxRadiusKm)}`);
+    parts.push(
+      d.freeRadiusKm > 0
+        ? t("sellers.delivery.freeUpTo", { km: formatKm(d.freeRadiusKm) })
+        : t("sellers.delivery.upTo", { km: formatKm(d.maxRadiusKm) }),
+    );
   }
-  if (d.hydraulicArm) parts.push("hydraul. ruka");
-  if (d.pickupAvailable) parts.push("osobní odběr");
-  if (!d.ownDelivery && parts.length === 0) return "Neuvedeno";
+  if (d.hydraulicArm) parts.push(t("sellers.delivery.arm"));
+  if (d.pickupAvailable) parts.push(t("sellers.delivery.pickup"));
+  if (!d.ownDelivery && parts.length === 0) return t("sellers.delivery.unspecified");
   if (!d.ownDelivery) return parts.join(", ");
-  return `Vlastní doprava ${parts.join(", ")}`;
+  return t("sellers.delivery.own", { parts: parts.join(", ") });
 }
 
 export function priceOrDash(value: number | undefined): string {
@@ -66,9 +75,9 @@ export function deliveryShort(s: Seller): string {
   const d = s.delivery;
   if (d.ownDelivery) {
     return d.freeRadiusKm > 0
-      ? `Zdarma do${NBSP}${formatKm(d.freeRadiusKm)}`
-      : `Vlastní · do${NBSP}${formatKm(d.maxRadiusKm)}`;
+      ? t("sellers.delivery.shortFree", { km: formatKm(d.freeRadiusKm) })
+      : t("sellers.delivery.shortOwn", { km: formatKm(d.maxRadiusKm) });
   }
-  if (d.pickupAvailable) return "Osobní odběr";
-  return "Neuvedeno";
+  if (d.pickupAvailable) return t("sellers.delivery.shortPickup");
+  return t("sellers.delivery.unspecified");
 }

@@ -1,14 +1,15 @@
 import L from "leaflet";
 import type { FuelCategory, PriceMode } from "@/types";
 import { FUEL_META } from "@/lib/constants";
-import { formatKwhPrice, formatNumber, NBSP } from "@/lib/format";
+import { currencySymbol, formatCzkPerUnit, formatKwhPrice, NBSP } from "@/lib/format";
+import { t } from "@/lib/i18n";
 import { PRICE_TIER_META, pricePerKwh, type PriceTier } from "@/lib/pricing";
 import type { SellerMatch } from "@/lib/filters";
 
 /** Text na špendlíku: „1 490 Kč/PRMS“ nebo „1,32 Kč/kWh“. */
 export function pinLabel(match: SellerMatch, mode: PriceMode): string {
   if (mode === "kwh") return formatKwhPrice(pricePerKwh(match.product));
-  return `${formatNumber(match.product.price)}${NBSP}Kč/${match.product.unit}`;
+  return formatCzkPerUnit(match.product.price, match.product.unit);
 }
 
 const iconCache = new Map<string, L.DivIcon>();
@@ -104,8 +105,8 @@ export function clusterIcon(count: number, fromLabel?: string): L.DivIcon {
   }
 
   // „1 190 Kč/PRMS“ → dva řádky „od 1 190“ / „Kč/PRMS“, ať je cluster co nejužší
-  const cut = fromLabel.lastIndexOf(`${NBSP}Kč`);
-  const value = `od${NBSP}${cut > 0 ? fromLabel.slice(0, cut) : fromLabel}`;
+  const cut = fromLabel.lastIndexOf(`${NBSP}${currencySymbol()}`);
+  const value = `${t("map.pin.from")}${NBSP}${cut > 0 ? fromLabel.slice(0, cut) : fromLabel}`;
   const unit = cut > 0 ? fromLabel.slice(cut + 1) : "";
   const width = Math.round(Math.max(value.length, unit.length * 0.85) * 7 + size + 16);
   const icon = L.divIcon({

@@ -4,21 +4,25 @@ import { useState } from "react";
 import { Lightbulb } from "lucide-react";
 import { WOOD_KWH_PER_PLM, KWH_PER_KG, WOOD_SOLID_FACTOR } from "@/lib/constants";
 import { woodKwhPerUnit } from "@/lib/pricing";
-import { formatNumber } from "@/lib/format";
+import { formatKwhPrice, formatNumber, fromDisplayCurrency, moneyUnit, toDisplayCurrency } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { NumberField, Panel, PanelTitle, parseNum } from "./fields";
 
 export function RawWoodExplainer() {
-  const [fresh, setFresh] = useState("1250");
-  const [dry, setDry] = useState("2900");
-  const [briq, setBriq] = useState("8300");
+  const { t } = useI18n();
+  // Vstupy jsou v zobrazované měně, výpočet běží v Kč.
+  const initial = (czk: number) => String(Math.round(toDisplayCurrency(czk) * 100) / 100);
+  const [fresh, setFresh] = useState(() => initial(1250));
+  const [dry, setDry] = useState(() => initial(2900));
+  const [briq, setBriq] = useState(() => initial(8300));
 
   const items = [
-    { key: "fresh", label: "Syrové sypané", unit: "Kč/PRMS", value: fresh, set: setFresh, kwh: woodKwhPerUnit("PRMS", "hard", "fresh") },
-    { key: "dry", label: "Suché rovnané", unit: "Kč/PRM", value: dry, set: setDry, kwh: woodKwhPerUnit("PRM", "hard", "dry") },
-    { key: "briq", label: "Brikety", unit: "Kč/t", value: briq, set: setBriq, kwh: 1000 * KWH_PER_KG.briquettesWood },
+    { key: "fresh" as const, label: t("calculator.rawWood.fresh.label"), inline: t("calculator.rawWood.fresh.inline"), unit: moneyUnit("PRMS"), value: fresh, set: setFresh, kwh: woodKwhPerUnit("PRMS", "hard", "fresh") },
+    { key: "dry" as const, label: t("calculator.rawWood.dry.label"), inline: t("calculator.rawWood.dry.inline"), unit: moneyUnit("PRM"), value: dry, set: setDry, kwh: woodKwhPerUnit("PRM", "hard", "dry") },
+    { key: "briq" as const, label: t("calculator.rawWood.briq.label"), inline: t("calculator.rawWood.briq.inline"), unit: moneyUnit("t"), value: briq, set: setBriq, kwh: 1000 * KWH_PER_KG.briquettesWood },
   ].map((i) => {
-    const price = parseNum(i.value);
+    const price = fromDisplayCurrency(parseNum(i.value));
     return { ...i, price, perKwh: price > 0 ? price / i.kwh : 0 };
   });
 
@@ -27,13 +31,13 @@ export function RawWoodExplainer() {
   const max = Math.max(...items.map((i) => i.perKwh), 0.0001);
 
   const [freshItem, dryItem] = items;
-  let verdict = "Zadejte ceny všech tří paliv.";
+  let verdict = t("calculator.rawWood.enterAll");
   if (best) {
     if (freshItem.perKwh > 0 && dryItem.perKwh > 0 && freshItem.perKwh >= dryItem.perKwh) {
       const diff = Math.round((freshItem.perKwh / dryItem.perKwh - 1) * 100);
-      verdict = `Syrové dřevo vychází o ${diff} % dráž než suché. Nejlevnější za kWh: ${best.label.toLowerCase()}.`;
+      verdict = t("calculator.rawWood.freshPricier", { diff, best: best.inline });
     } else {
-      verdict = `Nejlevnější za kWh: ${best.label.toLowerCase()} (${formatNumber(best.perKwh, 2)} Kč/kWh).`;
+      verdict = t("calculator.rawWood.cheapest", { best: best.inline, price: formatKwhPrice(best.perKwh) });
     }
   }
 
@@ -42,12 +46,14 @@ export function RawWoodExplainer() {
       <PanelTitle
         tip={
           <p>
-            Čerstvé dřevo obsahuje hodně vody, sypaný metr jen {Math.round(WOOD_SOLID_FACTOR.PRMS * 100)} % dřeva a část
-            energie se spotřebuje na odpaření vody. Výpočet pro tvrdé dřevo ({formatNumber(WOOD_KWH_PER_PLM.hard)} kWh/PLM).
+            {t("calculator.rawWood.tip", {
+              percent: Math.round(WOOD_SOLID_FACTOR.PRMS * 100),
+              kwh: formatNumber(WOOD_KWH_PER_PLM.hard),
+            })}
           </p>
         }
       >
-        Proč levné syrové dřevo není levné
+        {t("calculator.rawWood.title")}
       </PanelTitle>
 
       <ul className="space-y-4">
@@ -60,7 +66,7 @@ export function RawWoodExplainer() {
                 <div className="flex items-center gap-3">
                   <NumberField
                     id={`raw-${i.key}`}
-                    ariaLabel={`Cena: ${i.label}`}
+                    ariaLabel={t("calculator.rawWood.priceAria", { label: i.label })}
                     value={i.value}
                     onChange={i.set}
                     suffix={i.unit}
@@ -73,7 +79,7 @@ export function RawWoodExplainer() {
                       isBest && "text-moss-strong",
                     )}
                   >
-                    {i.perKwh > 0 ? `${formatNumber(i.perKwh, 2)} Kč/kWh` : "–"}
+                    {i.perKwh > 0 ? formatKwhPrice(i.perKwh) : "–"}
                   </span>
                 </div>
               </div>

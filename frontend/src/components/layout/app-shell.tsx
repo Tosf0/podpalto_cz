@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { PreferencesRemountBoundary } from "@/components/providers/preferences-provider";
 import { AppSidebar } from "./app-sidebar";
 
 /**
@@ -19,7 +20,9 @@ export function AppShell({ children, footer }: { children: React.ReactNode; foot
         id="app-scroll"
         className="flex min-w-0 flex-1 flex-col lg:h-dvh lg:overflow-y-auto"
       >
-        <main className="flex flex-1 flex-col">{children}</main>
+        <main className="flex flex-1 flex-col">
+          <PreferencesRemountBoundary>{children}</PreferencesRemountBoundary>
+        </main>
         {!fullscreen && footer}
       </div>
     </div>

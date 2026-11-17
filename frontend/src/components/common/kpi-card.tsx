@@ -1,4 +1,7 @@
+"use client";
+
 import type { ReactNode } from "react";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { PriceDelta } from "./price-delta";
 import { Sparkline } from "./sparkline";
@@ -27,6 +30,7 @@ export function KpiCard({
   hint?: string;
   className?: string;
 }) {
+  const { t } = useI18n();
   return (
     <div
       className={cn(
@@ -52,7 +56,7 @@ export function KpiCard({
         {changePct !== undefined && (
           <div className="flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground">
             <PriceDelta value={changePct} goodWhen={changeGoodWhen} />
-            <span>vs. minulý měsíc</span>
+            <span>{t("common.vsLastMonth")}</span>
           </div>
         )}
 

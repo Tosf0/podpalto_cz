@@ -5,22 +5,25 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { PriceMode } from "@/types";
 import { cn } from "@/lib/utils";
-
-const OPTIONS: { value: PriceMode; label: string; tooltip: string }[] = [
-  { value: "unit", label: "Kč/jednotka", tooltip: "Cena za PRMS / t" },
-  { value: "kwh", label: "Kč/kWh", tooltip: "Přepočet na výhřevnost" },
-];
+import { currencySymbol } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 
 /** Segmentový přepínač režimu zobrazení ceny (za jednotku / na kWh). */
 export function PriceModeToggle({ className }: { className?: string }) {
   const { priceMode, setPriceMode } = usePreferences();
+  const { t } = useI18n();
+  const currency = currencySymbol();
+  const OPTIONS: { value: PriceMode; label: string; tooltip: string }[] = [
+    { value: "unit", label: t("layout.priceToggle.unit", { currency }), tooltip: t("layout.priceToggle.unitTip") },
+    { value: "kwh", label: t("layout.priceToggle.kwh", { currency }), tooltip: t("layout.priceToggle.kwhTip") },
+  ];
 
   return (
     <ToggleGroup
       type="single"
       value={priceMode}
       spacing={0}
-      aria-label="Režim zobrazení ceny"
+      aria-label={t("layout.priceToggle.aria")}
       onValueChange={(v) => {
         if (v === "unit" || v === "kwh") setPriceMode(v);
       }}

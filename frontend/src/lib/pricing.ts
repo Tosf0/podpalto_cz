@@ -11,6 +11,7 @@ import type {
   Seller,
   WoodGroup,
 } from "@/types";
+import { t } from "@/lib/i18n/translate";
 import {
   BOILER_EFFICIENCY,
   KWH_PER_KG,
@@ -242,17 +243,23 @@ export function priceTier(p: FuelProduct, stats: RegionStats | undefined): Price
 
 export const PRICE_TIER_META: Record<PriceTier, { label: string; color: string; className: string }> = {
   below: {
-    label: "Pod průměrem kraje",
+    get label() {
+      return t("common.priceTiers.below");
+    },
     color: "#5e7d5b",
     className: "bg-moss text-white",
   },
   average: {
-    label: "Průměr kraje",
+    get label() {
+      return t("common.priceTiers.average");
+    },
     color: "#a07a50",
     className: "bg-wood text-white",
   },
   above: {
-    label: "Nad průměrem kraje",
+    get label() {
+      return t("common.priceTiers.above");
+    },
     color: "#a85a47",
     className: "bg-clay text-white",
   },

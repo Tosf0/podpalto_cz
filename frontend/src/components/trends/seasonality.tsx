@@ -1,7 +1,10 @@
+"use client";
+
 import { Snowflake, Sprout } from "lucide-react";
 import type { CommodityKey, PriceTrendPoint } from "@/types";
 import { COMMODITY_META } from "@/lib/constants";
 import { formatCzk, formatPct } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 import { Section } from "./chart-parts";
 
 const KEYS: CommodityKey[] = ["hardWoodPrms", "softWoodPrms", "pelletsT", "briquettesT", "coalT"];
@@ -16,6 +19,7 @@ function avgFor(trends: PriceTrendPoint[], months: number[], key: CommodityKey):
 
 /** Sezónnost: průměrná cena na jaře (březen–květen) vs. v zimě (prosinec–únor). */
 export function Seasonality({ trends }: { trends: PriceTrendPoint[] }) {
+  const { t } = useI18n();
   const rows = KEYS.map((k) => {
     const winter = avgFor(trends, WINTER, k);
     const spring = avgFor(trends, SPRING, k);
@@ -29,13 +33,16 @@ export function Seasonality({ trends }: { trends: PriceTrendPoint[] }) {
   return (
     <Section
       id="sezonnost"
-      title="Sezónnost"
+      title={t("trends.seasonality.title")}
       description={
         best.diffPct < 0
-          ? `Na jaře bývá levněji, nejvíc ${COMMODITY_META[best.key].label.toLowerCase()} (${formatPct(best.diffPct)} oproti zimě)`
-          : "Výraznější jarní pokles cen zatím nevidíme"
+          ? t("trends.seasonality.cheaper", {
+              commodity: t(`trends.commodityLower.${best.key}`),
+              pct: formatPct(best.diffPct),
+            })
+          : t("trends.seasonality.noDrop")
       }
-      info="Průměr za prosinec–únor vs. březen–květen v období zobrazeném v grafu. Orientační údaj, ne předpověď."
+      info={t("trends.seasonality.info")}
     >
       <ul className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {rows.map((r) => {
@@ -53,13 +60,13 @@ export function Seasonality({ trends }: { trends: PriceTrendPoint[] }) {
               <dl className="space-y-1 text-xs text-muted-foreground">
                 <div className="flex items-center justify-between gap-2">
                   <dt className="inline-flex items-center gap-1">
-                    <Snowflake aria-hidden="true" className="size-3" /> Zima
+                    <Snowflake aria-hidden="true" className="size-3" /> {t("trends.seasonality.winter")}
                   </dt>
                   <dd className="num">{formatCzk(r.winter)}</dd>
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <dt className="inline-flex items-center gap-1">
-                    <Sprout aria-hidden="true" className="size-3" /> Jaro
+                    <Sprout aria-hidden="true" className="size-3" /> {t("trends.seasonality.spring")}
                   </dt>
                   <dd className="num">{formatCzk(r.spring)}</dd>
                 </div>

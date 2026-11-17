@@ -55,6 +55,7 @@ cp .env.example .env.local      # Windows PowerShell: copy .env.example .env.loc
 | `NEXT_PUBLIC_MAP_TILE_URL` | *(prázdné)* | Vlastní zdroj mapových dlaždic. Prázdné = OpenStreetMap bez klíče. |
 | `NEXT_PUBLIC_MAP_TILE_ATTRIBUTION` | *(prázdné)* | Text atribuce k dlaždicím (HTML). |
 | `NEXT_PUBLIC_GEOCODER_URL` | `https://photon.komoot.io/api/` | Geokodér pro našeptávač adres nad mapou (Photon, data OpenStreetMap, omezeno na ČR). `off` = jen lokální shody (PSČ, města). Pro produkci vlastní instance Photonu nebo komerční API. |
+| `NEXT_PUBLIC_EUR_CZK_RATE` | `24.43` | Kurz Kč za 1 € pro zobrazení cen v eurech (Nastavení → Měna). Výchozí kurz ČNB z 16. 11. 2026. Data i API zůstávají v Kč. |
 | `NEXT_PUBLIC_REGIONS_GEOJSON_URL` | *(prázdné)* | Volitelné GeoJSON hranic 14 krajů (vlastnost `kod` = `PHA`/`STC`/… nebo `nazev`) pro choropleth. Bez něj se vykreslí plynulá heat mapa celé ČR (oříznutá hranicí státu). |
 
 Všechny proměnné začínají `NEXT_PUBLIC_`, takže se **zapékají do buildu**. Po změně je nutné aplikaci znovu sestavit (na Vercelu redeploy).
@@ -165,7 +166,9 @@ frontend/
 │   │   ├── pricing.ts        přepočty jednotek, Kč/kWh, doprava, cenové hladiny
 │   │   ├── filters.ts        filtrovací a řadicí engine úvodní stránky
 │   │   ├── report-parser.ts  rozdělení Markdown reportu na sekce, parser SWOT
-│   │   ├── format.ts         formátování čísel, Kč, dat (cs-CZ)
+│   │   ├── format.ts         formátování čísel, měny (Kč / € přepočtem), dat podle jazyka
+│   │   ├── i18n/             překlady UI (cs / de / en): core.ts, translate.ts (t), use-i18n.ts (useI18n),
+│   │   │                     messages/<oblast>.ts – slovníky po oblastech (common, layout, home, map, …)
 │   │   └── utils.ts          cn()
 │   └── types/
 │       └── index.ts          datový kontrakt (typy API) – jediný zdroj pravdy

@@ -13,7 +13,8 @@ import {
 } from "recharts";
 import type { CommodityKey, PriceTrendPoint } from "@/types";
 import { COMMODITY_META } from "@/lib/constants";
-import { formatCzk, formatMonth, formatNumber } from "@/lib/format";
+import { currencySymbol, formatCzk, formatMonth, formatNumber, moneyUnit, toDisplayCurrency } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import {
   AXIS_LINE,
@@ -26,13 +27,6 @@ import {
 } from "./chart-parts";
 
 const KEYS: CommodityKey[] = ["hardWoodPrms", "softWoodPrms", "pelletsT", "briquettesT", "coalT"];
-const CHIP_LABEL: Record<CommodityKey, string> = {
-  hardWoodPrms: "Tvrdé dřevo",
-  softWoodPrms: "Měkké dřevo",
-  pelletsT: "Pelety",
-  briquettesT: "Brikety",
-  coalT: "Uhlí",
-};
 const WOOD: CommodityKey[] = ["hardWoodPrms", "softWoodPrms"];
 
 type Mode = "index" | "abs";
@@ -64,6 +58,7 @@ function runs(months: string[], season: boolean): [string, string][] {
 type Row = { month: string; raw: Record<string, number> } & Record<string, number | string | Record<string, number>>;
 
 export function PriceTrendChart({ trends }: { trends: PriceTrendPoint[] }) {
+  const { t } = useI18n();
   const [mode, setMode] = useState<Mode>("index");
   const [hidden, setHidden] = useState<Set<CommodityKey>>(new Set());
 
@@ -75,7 +70,7 @@ export function PriceTrendChart({ trends }: { trends: PriceTrendPoint[] }) {
         const row: Row = { month: p.month, raw };
         for (const k of KEYS) {
           raw[k] = p[k];
-          row[k] = mode === "index" ? (p[k] / base[k]) * 100 : p[k];
+          row[k] = mode === "index" ? (p[k] / base[k]) * 100 : toDisplayCurrency(p[k]);
         }
         return row;
       }),
@@ -99,31 +94,29 @@ export function PriceTrendChart({ trends }: { trends: PriceTrendPoint[] }) {
   }
 
   const baseLabel = formatMonth(base.month);
+  // Krok zaokrouhlení os v zobrazované měně (Kč vs. €).
+  const woodStep = toDisplayCurrency(50) < 10 ? 2 : 50;
+  const tonStep = toDisplayCurrency(500) < 100 ? 20 : 500;
 
   return (
     <Section
       id="vyvoj"
-      title="Vývoj cen v čase"
-      description={`Průměr ČR, posledních ${trends.length} měsíců`}
-      info={
-        <>
-          Index převádí všechna paliva na společnou osu ({baseLabel} = 100), takže je vidět, co zdražilo nejvíc. Zvýrazněná
-          oblast je topná sezóna (říjen–březen). Řady skryjete kliknutím na štítek.
-        </>
-      }
+      title={t("trends.price.title")}
+      description={t("trends.price.description", { months: t("trends.months", { count: trends.length }) })}
+      info={t("trends.price.info", { base: baseLabel })}
       actions={
         <Segmented<Mode>
-          label="Režim grafu"
+          label={t("trends.price.modeLabel")}
           value={mode}
           onChange={setMode}
           options={[
-            { value: "index", label: "Index" },
-            { value: "abs", label: "Ceny v Kč" },
+            { value: "index", label: t("trends.price.modeIndex") },
+            { value: "abs", label: t("trends.price.modeAbs", { currency: currencySymbol() }) },
           ]}
         />
       }
     >
-      <div className="flex flex-wrap gap-2" role="group" aria-label="Zobrazené řady">
+      <div className="flex flex-wrap gap-2" role="group" aria-label={t("trends.price.seriesLabel")}>
         {KEYS.map((k) => {
           const on = !hidden.has(k);
           const color = COMMODITY_META[k].color;
@@ -145,13 +138,13 @@ export function PriceTrendChart({ trends }: { trends: PriceTrendPoint[] }) {
                 className="size-2.5 rounded-full"
                 style={{ backgroundColor: on ? color : "transparent", boxShadow: `inset 0 0 0 1.5px ${color}` }}
               />
-              {CHIP_LABEL[k]}
+              {t(`trends.commodityShort.${k}`)}
             </button>
           );
         })}
       </div>
 
-      <div className="h-80 w-full sm:h-96" role="img" aria-label="Čárový graf vývoje cen paliv v ČR">
+      <div className="h-80 w-full sm:h-96" role="img" aria-label={t("trends.price.chartAria")}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={rows} margin={{ top: 24, right: 8, left: 0, bottom: 0 }}>
             <CartesianGrid stroke={GRID_STROKE} strokeDasharray="3 3" vertical={false} />
@@ -166,7 +159,7 @@ export function PriceTrendChart({ trends }: { trends: PriceTrendPoint[] }) {
                 fillOpacity={0.1}
                 stroke="none"
                 ifOverflow="visible"
-                label={{ value: "Sezóna", position: "insideTop", fill: "var(--wood-strong)", fontSize: 12, fontWeight: 600 }}
+                label={{ value: t("trends.price.season"), position: "insideTop", fill: "var(--wood-strong)", fontSize: 12, fontWeight: 600 }}
               />
             ))}
             {offRuns
@@ -181,7 +174,7 @@ export function PriceTrendChart({ trends }: { trends: PriceTrendPoint[] }) {
                   fillOpacity={0.08}
                   stroke="none"
                   ifOverflow="visible"
-                  label={{ value: "Léto", position: "insideTop", fill: "var(--moss-strong)", fontSize: 12 }}
+                  label={{ value: t("trends.price.summer"), position: "insideTop", fill: "var(--moss-strong)", fontSize: 12 }}
                 />
               ))}
 
@@ -205,14 +198,14 @@ export function PriceTrendChart({ trends }: { trends: PriceTrendPoint[] }) {
                 mode === "index"
                   ? [(min: number) => Math.floor(min - 2), (max: number) => Math.ceil(max + 2)]
                   : [
-                      (min: number) => Math.floor((min * 0.96) / 50) * 50,
-                      (max: number) => Math.ceil((max * 1.04) / 50) * 50,
+                      (min: number) => Math.floor((min * 0.96) / woodStep) * woodStep,
+                      (max: number) => Math.ceil((max * 1.04) / woodStep) * woodStep,
                     ]
               }
               tickFormatter={(v: number) => formatNumber(v)}
               label={
                 mode === "abs" && hasWood
-                  ? { value: "Kč/PRMS", angle: -90, position: "insideLeft", fill: "var(--muted-foreground)", fontSize: 11, dx: 4 }
+                  ? { value: moneyUnit("PRMS"), angle: -90, position: "insideLeft", fill: "var(--muted-foreground)", fontSize: 11, dx: 4 }
                   : undefined
               }
             />
@@ -226,11 +219,11 @@ export function PriceTrendChart({ trends }: { trends: PriceTrendPoint[] }) {
                 tickLine={false}
                 hide={!hasOther}
                 domain={[
-                  (min: number) => Math.floor((min * 0.96) / 500) * 500,
-                  (max: number) => Math.ceil((max * 1.04) / 500) * 500,
+                  (min: number) => Math.floor((min * 0.96) / tonStep) * tonStep,
+                  (max: number) => Math.ceil((max * 1.04) / tonStep) * tonStep,
                 ]}
                 tickFormatter={(v: number) => formatNumber(v)}
-                label={{ value: "Kč/t", angle: 90, position: "insideRight", fill: "var(--muted-foreground)", fontSize: 11, dx: -4 }}
+                label={{ value: moneyUnit("t"), angle: 90, position: "insideRight", fill: "var(--muted-foreground)", fontSize: 11, dx: -4 }}
               />
             )}
 

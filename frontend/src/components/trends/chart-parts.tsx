@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { Info } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 /** Sdílené barvy os a mřížky grafů – CSS proměnné, takže fungují ve světlém i tmavém režimu. */
@@ -130,6 +131,7 @@ export function Section({
   children: ReactNode;
   className?: string;
 }) {
+  const { t } = useI18n();
   return (
     <section
       id={id}
@@ -139,7 +141,7 @@ export function Section({
         <div className="min-w-0 flex-1 basis-64 space-y-0.5">
           <div className="flex items-center gap-1.5">
             <h2 className="text-xl font-semibold text-foreground">{title}</h2>
-            {info && <InfoTip label={`Vysvětlivka: ${title}`}>{info}</InfoTip>}
+            {info && <InfoTip label={t("trends.infoLabel", { title })}>{info}</InfoTip>}
           </div>
           {description && <p className="text-sm text-muted-foreground">{description}</p>}
         </div>

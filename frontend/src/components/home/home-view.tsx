@@ -21,6 +21,7 @@ import {
 } from "@/lib/filters";
 import type { PlaceSuggestion } from "@/lib/geocoding";
 import { useApi } from "@/hooks/use-api";
+import { useI18n } from "@/lib/i18n";
 import type { CommodityKey, FuelCategory } from "@/types";
 import { cn } from "@/lib/utils";
 import { AddressSearch } from "./address-search";
@@ -59,6 +60,7 @@ function zoomFor(place: PlaceSuggestion): number {
  */
 export function HomeView() {
   const { priceMode, location, setLocation } = usePreferences();
+  const { t } = useI18n();
   const sellersApi = useApi(() => getSellers(), []);
   const regionsApi = useApi(() => getRegionStats(), []);
   const isDesktop = useMediaQuery("(min-width: 1024px)");
@@ -117,20 +119,20 @@ export function HomeView() {
 
   const onLocate = useCallback(() => {
     if (!navigator.geolocation) {
-      toast("Prohlížeč nepodporuje zjištění polohy.");
+      toast(t("home.view.geoUnsupported"));
       return;
     }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude: lat, longitude: lng } = pos.coords;
-        setLocation({ label: "Moje poloha", lat, lng });
+        setLocation({ label: t("home.view.myLocation"), lat, lng });
         setAddressPicked(true);
         setFocus({ lat, lng, zoom: 12, nonce: ++nonce.current });
       },
-      () => toast("Polohu se nepodařilo zjistit", { description: "Zadejte adresu do vyhledávání nahoře." }),
+      () => toast(t("home.view.geoFailed"), { description: t("home.view.geoFailedDesc") }),
       { timeout: 8000 },
     );
-  }, [setLocation]);
+  }, [setLocation, t]);
 
   const filtersPanel = (
     <FiltersPanel
@@ -176,8 +178,8 @@ export function HomeView() {
         <div className="pointer-events-none absolute inset-0 z-[1000] flex flex-col justify-between p-3 lg:p-4">
           {/* Horní lišta: jedna velká pilulka [ceny · vyhledávání · ovládání], boční mini-pilulky stejně široké */}
           <div className="flex flex-col items-center gap-3">
-            <MapTopBar className="max-w-5xl">
-              <PriceModePill className="hidden @3xl:grid" />
+            <MapTopBar>
+              <PriceModePill className="hidden @lg:grid" />
               <AddressSearch
                 sellers={sellers}
                 currentLabel={addressPicked ? location.label : undefined}
@@ -190,7 +192,7 @@ export function HomeView() {
                 showRegions={showRegions}
                 onToggleRegions={() => setShowRegions((v) => !v)}
                 onLocate={onLocate}
-                className="hidden @md:flex"
+                className="hidden @sm:flex"
               />
             </MapTopBar>
             {showRegions && (
@@ -209,7 +211,7 @@ export function HomeView() {
               className="pointer-events-auto mx-auto flex h-12 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-float lg:hidden"
             >
               <SlidersHorizontal aria-hidden className="size-4" />
-              Filtry a výsledky
+              {t("home.view.filtersAndResults")}
               <span className="num rounded-full bg-white/20 px-2 text-xs">{matches.length}</span>
             </button>
           </div>
@@ -241,15 +243,15 @@ export function HomeView() {
         <>
           <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
             <SheetContent side="bottom" className="h-[85dvh] rounded-t-3xl p-0" showCloseButton={false}>
-              <SheetTitle className="sr-only">Filtry a výsledky</SheetTitle>
-              <SheetDescription className="sr-only">Úprava filtrů a seznam prodejců</SheetDescription>
+              <SheetTitle className="sr-only">{t("home.view.filtersAndResults")}</SheetTitle>
+              <SheetDescription className="sr-only">{t("home.view.filtersDescription")}</SheetDescription>
               {filtersPanel}
             </SheetContent>
           </Sheet>
           <Sheet open={!!selected} onOpenChange={(v) => !v && setSelectedId(null)}>
             <SheetContent side="bottom" className="h-[90dvh] overflow-hidden rounded-t-3xl p-0" showCloseButton={false}>
-              <SheetTitle className="sr-only">{selected?.seller.name ?? "Prodejce"}</SheetTitle>
-              <SheetDescription className="sr-only">Detail prodejce</SheetDescription>
+              <SheetTitle className="sr-only">{selected?.seller.name ?? t("home.view.sellerFallback")}</SheetTitle>
+              <SheetDescription className="sr-only">{t("home.view.sellerDetail")}</SheetDescription>
               {selected && <SellerPanel match={selected} isBest={selected.seller.id === bestId} onClose={() => setSelectedId(null)} />}
             </SheetContent>
           </Sheet>

@@ -19,6 +19,7 @@ import type {
 } from "@/types";
 import { RADIUS_DEFAULT_KM, REGIONS } from "@/lib/constants";
 import { formatCzk } from "@/lib/format";
+import { t } from "@/lib/i18n/translate";
 import {
   offerTotal,
   priceTier,
@@ -38,12 +39,21 @@ import {
 
 export type SortKey = "total" | "unit" | "kwh" | "distance" | "rating";
 
-export const SORT_OPTIONS: { value: SortKey; label: string }[] = [
-  { value: "total", label: "Nejlevnější vč. dopravy" },
-  { value: "unit", label: "Nejlevnější za jednotku" },
-  { value: "kwh", label: "Nejlevnější za 1 kWh" },
-  { value: "distance", label: "Nejblíže" },
-  { value: "rating", label: "Nejlépe hodnocené" },
+function sortOption(value: SortKey): { value: SortKey; readonly label: string } {
+  return {
+    value,
+    get label() {
+      return t(`common.sort.${value}`);
+    },
+  };
+}
+
+export const SORT_OPTIONS: { value: SortKey; readonly label: string }[] = [
+  sortOption("total"),
+  sortOption("unit"),
+  sortOption("kwh"),
+  sortOption("distance"),
+  sortOption("rating"),
 ];
 
 export interface FilterState {
@@ -320,10 +330,10 @@ export function findBestValueId(matches: SellerMatch[], mixed: boolean): string 
 /** Textový popis dopravy pro kartu / popup. */
 export function deliveryLabel(delivery: DeliveryEstimate, seller: Seller): string {
   if (delivery.outOfRange) {
-    return seller.delivery.pickupAvailable ? "Jen osobní odběr" : "Mimo dojezd dopravy";
+    return seller.delivery.pickupAvailable ? t("common.delivery.pickupOnly") : t("common.delivery.outOfRange");
   }
-  if (delivery.free) return "Doprava zdarma";
-  return `Doprava ~ ${formatCzk(delivery.fee)}`;
+  if (delivery.free) return t("common.delivery.free");
+  return t("common.delivery.approx", { price: formatCzk(delivery.fee) });
 }
 
 /** Až `limit` hlavních produktů prodejce pro popup: nejdřív vybraný, pak nejlevnější z ostatních kategorií. */

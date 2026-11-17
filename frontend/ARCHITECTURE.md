@@ -135,6 +135,16 @@ Soubor: `src/components/providers/preferences-provider.tsx`. Kontext se čte př
 | `setLocationByZip(zip)` | funkce | Nastaví lokalitu podle PSČ. Vrací `false`, pokud PSČ nelze rozpoznat. |
 | `compareIds` | `string[]` | Prodejci k porovnání, maximum `MAX_COMPARE = 4`. Při přidání nad limit se vyřadí nejstarší. |
 | `toggleCompare`, `clearCompare` | funkce | Správa seznamu porovnání. |
+| `lang` | `"cs" \| "de" \| "en"` | Jazyk UI (Nastavení → Jazyk). Demo data (prodejci, produkty, reporty) zůstávají česky. |
+| `currency` | `"CZK" \| "EUR"` | Měna zobrazení. Data a API jsou vždy v Kč; při EUR se přepočítává kurzem `DEFAULT_EUR_RATE` (`NEXT_PUBLIC_EUR_CZK_RATE`, výchozí ČNB 16. 11. 2026 = 24,43 Kč/€). |
+
+Jazyk a měna:
+
+- Provider při každém renderu volá `setCurrentLang(lang)` a `setFormatSettings({ locale, currency })`, takže `t()` i formátovače v `src/lib/format.ts` (`formatCzk`, `formatKwhPrice`, `moneyUnit`, `toDisplayCurrency`, …) vrací texty a částky v aktuálním jazyce a měně.
+- `PreferencesRemountBoundary` (v `AppShell` kolem obsahu stránky) po změně jazyka nebo měny obsah znovu připojí, aby se přepočítaly i memoizované hodnoty a grafy. Navigace a otevřený dialog Nastavení zůstávají.
+- Překlady jsou v `src/lib/i18n/messages/<oblast>.ts` jako `defineMessages({ cs, de, en })`. Čeština určuje tvar, TypeScript hlídá, že němčina a angličtina mají stejné klíče, a `t("oblast.klic")` má typované klíče. Plurály přes `Intl.PluralRules` (`{ one, few, many, other }`).
+- Číselníky v `constants.ts` (paliva, štítky, sklad, vlhkost…) mají `label` jako getter, který čte aktuální jazyk.
+- Titulky stránek v `metadata` (záložka prohlížeče) jsou serverové a zůstávají česky.
 
 Persistence:
 

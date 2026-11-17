@@ -10,7 +10,8 @@ import { usePreferences } from "@/components/providers/preferences-provider";
 import { Button } from "@/components/ui/button";
 import { REGIONS } from "@/lib/constants";
 import { deliveryLabel, popupProducts, type SellerMatch } from "@/lib/filters";
-import { formatCzk, formatKm, formatRelative } from "@/lib/format";
+import { formatCzk, formatCzkPerUnit, formatKm, formatRelative } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 import { PRICE_TIER_META } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
 import { OrderDialog } from "./order-dialog";
@@ -34,6 +35,7 @@ function InfoTile({ icon, label, value, hint }: { icon: React.ReactNode; label: 
 export function SellerPanel({ match, isBest, onClose }: { match: SellerMatch; isBest: boolean; onClose: () => void }) {
   const { seller, product } = match;
   const { location, compareIds, toggleCompare } = usePreferences();
+  const { t } = useI18n();
   const [orderOpen, setOrderOpen] = useState(false);
   const router = useRouter();
   const comparing = compareIds.includes(seller.id);
@@ -57,7 +59,7 @@ export function SellerPanel({ match, isBest, onClose }: { match: SellerMatch; is
               <button
                 type="button"
                 onClick={onClose}
-                aria-label="Zavřít detail"
+                aria-label={t("home.panel.closeDetail")}
                 className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-card/90 text-foreground shadow-soft backdrop-blur transition-colors hover:bg-card"
               >
                 <X aria-hidden className="size-4" />
@@ -65,7 +67,7 @@ export function SellerPanel({ match, isBest, onClose }: { match: SellerMatch; is
             </div>
             {isBest && (
               <span className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-lg bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground shadow-soft">
-                <Check aria-hidden className="size-3.5" /> Nejlepší cena v nabídce
+                <Check aria-hidden className="size-3.5" /> {t("home.panel.bestPrice")}
               </span>
             )}
           </div>
@@ -80,7 +82,7 @@ export function SellerPanel({ match, isBest, onClose }: { match: SellerMatch; is
               <MapPin aria-hidden className="size-3.5" />
               {seller.address.city}, {REGIONS[seller.address.region].short}
             </span>
-            <span className="num">{formatKm(match.distanceKm)} od vás</span>
+            <span className="num">{t("home.panel.fromYou", { distance: formatKm(match.distanceKm) })}</span>
           </div>
           <p className="text-sm leading-relaxed text-foreground/80">{seller.description}</p>
           <SellerTags tags={seller.tags} max={5} className="pt-1" />
@@ -89,7 +91,7 @@ export function SellerPanel({ match, isBest, onClose }: { match: SellerMatch; is
         {/* Ceník */}
         <section className="space-y-3 px-5 pt-6">
           <div className="flex items-baseline justify-between">
-            <h3 className="font-heading text-lg font-semibold">Ceník</h3>
+            <h3 className="font-heading text-lg font-semibold">{t("home.panel.priceList")}</h3>
             <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
               <span aria-hidden className="size-2 rounded-full" style={{ background: tier.color }} />
               {tier.label}
@@ -113,40 +115,40 @@ export function SellerPanel({ match, isBest, onClose }: { match: SellerMatch; is
             ))}
           </div>
           <p className="text-[11px] text-muted-foreground">
-            Ceny vč. DPH, aktualizováno {formatRelative(product.updatedAt)}.{" "}
+            {t("home.panel.pricesNote", { when: formatRelative(product.updatedAt) })}{" "}
             <Link href={`/prodejci/${seller.slug}`} className="font-medium text-moss-strong underline-offset-2 hover:underline">
-              Kompletní ceník
+              {t("home.panel.fullPriceList")}
             </Link>
           </p>
         </section>
 
         {/* Doprava */}
         <section className="space-y-3 px-5 pt-6 pb-6">
-          <h3 className="font-heading text-lg font-semibold">Doprava k vám</h3>
+          <h3 className="font-heading text-lg font-semibold">{t("home.panel.deliveryTitle")}</h3>
           <div className="grid auto-rows-fr grid-cols-2 gap-2.5">
             <InfoTile
               icon={<Truck aria-hidden />}
-              label="Odhad dopravy"
-              value={match.delivery.outOfRange ? "—" : match.delivery.free ? "Zdarma" : formatCzk(match.delivery.fee)}
+              label={t("home.panel.deliveryEstimate")}
+              value={match.delivery.outOfRange ? "—" : match.delivery.free ? t("home.panel.free") : formatCzk(match.delivery.fee)}
               hint={deliveryLabel(match.delivery, seller)}
             />
             <InfoTile
               icon={<ShoppingBasket aria-hidden />}
-              label={`Celkem za ${match.reference.label}`}
+              label={t("home.panel.totalFor", { ref: match.reference.label })}
               value={formatCzk(match.totalForReference)}
-              hint="palivo + doprava"
+              hint={t("home.panel.fuelPlusDelivery")}
             />
             <InfoTile
               icon={<MapPin aria-hidden />}
-              label="Dojezd"
-              value={d.ownDelivery ? `${d.maxRadiusKm} km` : "Jen odběr"}
-              hint={d.freeRadiusKm ? `zdarma do ${d.freeRadiusKm} km` : `${d.pricePerKm} Kč/km`}
+              label={t("home.panel.reach")}
+              value={d.ownDelivery ? `${d.maxRadiusKm} km` : t("home.panel.pickupOnly")}
+              hint={d.freeRadiusKm ? t("home.panel.freeWithin", { km: d.freeRadiusKm }) : formatCzkPerUnit(d.pricePerKm, "km")}
             />
             <InfoTile
               icon={<Truck aria-hidden />}
-              label="Hydraulická ruka"
-              value={d.hydraulicArm ? "Ano" : "Ne"}
-              hint={d.hydraulicArm && d.hydraulicArmFee ? `příplatek ${formatCzk(d.hydraulicArmFee)}` : undefined}
+              label={t("home.panel.hydraulicArm")}
+              value={d.hydraulicArm ? t("home.panel.yes") : t("home.panel.no")}
+              hint={d.hydraulicArm && d.hydraulicArmFee ? t("home.panel.armSurcharge", { price: formatCzk(d.hydraulicArmFee) }) : undefined}
             />
           </div>
           {d.notes && <p className="rounded-xl bg-secondary px-3.5 py-2.5 text-xs leading-relaxed text-secondary-foreground">{d.notes}</p>}
@@ -175,24 +177,24 @@ export function SellerPanel({ match, isBest, onClose }: { match: SellerMatch; is
       <div className="grid shrink-0 grid-cols-2 gap-2.5 border-t border-border bg-card p-4">
         <Button size="lg" className="col-span-2" onClick={() => setOrderOpen(true)}>
           <ShoppingBasket aria-hidden />
-          Objednat
+          {t("common.actions.order")}
         </Button>
         <Button
           variant="outline"
           onClick={() => {
             toggleCompare(seller.id);
-            toast(comparing ? "Odebráno z porovnání" : "Přidáno k porovnání", {
-              action: comparing ? undefined : { label: "Porovnat", onClick: () => router.push("/kalkulacka#srovnani") },
+            toast(comparing ? t("home.panel.removedCompare") : t("home.panel.addedCompare"), {
+              action: comparing ? undefined : { label: t("common.actions.compare"), onClick: () => router.push("/kalkulacka#srovnani") },
             });
           }}
           className={cn(comparing && "border-moss/50 bg-moss-soft text-moss-strong")}
         >
           <Scale aria-hidden />
-          {comparing ? "V porovnání" : "Porovnat"}
+          {comparing ? t("common.actions.inCompare") : t("common.actions.compare")}
         </Button>
         <Button variant="outline" asChild>
           <Link href={`/prodejci/${seller.slug}`}>
-            Celý profil
+            {t("common.actions.profile")}
             <ArrowUpRight aria-hidden />
           </Link>
         </Button>

@@ -22,7 +22,8 @@ import {
   woodKwhPerUnit,
   type OfferTotal,
 } from "@/lib/pricing";
-import { formatCzk, formatKm, formatNumber, plural } from "@/lib/format";
+import { formatCzk, formatKm, formatKwhNumber, formatKwhPrice, formatNumber, moneyUnit } from "@/lib/format";
+import { t, useI18n } from "@/lib/i18n";
 import { locationFromZip, usePreferences } from "@/components/providers/preferences-provider";
 import { cn } from "@/lib/utils";
 import type { FuelCategory, FuelProduct, Seller, WoodGroup } from "@/types";
@@ -32,20 +33,20 @@ type FuelKey = "wood-hard" | "wood-soft" | "pellets" | "briquettes" | "coal";
 
 const FUELS: Record<
   FuelKey,
-  { label: string; category: FuelCategory; group?: WoodGroup; unit: "PRMS" | "t"; defaultQty: string }
+  { category: FuelCategory; group?: WoodGroup; unit: "PRMS" | "t"; defaultQty: string }
 > = {
-  "wood-hard": { label: "Tvrdé dřevo", category: "wood", group: "hard", unit: "PRMS", defaultQty: "10" },
-  "wood-soft": { label: "Měkké dřevo", category: "wood", group: "soft", unit: "PRMS", defaultQty: "10" },
-  pellets: { label: "Pelety", category: "pellets", unit: "t", defaultQty: "4" },
-  briquettes: { label: "Brikety", category: "briquettes", unit: "t", defaultQty: "4" },
-  coal: { label: "Uhlí", category: "coal", unit: "t", defaultQty: "4" },
+  "wood-hard": { category: "wood", group: "hard", unit: "PRMS", defaultQty: "10" },
+  "wood-soft": { category: "wood", group: "soft", unit: "PRMS", defaultQty: "10" },
+  pellets: { category: "pellets", unit: "t", defaultQty: "4" },
+  briquettes: { category: "briquettes", unit: "t", defaultQty: "4" },
+  coal: { category: "coal", unit: "t", defaultQty: "4" },
 };
 
 const DEMAND_PRESETS = [
-  { label: "Novostavba", kwh: 8000 },
-  { label: "Starší dům", kwh: 18000 },
-  { label: "Nezateplený dům", kwh: 28000 },
-];
+  { key: "new", kwh: 8000 },
+  { key: "older", kwh: 18000 },
+  { key: "uninsulated", kwh: 28000 },
+] as const;
 
 /** kWh energie v 1 základní jednotce (PRMS / t) pro odhad spotřeby. */
 function energyPerBaseUnit(key: FuelKey): number {
@@ -81,10 +82,11 @@ interface Row {
 }
 
 function unitLabel(p: FuelProduct): string {
-  return p.unit === "paleta" ? "pal." : p.unit === "pytel" ? "pytlů" : p.unit;
+  return p.unit === "paleta" ? t("calculator.season.unitPallet") : p.unit === "pytel" ? t("calculator.season.unitBag") : p.unit;
 }
 
 export function SeasonCalculator() {
+  const { t } = useI18n();
   const { location, setLocationByZip } = usePreferences();
   const { data: sellers, loading, error } = useApi(() => getSellers(), []);
   const { data: regions } = useApi(() => getRegionStats(), []);
@@ -161,9 +163,9 @@ export function SeasonCalculator() {
   function saveLocation() {
     if (setLocationByZip(zipValue)) {
       setZipInput(null);
-      toast.success("Poloha uložena", { description: "Použije se i na mapě a v dalších nástrojích." });
+      toast.success(t("calculator.season.locationSaved"), { description: t("calculator.season.locationSavedDesc") });
     } else {
-      toast.error("PSČ se nepodařilo rozpoznat");
+      toast.error(t("calculator.season.zipFailed"));
     }
   }
 
@@ -176,14 +178,14 @@ export function SeasonCalculator() {
       <Panel className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-1.5">
-            <Label htmlFor="season-zip">PSČ</Label>
+            <Label htmlFor="season-zip">{t("calculator.season.zip")}</Label>
             <div className="relative">
               <MapPin className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 id="season-zip"
                 inputMode="numeric"
                 autoComplete="postal-code"
-                placeholder="110 00"
+                placeholder={t("calculator.season.zipPlaceholder")}
                 value={zipValue}
                 onChange={(e) => setZipInput(e.target.value)}
                 aria-invalid={zipInvalid}
@@ -193,7 +195,7 @@ export function SeasonCalculator() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="season-fuel">Palivo</Label>
+            <Label htmlFor="season-fuel">{t("calculator.season.fuel")}</Label>
             <Select value={fuel} onValueChange={(v) => changeFuel(v as FuelKey)}>
               <SelectTrigger id="season-fuel" className="h-10 w-full rounded-xl text-base">
                 <SelectValue />
@@ -201,7 +203,7 @@ export function SeasonCalculator() {
               <SelectContent position="popper">
                 {(Object.keys(FUELS) as FuelKey[]).map((k) => (
                   <SelectItem key={k} value={k}>
-                    {FUELS[k].label}
+                    {t(`calculator.season.fuels.${k}`)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -210,7 +212,7 @@ export function SeasonCalculator() {
 
           <NumberField
             id="season-qty"
-            label="Množství"
+            label={t("calculator.season.qty")}
             value={qty}
             onChange={setQty}
             suffix={f.unit}
@@ -218,12 +220,12 @@ export function SeasonCalculator() {
           />
 
           <div className="space-y-1.5">
-            <Label htmlFor="season-arm">Hydraulická ruka</Label>
+            <Label htmlFor="season-arm">{t("calculator.season.arm")}</Label>
             <label
               htmlFor="season-arm"
               className="flex h-10 cursor-pointer items-center justify-between gap-3 rounded-xl border border-input px-3"
             >
-              <span className="text-sm">{arm ? "Ano, složit" : "Ne"}</span>
+              <span className="text-sm">{arm ? t("calculator.season.armYes") : t("calculator.season.armNo")}</span>
               <Switch id="season-arm" checked={arm} onCheckedChange={setArm} />
             </label>
           </div>
@@ -232,20 +234,20 @@ export function SeasonCalculator() {
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           <p className={cn("flex items-center gap-1.5 text-sm", zipInvalid ? "text-clay-strong" : "text-muted-foreground")}>
             <MapPin className="size-4 shrink-0" aria-hidden="true" />
-            {zipInvalid ? "PSČ nerozpoznáno" : loc ? loc.label : "Zadejte PSČ"}
+            {zipInvalid ? t("calculator.season.zipUnknown") : loc ? loc.label : t("calculator.season.zipEnter")}
           </p>
           <Button variant="outline" size="sm" onClick={saveLocation} disabled={!loc || zipInput === null}>
-            Uložit jako moji polohu
+            {t("calculator.season.saveLocation")}
           </Button>
         </div>
 
         <Collapsible
-          title="Nevím kolik – spočítat podle domu"
+          title={t("calculator.season.helper")}
           icon={<Wand2 className="size-4 text-wood-strong" aria-hidden="true" />}
         >
           <div className="grid items-end gap-4 lg:grid-cols-[auto_12rem_1fr]">
             <div className="space-y-1.5">
-              <Label>Typ domu</Label>
+              <Label>{t("calculator.season.houseType")}</Label>
               <div className="flex flex-wrap gap-1.5">
                 {DEMAND_PRESETS.map((p) => (
                   <Button
@@ -254,21 +256,21 @@ export function SeasonCalculator() {
                     variant={parseNum(demand) === p.kwh ? "default" : "outline"}
                     onClick={() => setDemand(String(p.kwh))}
                   >
-                    {p.label}
+                    {t(`calculator.season.presets.${p.key}`)}
                   </Button>
                 ))}
               </div>
             </div>
-            <NumberField id="season-demand" label="Potřeba tepla" value={demand} onChange={setDemand} suffix="kWh/rok" />
+            <NumberField id="season-demand" label={t("calculator.season.demand")} value={demand} onChange={setDemand} suffix={t("calculator.season.demandSuffix")} />
             <div className="flex items-center justify-between gap-3 rounded-xl bg-card px-4 py-2 sm:justify-end">
               <p className="text-sm">
-                Doporučeno{" "}
+                {t("calculator.season.recommended")}{" "}
                 <strong className="num text-base whitespace-nowrap">
                   {formatNumber(suggested, 1)} {f.unit}
                 </strong>
               </p>
               <Button size="sm" disabled={!suggested} onClick={() => setQty(String(suggested))}>
-                Použít
+                {t("calculator.season.use")}
               </Button>
             </div>
           </div>
@@ -276,12 +278,12 @@ export function SeasonCalculator() {
       </Panel>
 
       {loading && <Skeleton className="h-64 w-full rounded-2xl" />}
-      {error && <EmptyState title="Nepodařilo se načíst prodejce" description="Zkuste to znovu za chvíli." />}
+      {error && <EmptyState title={t("calculator.season.loadFailed")} description={t("calculator.season.loadFailedDesc")} />}
       {!loading && !error && result && rows.length === 0 && (
-        <EmptyState icon={<Truck />} title="Žádná nabídka" description="Pro toto palivo a polohu nikdo nemá skladem." />
+        <EmptyState icon={<Truck />} title={t("calculator.season.noOffers")} description={t("calculator.season.noOffersDesc")} />
       )}
       {!loading && !error && !result && (
-        <EmptyState title="Zadejte PSČ a množství" description="Spočítáme cenu u každého prodejce." />
+        <EmptyState title={t("calculator.season.enterZip")} description={t("calculator.season.enterZipDesc")} />
       )}
 
       {winner && (
@@ -292,13 +294,13 @@ export function SeasonCalculator() {
                 <Trophy className="size-5" aria-hidden="true" />
               </span>
               <div className="min-w-0">
-                <p className="text-xs font-semibold tracking-wider text-moss-strong uppercase">Nejvýhodnější</p>
+                <p className="text-xs font-semibold tracking-wider text-moss-strong uppercase">{t("calculator.season.best")}</p>
                 <Link href={`/prodejci/${winner.seller.slug}`} className="block text-lg leading-snug font-semibold hover:underline">
                   {winner.seller.name}
                 </Link>
                 {winner.saving !== undefined && winner.saving > 0 && (
                   <p className="text-sm font-medium text-moss-strong">
-                    Ušetříte <span className="num">{formatCzk(winner.saving)}</span> oproti průměru kraje
+                    {t("calculator.season.save", { amount: formatCzk(winner.saving) })}
                   </p>
                 )}
               </div>
@@ -308,37 +310,40 @@ export function SeasonCalculator() {
                 {formatCzk(winner.offer.total)}
               </p>
               <p className="num text-sm whitespace-nowrap text-muted-foreground">
-                {formatNumber(winner.offer.totalPerKwh, 2)} Kč/kWh vč. dopravy
+                {t("calculator.season.perKwhWithDelivery", { price: formatKwhPrice(winner.offer.totalPerKwh) })}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-1 pt-2">
             <h3 className="font-heading text-base font-semibold">
-              {rows.length} {plural(rows.length, "nabídka", "nabídky", "nabídek")} od nejlevnější
+              {t("calculator.season.offers", { count: rows.length })}
             </h3>
-            <InfoTip label="Jak to počítáme">
+            <InfoTip label={t("calculator.season.howTitle")}>
               <p>
-                Cena = zboží + doprava k vám. Množství se u každého prodejce zaokrouhlí nahoru na prodejní jednotku.
-                Syrové dřevo je vynecháno.
+                {t("calculator.season.howBody")}
               </p>
               <p>
-                Průměr kraje{result?.regionName ? ` (${result.regionName})` : ""} = průměrná cena paliva ×{" "}
-                {formatNumber(baseQty, 1)} {f.unit} + průměrná doprava ({formatCzk(result?.avgDelivery ?? 0)}).
+                {t("calculator.season.howAverage", {
+                  region: result?.regionName ? ` (${result.regionName})` : "",
+                  qty: formatNumber(baseQty, 1),
+                  unit: f.unit,
+                  delivery: formatCzk(result?.avgDelivery ?? 0),
+                })}
               </p>
-              {arm && rows.some((r) => r.armMissing) && <p>Někteří prodejci hydraulickou ruku nenabízejí.</p>}
+              {arm && rows.some((r) => r.armMissing) && <p>{t("calculator.season.howArm")}</p>}
             </InfoTip>
           </div>
 
           <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-soft">
             <div className={cn("hidden items-center border-b border-border bg-secondary/50 px-4 py-2.5 text-xs font-medium text-muted-foreground lg:grid", ROW_GRID)}>
               <span>#</span>
-              <span>Prodejce</span>
-              <span className="text-right">Vzdálenost</span>
-              <span className="text-right">Doprava</span>
-              <span className="text-right">Celkem</span>
-              <span className="text-right">Kč/kWh</span>
-              <span className="text-right">Vs. průměr</span>
+              <span>{t("calculator.season.colSeller")}</span>
+              <span className="text-right">{t("calculator.season.colDistance")}</span>
+              <span className="text-right">{t("calculator.season.colDelivery")}</span>
+              <span className="text-right">{t("calculator.season.colTotal")}</span>
+              <span className="text-right">{moneyUnit("kWh")}</span>
+              <span className="text-right">{t("calculator.season.colVsAvg")}</span>
             </div>
             <ol className="divide-y divide-border">
               {visible.map((r, i) => (
@@ -350,7 +355,9 @@ export function SeasonCalculator() {
           {rows.length > 10 && (
             <div className="text-center">
               <Button variant="outline" onClick={() => setShowAll((s) => !s)}>
-                {showAll ? "Zobrazit méně" : `Zobrazit všech ${rows.length} ${plural(rows.length, "prodejce", "prodejce", "prodejců")}`}
+                {showAll
+                  ? t("calculator.season.showLess")
+                  : t("calculator.season.showAll", { sellers: t("common.sellers", { count: rows.length }) })}
               </Button>
             </div>
           )}
@@ -394,7 +401,7 @@ function ResultRow({ row: r, rank }: { row: Row; rank: number }) {
         <span className={cn("num text-right text-base font-semibold whitespace-nowrap", first && "text-moss-strong")}>
           {formatCzk(r.offer.total)}
         </span>
-        <span className="num text-right text-sm whitespace-nowrap">{formatNumber(r.offer.totalPerKwh, 2)}</span>
+        <span className="num text-right text-sm whitespace-nowrap">{formatKwhNumber(r.offer.totalPerKwh)}</span>
         <span className="text-right">
           <SavingChip saving={r.saving} />
         </span>
@@ -419,9 +426,9 @@ function ResultRow({ row: r, rank }: { row: Row; rank: number }) {
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pl-8 text-xs text-muted-foreground">
           <span className="num whitespace-nowrap">{formatKm(r.offer.delivery.distanceKm)}</span>
           <span className="whitespace-nowrap">
-            doprava: <DeliveryCell row={r} />
+            {t("calculator.season.deliveryLabel")} <DeliveryCell row={r} />
           </span>
-          <span className="num whitespace-nowrap">{formatNumber(r.offer.totalPerKwh, 2)} Kč/kWh</span>
+          <span className="num whitespace-nowrap">{formatKwhPrice(r.offer.totalPerKwh)}</span>
           <span className="ml-auto">
             <SavingChip saving={r.saving} />
           </span>
@@ -433,8 +440,8 @@ function ResultRow({ row: r, rank }: { row: Row; rank: number }) {
 
 function DeliveryCell({ row }: { row: Row }) {
   const d = row.offer.delivery;
-  if (d.outOfRange) return <span className="text-muted-foreground">osobní odběr</span>;
-  if (d.free) return <span className="font-medium text-moss-strong">zdarma</span>;
+  if (d.outOfRange) return <span className="text-muted-foreground">{t("calculator.season.pickup")}</span>;
+  if (d.free) return <span className="font-medium text-moss-strong">{t("calculator.season.free")}</span>;
   return <span className="num">{formatCzk(d.fee)}</span>;
 }
 

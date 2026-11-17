@@ -1,5 +1,6 @@
 import type { AnalysisRun, StartAnalysisRequest, StartAnalysisResponse } from "@/types";
 import { IS_MOCK } from "./config";
+import { t } from "@/lib/i18n/translate";
 import { apiFetch, mockResolve } from "./client";
 import { getSimulatedRun, startSimulatedRun } from "./mock/analysis-sim";
 
@@ -18,7 +19,7 @@ export async function startAnalysis(req: StartAnalysisRequest): Promise<StartAna
 export async function getAnalysisRun(runId: string): Promise<AnalysisRun> {
   if (!IS_MOCK) return apiFetch<AnalysisRun>(`/api/analyze/${encodeURIComponent(runId)}`);
   const run = getSimulatedRun(runId);
-  if (!run) throw new Error(`Běh ${runId} neexistuje`);
+  if (!run) throw new Error(t("ci.api.runNotFound", { id: runId }));
   return mockResolve(run, 60);
 }
 

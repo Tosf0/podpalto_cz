@@ -3,6 +3,7 @@
 import { useCallback, useSyncExternalStore } from "react";
 import { BookOpen, Calculator, Flame, GitCompareArrows, Scale, type LucideIcon } from "lucide-react";
 import { PageHeader } from "@/components/common";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { WoodConverter } from "./wood-converter";
 import { RawWoodExplainer } from "./raw-wood-explainer";
@@ -12,11 +13,11 @@ import { Methodology } from "./methodology";
 
 type TabId = "prevodnik" | "sezona" | "srovnani" | "metodika";
 
-const TABS: { id: TabId; label: string; short: string; icon: LucideIcon }[] = [
-  { id: "prevodnik", label: "Převodník", short: "Převodník", icon: Scale },
-  { id: "sezona", label: "Sezónní nákup", short: "Sezóna", icon: Flame },
-  { id: "srovnani", label: "Srovnání prodejců", short: "Srovnání", icon: GitCompareArrows },
-  { id: "metodika", label: "Metodika", short: "Metodika", icon: BookOpen },
+const TABS: { id: TabId; key: "converter" | "season" | "compare" | "method"; icon: LucideIcon }[] = [
+  { id: "prevodnik", key: "converter", icon: Scale },
+  { id: "sezona", key: "season", icon: Flame },
+  { id: "srovnani", key: "compare", icon: GitCompareArrows },
+  { id: "metodika", key: "method", icon: BookOpen },
 ];
 
 function readHash(): TabId {
@@ -30,6 +31,7 @@ function subscribe(cb: () => void) {
 }
 
 export function CalculatorPage() {
+  const { t } = useI18n();
   // Aktivní záložka vychází z location.hash, takže odkazy #sezona apod. fungují.
   const tab = useSyncExternalStore(subscribe, readHash, () => "prevodnik" as TabId);
 
@@ -42,8 +44,8 @@ export function CalculatorPage() {
     <div className="mx-auto w-full max-w-7xl px-4 pb-10 sm:px-6 lg:px-8">
       <div className="pt-6 lg:pt-8">
         <PageHeader
-          title="Kalkulačka"
-          description="Jednotky, sezónní nákup a srovnání prodejců."
+          title={t("calculator.page.title")}
+          description={t("calculator.page.description")}
           icon={<Calculator />}
         />
       </div>
@@ -51,10 +53,10 @@ export function CalculatorPage() {
       <div className="sticky top-14 z-30 -mx-4 bg-background/90 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:top-0 lg:-mx-8 lg:px-8">
         <div
           role="tablist"
-          aria-label="Nástroje kalkulačky"
+          aria-label={t("calculator.page.tablistAria")}
           className="flex w-full gap-1 rounded-full bg-muted p-1 sm:inline-flex sm:w-auto"
         >
-          {TABS.map(({ id, label, short, icon: Icon }) => {
+          {TABS.map(({ id, key, icon: Icon }) => {
             const active = tab === id;
             return (
               <button
@@ -73,8 +75,8 @@ export function CalculatorPage() {
                 )}
               >
                 <Icon className="hidden size-4 sm:block" aria-hidden="true" />
-                <span className="sm:hidden">{short}</span>
-                <span className="hidden sm:inline">{label}</span>
+                <span className="sm:hidden">{t(`calculator.page.tabs.${key}.short`)}</span>
+                <span className="hidden sm:inline">{t(`calculator.page.tabs.${key}.label`)}</span>
               </button>
             );
           })}

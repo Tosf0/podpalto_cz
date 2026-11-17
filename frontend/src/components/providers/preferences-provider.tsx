@@ -1,16 +1,24 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { PriceMode, UserLocation } from "@/types";
 import { DEFAULT_LOCATION, ZIP_PREFIX_LOCATIONS } from "@/lib/constants";
+import { setFormatSettings, type Currency } from "@/lib/format";
+import { DEFAULT_LANG, isLang, localeOf, setCurrentLang, type Lang } from "@/lib/i18n/translate";
 
 /**
  * Globální uživatelské preference (sdílené napříč stránkami, uložené v localStorage):
  * - priceMode: zobrazení ceny za jednotku (PRMS/t) vs. Kč/kWh
  * - location: lokalita uživatele (pro vzdálenosti a dopravu)
  * - compareIds: prodejci vybraní k porovnání (tlačítko „Porovnat“)
+ * - lang: jazyk UI (cs / de / en) – demo data zůstávají česky
+ * - currency: měna zobrazení (CZK / EUR) – data jsou v Kč, při EUR se přepočítávají kurzem
  */
 interface PreferencesValue {
+  lang: Lang;
+  setLang: (l: Lang) => void;
+  currency: Currency;
+  setCurrency: (c: Currency) => void;
   priceMode: PriceMode;
   setPriceMode: (m: PriceMode) => void;
   location: UserLocation;
@@ -41,6 +49,8 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
   const [priceMode, setPriceMode] = useState<PriceMode>("unit");
   const [location, setLocation] = useState<UserLocation>(DEFAULT_LOCATION);
   const [compareIds, setCompareIds] = useState<string[]>([]);
+  const [lang, setLang] = useState<Lang>(DEFAULT_LANG);
+  const [currency, setCurrency] = useState<Currency>("CZK");
   const [hydrated, setHydrated] = useState(false);
 
   // načtení z localStorage až po hydrataci (žádný mismatch SSR/CSR)
@@ -48,11 +58,13 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
-        const saved = JSON.parse(raw) as Partial<Pick<PreferencesValue, "priceMode" | "location" | "compareIds">>;
+        const saved = JSON.parse(raw) as Partial<Pick<PreferencesValue, "priceMode" | "location" | "compareIds" | "lang" | "currency">>;
         /* eslint-disable react-hooks/set-state-in-effect */
         if (saved.priceMode === "unit" || saved.priceMode === "kwh") setPriceMode(saved.priceMode);
         if (saved.location?.lat && saved.location?.lng) setLocation(saved.location);
         if (Array.isArray(saved.compareIds)) setCompareIds(saved.compareIds.slice(0, MAX_COMPARE));
+        if (isLang(saved.lang)) setLang(saved.lang);
+        if (saved.currency === "CZK" || saved.currency === "EUR") setCurrency(saved.currency);
         /* eslint-enable react-hooks/set-state-in-effect */
       }
     } catch {
@@ -64,11 +76,16 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
   useEffect(() => {
     if (!hydrated) return;
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ priceMode, location, compareIds }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ priceMode, location, compareIds, lang, currency }));
     } catch {
       /* ignorovat */
     }
-  }, [hydrated, priceMode, location, compareIds]);
+  }, [hydrated, priceMode, location, compareIds, lang, currency]);
+
+  // jazyk dokumentu (čtečky obrazovky, dělení slov)
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
 
   const setLocationByZip = useCallback((zip: string) => {
     const loc = locationFromZip(zip);
@@ -85,8 +102,16 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
 
   const clearCompare = useCallback(() => setCompareIds([]), []);
 
+  // Formátovače a `t()` mimo React čtou modulové nastavení – musí platit už během tohoto renderu.
+  setCurrentLang(lang);
+  setFormatSettings({ locale: localeOf(lang), currency });
+
   const value = useMemo<PreferencesValue>(
     () => ({
+      lang,
+      setLang,
+      currency,
+      setCurrency,
       priceMode,
       setPriceMode,
       location,
@@ -96,10 +121,19 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
       toggleCompare,
       clearCompare,
     }),
-    [priceMode, location, setLocationByZip, compareIds, toggleCompare, clearCompare],
+    [lang, currency, priceMode, location, setLocationByZip, compareIds, toggleCompare, clearCompare],
   );
 
   return <PreferencesContext.Provider value={value}>{children}</PreferencesContext.Provider>;
+}
+
+/**
+ * Po změně jazyka nebo měny znovu připojí obsah stránky, aby se přepočítaly i memoizované
+ * hodnoty (formátované ceny, popisky grafů). Kostra (navigace, otevřené Nastavení) zůstává.
+ */
+export function PreferencesRemountBoundary({ children }: { children: React.ReactNode }) {
+  const { lang, currency } = usePreferences();
+  return <Fragment key={`${lang}-${currency}`}>{children}</Fragment>;
 }
 
 export function usePreferences(): PreferencesValue {

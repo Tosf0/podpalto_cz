@@ -31,7 +31,11 @@ import {
   formatNumber,
   formatPct,
   formatRelative,
+  moneyUnit,
+  toDisplayCurrency,
+  fromDisplayCurrency,
 } from "@/lib/format";
+import { t } from "@/lib/i18n/translate";
 import {
   baseUnitLabel,
   estimateDelivery,
@@ -50,7 +54,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { SIZE_LABEL, THREAT_META } from "./seller-utils";
+import { sizeLabel, THREAT_META } from "./seller-utils";
 
 /* ------------------------------------------------------------------ */
 /* Pomocné funkce                                                      */
@@ -73,7 +77,7 @@ function productParams(p: FuelProduct): string[] {
   const out: string[] = [];
   if (p.woodSpecies?.length) out.push(p.woodSpecies.map((s) => WOOD_SPECIES[s].label).join(", "));
   if (p.woodForm) out.push(WOOD_FORMS[p.woodForm].label);
-  if (p.moisturePercent !== undefined) out.push(`vlhkost ${formatNumber(p.moisturePercent)} %`);
+  if (p.moisturePercent !== undefined) out.push(t("sellers.detail.params.moisture", { value: formatNumber(p.moisturePercent) }));
   if (p.logLengthCm) out.push(`${p.logLengthCm} cm`);
   if (p.certification) out.push(p.certification);
   if (p.diameterMm) out.push(`Ø ${p.diameterMm} mm`);
@@ -163,11 +167,11 @@ function Hero({ seller }: { seller: Seller }) {
         <div className="flex shrink-0 flex-wrap gap-2">
           <Button variant={inCompare ? "secondary" : "default"} onClick={() => toggleCompare(seller.id)}>
             {inCompare ? <Check /> : <GitCompareArrows />}
-            {inCompare ? "V porovnání" : "Porovnat"}
+            {inCompare ? t("common.actions.inCompare") : t("common.actions.compare")}
           </Button>
           <Link href="/" className={buttonVariants({ variant: "outline" })}>
             <MapPin />
-            Na mapě
+            {t("sellers.detail.onMap")}
           </Link>
         </div>
       </div>
@@ -175,24 +179,24 @@ function Hero({ seller }: { seller: Seller }) {
       <p className="mt-4 max-w-3xl text-sm text-muted-foreground sm:text-base">{seller.description}</p>
 
       <dl className="mt-5 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-border pt-5 sm:grid-cols-3 lg:grid-cols-4">
-        <Fact label="Adresa">
+        <Fact label={t("sellers.detail.facts.address")}>
           {a.street}
           <br />
           {a.zip} {a.city}
         </Fact>
-        <Fact label="Kraj">{REGIONS[a.region].name}</Fact>
+        <Fact label={t("sellers.detail.facts.region")}>{REGIONS[a.region].name}</Fact>
         {seller.ico && (
-          <Fact label="IČO">
+          <Fact label={t("sellers.detail.facts.ico")}>
             <span className="num">{seller.ico}</span>
           </Fact>
         )}
-        <Fact label="Velikost">{SIZE_LABEL[seller.size]}</Fact>
+        <Fact label={t("sellers.detail.facts.size")}>{sizeLabel(seller.size)}</Fact>
         {seller.foundedYear && (
-          <Fact label="Založeno">
+          <Fact label={t("sellers.detail.facts.founded")}>
             <span className="num">{seller.foundedYear}</span>
           </Fact>
         )}
-        <Fact label="Web">
+        <Fact label={t("sellers.detail.facts.web")}>
           <a
             href={seller.website}
             target="_blank"
@@ -205,7 +209,7 @@ function Hero({ seller }: { seller: Seller }) {
           </a>
         </Fact>
         {seller.phone && (
-          <Fact label="Telefon">
+          <Fact label={t("sellers.detail.facts.phone")}>
             <a href={`tel:${seller.phone.replace(/\s/g, "")}`} className="num inline-flex items-center gap-1 hover:text-primary">
               <Phone className="size-3.5" />
               {seller.phone}
@@ -213,7 +217,7 @@ function Hero({ seller }: { seller: Seller }) {
           </Fact>
         )}
         {seller.email && (
-          <Fact label="E-mail">
+          <Fact label={t("sellers.detail.facts.email")}>
             <a href={`mailto:${seller.email}`} className="inline-flex items-center gap-1 break-all hover:text-primary">
               <Mail className="size-3.5 shrink-0" />
               {seller.email}
@@ -239,10 +243,11 @@ function PriceHistoryChart({
   trends: PriceTrendPoint[] | undefined;
 }) {
   const color = FUEL_META[product.category].color;
-  const data = product.priceHistory.map((h) => ({ month: h.date, price: h.price }));
+  const data = product.priceHistory.map((h) => ({ month: h.date, price: toDisplayCurrency(h.price) }));
   const baseUnit = baseUnitLabel(product.category);
   const key = commodityKey(product);
-  const czAvg = product.unit === baseUnit && trends?.length ? trends[trends.length - 1][key] : undefined;
+  const czAvgCzk = product.unit === baseUnit && trends?.length ? trends[trends.length - 1][key] : undefined;
+  const czAvg = czAvgCzk ? toDisplayCurrency(czAvgCzk) : undefined;
   const values = data.map((d) => d.price).concat(czAvg ? [czAvg] : []);
   const min = Math.min(...values);
   const max = Math.max(...values);
@@ -253,16 +258,16 @@ function PriceHistoryChart({
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
         <div>
           <h3 className="font-medium">{product.name}</h3>
-          <p className="text-xs text-muted-foreground">Posledních 12 měsíců · Kč/{product.unit}</p>
+          <p className="text-xs text-muted-foreground">{t("sellers.detail.chart.last12", { unit: moneyUnit(product.unit) })}</p>
         </div>
         {czAvg && (
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
             <span aria-hidden="true" className="h-0 w-5 border-t-2 border-dashed border-muted-foreground" />
-            Ø ČR: <span className="num">{formatCzk(czAvg)}</span>
+            {t("sellers.detail.chart.avgCz")} <span className="num">{formatCzk(czAvgCzk!)}</span>
           </span>
         )}
       </div>
-      <div className="h-64 w-full" role="img" aria-label={`Graf vývoje ceny produktu ${product.name}`}>
+      <div className="h-64 w-full" role="img" aria-label={t("sellers.detail.chart.aria", { name: product.name })}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
@@ -275,7 +280,7 @@ function PriceHistoryChart({
             />
             <YAxis
               domain={[Math.floor(min - pad), Math.ceil(max + pad)]}
-              tickFormatter={(v: number) => formatNumber(v)}
+              tickFormatter={(v: number) => formatNumber(v, v < 100 ? 1 : 0)}
               tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
               tickLine={false}
               axisLine={false}
@@ -283,7 +288,7 @@ function PriceHistoryChart({
             />
             <Tooltip
               labelFormatter={(l) => formatMonth(String(l))}
-              formatter={(v) => [formatCzkPerUnit(Number(v), product.unit), "Cena"]}
+              formatter={(v) => [formatCzkPerUnit(fromDisplayCurrency(Number(v)), product.unit), t("sellers.detail.chart.price")]}
               contentStyle={{
                 background: "var(--card)",
                 border: "1px solid var(--border)",
@@ -309,27 +314,27 @@ function PriceList({ seller }: { seller: Seller }) {
 
   if (seller.products.length === 0) {
     return (
-      <Section title="Ceník" icon={<Store />}>
-        <EmptyState title="Prodejce zatím nemá žádné sledované produkty" />
+      <Section title={t("sellers.detail.priceList.title")} icon={<Store />}>
+        <EmptyState title={t("sellers.detail.priceList.empty")} />
       </Section>
     );
   }
 
   return (
     <Section
-      title="Ceník"
-      description="Klikněte na řádek pro graf ceny."
+      title={t("sellers.detail.priceList.title")}
+      description={t("sellers.detail.priceList.description")}
       icon={<Store />}
     >
       <div className="overflow-hidden rounded-xl border border-border">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">
-              <TableHead>Produkt</TableHead>
-              <TableHead className="text-right">Cena</TableHead>
-              <TableHead className="text-right">Kč/kWh</TableHead>
-              <TableHead>Sklad</TableHead>
-              <TableHead className="text-right">12 měs.</TableHead>
+              <TableHead>{t("sellers.detail.priceList.product")}</TableHead>
+              <TableHead className="text-right">{t("sellers.detail.priceList.price")}</TableHead>
+              <TableHead className="text-right">{moneyUnit("kWh")}</TableHead>
+              <TableHead>{t("sellers.detail.priceList.stock")}</TableHead>
+              <TableHead className="text-right">{t("sellers.detail.priceList.months12")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -402,44 +407,49 @@ function DeliverySection({ seller }: { seller: Seller }) {
   const pallet = seller.products.find((p) => p.unit === "paleta");
 
   const examples = [
-    woodMain && { label: "5 PRMS dřeva", qty: unitsForBaseQuantity(woodMain, 5) },
-    pallet && { label: "1 paleta", qty: 1 },
+    woodMain && { label: t("sellers.detail.deliverySection.exampleWood"), qty: unitsForBaseQuantity(woodMain, 5) },
+    pallet && { label: t("sellers.detail.deliverySection.examplePallet"), qty: 1 },
   ].filter(Boolean) as { label: string; qty: number }[];
 
   const estimate = estimateDelivery(seller, location, 1);
 
   return (
-    <Section title="Doprava" icon={<Truck />}>
+    <Section title={t("sellers.detail.deliverySection.title")} icon={<Truck />}>
       <div className="grid items-stretch gap-6 lg:grid-cols-2">
         <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
-          <Fact label="Způsob">{d.ownDelivery ? "Vlastní doprava" : "Pouze osobní odběr"}</Fact>
-          <Fact label="Osobní odběr">{d.pickupAvailable ? "Možný" : "Nenabízí se"}</Fact>
+          <Fact label={t("sellers.detail.deliverySection.method")}>
+            {d.ownDelivery ? t("sellers.detail.deliverySection.own") : t("sellers.detail.deliverySection.pickupOnlyMethod")}
+          </Fact>
+          <Fact label={t("sellers.detail.deliverySection.pickup")}>
+            {d.pickupAvailable ? t("sellers.detail.deliverySection.possible") : t("sellers.detail.deliverySection.notOffered")}
+          </Fact>
           {d.ownDelivery && (
             <>
-              <Fact label="Paušál">
+              <Fact label={t("sellers.detail.deliverySection.baseFee")}>
                 <span className="num">{formatCzk(d.baseFee)}</span>
               </Fact>
-              <Fact label="Cena za km">
+              <Fact label={t("sellers.detail.deliverySection.perKm")}>
                 <span className="num">{formatCzk(d.pricePerKm)}/km</span>
               </Fact>
-              <Fact label="Zdarma do">
+              <Fact label={t("sellers.detail.deliverySection.freeUpTo")}>
                 <span className="num">{d.freeRadiusKm > 0 ? formatKm(d.freeRadiusKm) : "–"}</span>
               </Fact>
-              <Fact label="Zdarma od množství">
+              <Fact label={t("sellers.detail.deliverySection.freeOverQty")}>
                 <span className="num">{d.freeOverQuantity != null ? formatNumber(d.freeOverQuantity) : "–"}</span>
               </Fact>
-              <Fact label="Max. dojezd">
+              <Fact label={t("sellers.detail.deliverySection.maxRange")}>
                 <span className="num">{formatKm(d.maxRadiusKm)}</span>
               </Fact>
             </>
           )}
-          <Fact label="Hydraulická ruka">
+          <Fact label={t("sellers.detail.deliverySection.arm")}>
             {d.hydraulicArm ? (
               <span>
-                Ano{d.hydraulicArmFee ? <>, příplatek <span className="num">{formatCzk(d.hydraulicArmFee)}</span></> : ""}
+                {t("sellers.detail.deliverySection.yes")}
+                {d.hydraulicArmFee ? <>{t("sellers.detail.deliverySection.surcharge")} <span className="num">{formatCzk(d.hydraulicArmFee)}</span></> : ""}
               </span>
             ) : (
-              "Ne"
+              t("sellers.detail.deliverySection.no")
             )}
           </Fact>
           {d.notes && (
@@ -448,14 +458,14 @@ function DeliverySection({ seller }: { seller: Seller }) {
         </dl>
 
         <div className="h-full space-y-3 rounded-xl bg-secondary p-4">
-          <p className="text-xs font-medium tracking-wider text-wood-strong uppercase">Odhad pro: {location.label}</p>
+          <p className="text-xs font-medium tracking-wider text-wood-strong uppercase">{t("sellers.detail.deliverySection.estimateFor", { location: location.label })}</p>
           <p className="text-sm">
-            Vzdálenost po silnici cca <span className="num font-semibold">{formatKm(estimate.distanceKm)}</span>
+            {t("sellers.detail.deliverySection.distance")} <span className="num font-semibold">{formatKm(estimate.distanceKm)}</span>
           </p>
           {estimate.outOfRange ? (
             <p className="flex items-start gap-2 text-sm text-muted-foreground">
               <X className="mt-0.5 size-4 shrink-0 text-clay" />
-              Mimo dojezd vlastní dopravy – zbývá osobní odběr.
+              {t("sellers.detail.deliverySection.outOfRange")}
             </p>
           ) : (
             <ul className="divide-y divide-border/70 text-sm">
@@ -463,15 +473,15 @@ function DeliverySection({ seller }: { seller: Seller }) {
                 const est = estimateDelivery(seller, location, ex.qty, false);
                 return (
                   <li key={ex.label} className="flex items-center justify-between gap-3 py-2">
-                    <span>Dovoz: {ex.label}</span>
-                    <span className="num font-semibold">{est.free ? "zdarma" : formatCzk(est.fee)}</span>
+                    <span>{t("sellers.detail.deliverySection.shipping", { label: ex.label })}</span>
+                    <span className="num font-semibold">{est.free ? t("sellers.detail.deliverySection.free") : formatCzk(est.fee)}</span>
                   </li>
                 );
               })}
               {examples.length === 0 && (
                 <li className="flex items-center justify-between gap-3 py-2">
-                  <span>Dovoz 1 jednotky</span>
-                  <span className="num font-semibold">{estimate.free ? "zdarma" : formatCzk(estimate.fee)}</span>
+                  <span>{t("sellers.detail.deliverySection.shipOneUnit")}</span>
+                  <span className="num font-semibold">{estimate.free ? t("sellers.detail.deliverySection.free") : formatCzk(estimate.fee)}</span>
                 </li>
               )}
             </ul>
@@ -516,8 +526,8 @@ function PriceComparison({ seller }: { seller: Seller }) {
   const cz = trends?.length ? trends[trends.length - 1] : undefined;
 
   const rows = ([
-    { key: "hardWoodPrms", label: "Tvrdé dřevo", unit: "PRMS" },
-    { key: "pelletsT", label: "Pelety", unit: "t" },
+    { key: "hardWoodPrms", label: t("sellers.detail.intel.hardWood"), unit: "PRMS" },
+    { key: "pelletsT", label: t("sellers.detail.intel.pellets"), unit: "t" },
   ] as const)
     .map((r) => ({ ...r, seller: cheapestBase(seller, r.key) }))
     .filter((r) => r.seller !== undefined);
@@ -533,13 +543,13 @@ function PriceComparison({ seller }: { seller: Seller }) {
         return (
           <div key={r.key} className="space-y-2">
             <h4 className="text-sm font-medium">
-              {r.label} <span className="font-normal text-muted-foreground">(nejlevnější, Kč/{r.unit})</span>
+              {r.label} <span className="font-normal text-muted-foreground">{t("sellers.detail.intel.cheapest", { unit: moneyUnit(r.unit) })}</span>
             </h4>
             <CompareBar label={seller.name} value={r.seller!} max={max} tone="seller" />
             {regionAvg !== undefined && (
-              <CompareBar label={`Ø ${REGIONS[seller.address.region].short}`} value={regionAvg} max={max} tone="region" />
+              <CompareBar label={t("sellers.detail.intel.avgRegion", { region: REGIONS[seller.address.region].short })} value={regionAvg} max={max} tone="region" />
             )}
-            {czAvg !== undefined && <CompareBar label="Ø ČR" value={czAvg} max={max} tone="cz" />}
+            {czAvg !== undefined && <CompareBar label={t("sellers.detail.intel.avgCz")} value={czAvg} max={max} tone="cz" />}
           </div>
         );
       })}
@@ -557,9 +567,9 @@ function IntelSection({ seller }: { seller: Seller }) {
             <Brain className="size-5" />
           </span>
           <div>
-            <h2 className="text-xl font-semibold">Zatím bez konkurenční analýzy</h2>
+            <h2 className="text-xl font-semibold">{t("sellers.detail.intel.noneTitle")}</h2>
             <p className="text-sm text-muted-foreground">
-              SWOT, positioning a cenové srovnání z webu prodejce.
+              {t("sellers.detail.intel.noneText")}
             </p>
           </div>
         </div>
@@ -568,7 +578,7 @@ function IntelSection({ seller }: { seller: Seller }) {
           className={cn(buttonVariants({ size: "lg" }), "shrink-0")}
         >
           <Sparkles />
-          Spustit analýzu
+          {t("sellers.detail.intel.run")}
         </Link>
       </section>
     );
@@ -578,19 +588,19 @@ function IntelSection({ seller }: { seller: Seller }) {
   return (
     <Section
       title="Competitive Intelligence"
-      description={`Analyzováno ${formatDate(intel.analyzedAt)}`}
+      description={t("sellers.detail.intel.analyzed", { date: formatDate(intel.analyzedAt) })}
       icon={<Brain />}
     >
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-3">
           <div className="rounded-xl bg-secondary p-4 md:col-span-2">
-            <p className="text-xs font-medium text-muted-foreground">Positioning</p>
+            <p className="text-xs font-medium text-muted-foreground">{t("sellers.detail.intel.positioning")}</p>
             <p className="mt-1 text-sm">{intel.positioning}</p>
-            <p className="mt-3 text-xs font-medium text-muted-foreground">Tón komunikace</p>
+            <p className="mt-3 text-xs font-medium text-muted-foreground">{t("sellers.detail.intel.tone")}</p>
             <p className="mt-1 text-sm">{intel.toneOfVoice}</p>
           </div>
           <div className="rounded-xl bg-secondary p-4">
-            <p className="text-xs font-medium text-muted-foreground">Úroveň hrozby</p>
+            <p className="text-xs font-medium text-muted-foreground">{t("sellers.detail.intel.threatLevel")}</p>
             <span
               className={cn(
                 "mt-1.5 inline-flex items-center rounded-lg border px-2.5 py-0.5 text-sm font-medium",
@@ -599,7 +609,7 @@ function IntelSection({ seller }: { seller: Seller }) {
             >
               {threat.label}
             </span>
-            <p className="mt-3 text-xs font-medium text-muted-foreground">Cenový index vs. ČR</p>
+            <p className="mt-3 text-xs font-medium text-muted-foreground">{t("sellers.detail.intel.priceIndex")}</p>
             <p className="mt-1">
               <PriceDelta value={intel.priceIndexVsCz} />
             </p>
@@ -608,7 +618,7 @@ function IntelSection({ seller }: { seller: Seller }) {
 
         {intel.usp.length > 0 && (
           <div>
-            <h3 className="mb-2 text-sm font-medium">Silné stránky (USP)</h3>
+            <h3 className="mb-2 text-sm font-medium">{t("sellers.detail.intel.usp")}</h3>
             <ul className="grid gap-2 sm:grid-cols-2">
               {intel.usp.map((u) => (
                 <li key={u} className="flex items-start gap-2 text-sm">
@@ -621,15 +631,15 @@ function IntelSection({ seller }: { seller: Seller }) {
         )}
 
         <div>
-          <h3 className="mb-2 text-sm font-medium">SWOT analýza</h3>
+          <h3 className="mb-2 text-sm font-medium">{t("sellers.detail.intel.swot")}</h3>
           <SwotMatrix swot={intel.swot} />
         </div>
 
         <div>
-          <h3 className="mb-3 text-sm font-medium">Cenové srovnání</h3>
+          <h3 className="mb-3 text-sm font-medium">{t("sellers.detail.intel.priceCompare")}</h3>
           <PriceComparison seller={seller} />
           <p className="mt-3 text-xs text-muted-foreground">
-            Cenový index vs. ČR: <span className="num">{formatPct(intel.priceIndexVsCz)}</span> (záporný = levnější).
+            {t("sellers.detail.intel.priceIndexNote", { value: formatPct(intel.priceIndexVsCz) })}
           </p>
         </div>
 
@@ -639,7 +649,7 @@ function IntelSection({ seller }: { seller: Seller }) {
             className={buttonVariants({ variant: "outline" })}
           >
             <ExternalLink />
-            Celý report v CI Studiu
+            {t("sellers.detail.intel.fullReport")}
           </Link>
         )}
       </div>
@@ -656,11 +666,11 @@ export function SellerDetail({ slug }: { slug: string }) {
 
   return (
     <div className="mx-auto w-full max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
-      <nav aria-label="Drobečková navigace" className="flex flex-wrap items-center justify-between gap-2 text-sm">
+      <nav aria-label={t("sellers.detail.breadcrumbAria")} className="flex flex-wrap items-center justify-between gap-2 text-sm">
         <ol className="flex items-center gap-1.5 text-muted-foreground">
           <li>
             <Link href="/prodejci" className="hover:text-foreground">
-              Prodejci
+              {t("sellers.detail.sellers")}
             </Link>
           </li>
           <li aria-hidden="true">/</li>
@@ -670,7 +680,7 @@ export function SellerDetail({ slug }: { slug: string }) {
         </ol>
         <Link href="/prodejci" className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-4" />
-          Katalog
+          {t("sellers.detail.catalog")}
         </Link>
       </nav>
 
@@ -681,18 +691,18 @@ export function SellerDetail({ slug }: { slug: string }) {
         </div>
       ) : error ? (
         <EmptyState
-          title="Profil se nepodařilo načíst"
+          title={t("sellers.detail.loadError")}
           description={error.message}
-          action={<Button onClick={reload}>Zkusit znovu</Button>}
+          action={<Button onClick={reload}>{t("common.actions.retry")}</Button>}
         />
       ) : !seller ? (
         <EmptyState
           icon={<Calendar />}
-          title="Prodejce nenalezen"
-          description="Tento prodejce v katalogu neexistuje nebo byl odstraněn."
+          title={t("sellers.detail.notFoundTitle")}
+          description={t("sellers.detail.notFoundDescription")}
           action={
             <Link href="/prodejci" className={buttonVariants()}>
-              Zpět na katalog prodejců
+              {t("sellers.detail.backToCatalog")}
             </Link>
           }
         />

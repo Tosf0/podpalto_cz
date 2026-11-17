@@ -8,7 +8,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { priceScale } from "@/components/map";
 import { getMarketPulse } from "@/lib/api";
 import { COMMODITY_META } from "@/lib/constants";
-import { formatNumber } from "@/lib/format";
+import { currencySymbol, formatMoneyNumber, moneyUnit } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 import { PRICE_TIER_META, type PriceTier } from "@/lib/pricing";
 import { useApi } from "@/hooks/use-api";
 import type { CommodityKey, FuelCategory, PriceMode } from "@/types";
@@ -18,7 +19,7 @@ import { cn } from "@/lib/utils";
 export const floatCard = "pointer-events-auto rounded-2xl border border-border bg-card/95 shadow-float backdrop-blur";
 
 /** Šířka bočních skupin v horní liště – vlevo i vpravo stejná (symetrie). */
-export const TOP_SIDE_WIDTH = "w-[188px]";
+export const TOP_SIDE_WIDTH = "w-[156px] @3xl:w-[188px]";
 
 /** Malá kulatá ikonová pilulka uvnitř horní lišty. */
 function PillIconButton({ label, onClick, pressed, children }: { label: string; onClick: () => void; pressed?: boolean; children: React.ReactNode }) {
@@ -42,12 +43,13 @@ function PillIconButton({ label, onClick, pressed, children }: { label: string; 
 /** Mini-pilulka: přepínač zobrazení ceny (Kč/jednotka ↔ Kč/kWh). */
 export function PriceModePill({ className }: { className?: string }) {
   const { priceMode, setPriceMode } = usePreferences();
+  const { t } = useI18n();
   const options: { value: PriceMode; label: string }[] = [
-    { value: "unit", label: "Kč/jedn." },
-    { value: "kwh", label: "Kč/kWh" },
+    { value: "unit", label: t("home.overlays.perUnit", { currency: currencySymbol() }) },
+    { value: "kwh", label: moneyUnit("kWh") },
   ];
   return (
-    <div role="radiogroup" aria-label="Zobrazení ceny" className={cn("grid h-11 shrink-0 grid-cols-2 gap-1 rounded-full bg-muted p-1", TOP_SIDE_WIDTH, className)}>
+    <div role="radiogroup" aria-label={t("home.overlays.priceMode")} className={cn("grid h-11 shrink-0 grid-cols-2 gap-1 rounded-full bg-muted p-1", TOP_SIDE_WIDTH, className)}>
       {options.map((o) => (
         <button
           key={o.value}
@@ -81,18 +83,19 @@ export function MapControlsPill({
   onLocate: () => void;
   className?: string;
 }) {
+  const { t } = useI18n();
   return (
     <div className={cn("flex h-11 shrink-0 items-center gap-0.5 rounded-full bg-muted p-1", TOP_SIDE_WIDTH, className)}>
-      <PillIconButton label="Cenová teplotní mapa krajů" onClick={onToggleRegions} pressed={showRegions}>
+      <PillIconButton label={t("home.overlays.regionsMap")} onClick={onToggleRegions} pressed={showRegions}>
         <Layers aria-hidden />
       </PillIconButton>
-      <PillIconButton label="Moje poloha" onClick={onLocate}>
+      <PillIconButton label={t("home.overlays.myLocation")} onClick={onLocate}>
         <LocateFixed aria-hidden />
       </PillIconButton>
-      <PillIconButton label="Oddálit" onClick={() => map?.zoomOut()}>
+      <PillIconButton label={t("home.overlays.zoomOut")} onClick={() => map?.zoomOut()}>
         <Minus aria-hidden />
       </PillIconButton>
-      <PillIconButton label="Přiblížit" onClick={() => map?.zoomIn()}>
+      <PillIconButton label={t("home.overlays.zoomIn")} onClick={() => map?.zoomIn()}>
         <Plus aria-hidden />
       </PillIconButton>
     </div>
@@ -115,14 +118,15 @@ export function MapTopBar({ children, className }: { children: React.ReactNode; 
 
 /** Legenda teplotní mapy krajů (pod levou skupinou). */
 export function RegionLegend({ metricLabel, className }: { metricLabel?: string; className?: string }) {
+  const { t } = useI18n();
   return (
     <div className={cn(floatCard, "p-3 text-[11px]", TOP_SIDE_WIDTH, className)}>
-      <p className="mb-2 font-semibold text-foreground">Cenový index krajů</p>
+      <p className="mb-2 font-semibold text-foreground">{t("home.overlays.legendTitle")}</p>
       {metricLabel && <p className="-mt-1.5 mb-2 text-muted-foreground">{metricLabel}</p>}
       <div className="h-2 rounded-full" style={{ background: `linear-gradient(90deg, ${priceScale(0)}, ${priceScale(0.5)}, ${priceScale(1)})` }} />
       <div className="mt-1.5 flex justify-between text-muted-foreground">
-        <span>levněji</span>
-        <span>dráž</span>
+        <span>{t("home.overlays.cheaper")}</span>
+        <span>{t("home.overlays.pricier")}</span>
       </div>
     </div>
   );
@@ -140,11 +144,12 @@ const TIER_ORDER: PriceTier[] = ["below", "average", "above"];
 
 /** Spodní pás: průměrné ceny v ČR (4 stejné dlaždice) + legenda barev cenovek. */
 export function MarketStrip({ className }: { className?: string }) {
+  const { t } = useI18n();
   const { data, loading } = useApi(() => getMarketPulse(), []);
   const items = PULSE.map((k) => data?.find((i) => i.key === k));
 
   return (
-    <section aria-label="Průměrné ceny v ČR" className={cn("border-t border-border bg-card px-4 py-3", className)}>
+    <section aria-label={t("home.overlays.marketAria")} className={cn("border-t border-border bg-card px-4 py-3", className)}>
       <div className="grid grid-cols-2 gap-2 @3xl:grid-cols-4 @3xl:gap-3">
         {items.map((item, i) =>
           loading || !item ? (
@@ -157,8 +162,8 @@ export function MarketStrip({ className }: { className?: string }) {
               </span>
               <span className="flex items-baseline justify-between gap-2 whitespace-nowrap">
                 <span className="flex items-baseline gap-1">
-                  <span className="num text-sm font-bold text-foreground">{formatNumber(item.value)}</span>
-                  <span className="text-[10px] text-muted-foreground">{item.unit}</span>
+                  <span className="num text-sm font-bold text-foreground">{formatMoneyNumber(item.value)}</span>
+                  <span className="text-[10px] text-muted-foreground">{COMMODITY_META[item.key].unit}</span>
                 </span>
                 <PriceDelta value={item.changePct} className="text-[11px]" />
               </span>
@@ -167,7 +172,7 @@ export function MarketStrip({ className }: { className?: string }) {
         )}
       </div>
       <div className="mt-2.5 flex flex-wrap items-center justify-center gap-x-5 gap-y-1 text-[11px] text-muted-foreground">
-        <span className="hidden font-medium text-foreground/80 @3xl:inline">Průměr ČR · změna za měsíc</span>
+        <span className="hidden font-medium text-foreground/80 @3xl:inline">{t("home.overlays.marketTitle")}</span>
         <span aria-hidden className="hidden h-3 w-px bg-border @3xl:inline-block" />
         {TIER_ORDER.map((t) => (
           <span key={t} className="inline-flex items-center gap-1.5">

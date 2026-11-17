@@ -25,7 +25,8 @@ import {
   type SellerMatch,
   type SortKey,
 } from "@/lib/filters";
-import { formatKm, formatKwhPrice, formatNumber, plural, NBSP } from "@/lib/format";
+import { formatCzkPerUnit, formatKm, formatKwhPrice, NBSP } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 import { PRICE_TIER_META } from "@/lib/pricing";
 import type { FuelCategory, Moisture, PriceMode, WoodForm, WoodGroup } from "@/types";
 import { cn } from "@/lib/utils";
@@ -79,6 +80,7 @@ function ChipGrid({ children, cols = 2 }: { children: ReactNode; cols?: 2 | 3 | 
 /* ------------------------------------------------------------------ */
 
 function DetailFilters({ filters, onChange }: { filters: FilterState; onChange: (patch: Partial<FilterState>) => void }) {
+  const { t } = useI18n();
   const toggle = <K extends keyof FilterState>(key: K, value: NonNullable<FilterState[K]>) =>
     onChange({ [key]: filters[key] === value ? null : value } as Partial<FilterState>);
 
@@ -86,7 +88,7 @@ function DetailFilters({ filters, onChange }: { filters: FilterState; onChange: 
     case "wood":
       return (
         <>
-          <Section title="Druh dřeva">
+          <Section title={t("home.filters.woodType")}>
             <ChipGrid cols={3}>
               {(Object.keys(WOOD_GROUPS) as WoodGroup[]).map((g) => (
                 <Chip key={g} active={filters.woodGroup === g} onClick={() => toggle("woodGroup", g)} title={WOOD_GROUPS[g].hint}>
@@ -95,25 +97,25 @@ function DetailFilters({ filters, onChange }: { filters: FilterState; onChange: 
               ))}
             </ChipGrid>
           </Section>
-          <Section title="Zpracování">
+          <Section title={t("home.filters.processing")}>
             <ChipGrid>
               {(Object.keys(WOOD_FORMS) as WoodForm[]).map((f) => (
                 <Chip key={f} active={filters.woodForm === f} onClick={() => toggle("woodForm", f)}>
-                  {f === "sypane" ? "Sypané (PRMS)" : f === "rovnane" ? "Rovnané (PRM)" : f === "metrovky" ? "Metrovky" : "Palety"}
+                  {t(`home.filters.form.${f}`)}
                 </Chip>
               ))}
             </ChipGrid>
           </Section>
-          <Section title="Vlhkost">
+          <Section title={t("home.filters.moisture")}>
             <ChipGrid cols={3}>
               {(Object.keys(MOISTURE) as Moisture[]).map((m) => (
                 <Chip key={m} active={filters.moisture === m} onClick={() => toggle("moisture", m)} title={MOISTURE[m].hint}>
-                  {m === "dry" ? "Suché" : m === "semi" ? "Polosuché" : "Syrové"}
+                  {t(`home.filters.moist.${m}`)}
                 </Chip>
               ))}
             </ChipGrid>
           </Section>
-          <Section title="Délka polen">
+          <Section title={t("home.filters.logLength")}>
             <ChipGrid cols={4}>
               {LOG_LENGTHS.map((l) => (
                 <Chip key={l} active={filters.logLengthCm === l} onClick={() => toggle("logLengthCm", l)}>
@@ -126,7 +128,7 @@ function DetailFilters({ filters, onChange }: { filters: FilterState; onChange: 
       );
     case "pellets":
       return (
-        <Section title="Certifikace">
+        <Section title={t("home.filters.certification")}>
           <ChipGrid>
             {PELLET_CERTIFICATIONS.map((c) => (
               <Chip key={c} active={filters.certification === c} onClick={() => toggle("certification", c)}>
@@ -138,7 +140,7 @@ function DetailFilters({ filters, onChange }: { filters: FilterState; onChange: 
       );
     case "briquettes":
       return (
-        <Section title="Typ briket">
+        <Section title={t("home.filters.briquetteType")}>
           <ChipGrid>
             {BRIQUETTE_TYPES.map((t) => (
               <Chip key={t} active={filters.briquetteType === t} onClick={() => toggle("briquetteType", t)}>
@@ -150,7 +152,7 @@ function DetailFilters({ filters, onChange }: { filters: FilterState; onChange: 
       );
     case "coal":
       return (
-        <Section title="Typ uhlí">
+        <Section title={t("home.filters.coalType")}>
           <ChipGrid>
             {COAL_TYPES.map((t) => (
               <Chip key={t} active={filters.coalType === t} onClick={() => toggle("coalType", t)}>
@@ -184,7 +186,7 @@ function ResultRow({
 }) {
   const { seller, product } = match;
   const tierColor = PRICE_TIER_META[match.tier].color;
-  const unitPrice = `${formatNumber(product.price)}${NBSP}Kč/${product.unit}`;
+  const unitPrice = formatCzkPerUnit(product.price, product.unit);
   const kwhPrice = formatKwhPrice(match.pricePerKwh);
   const [price, secondary] = mode === "kwh" ? [kwhPrice, unitPrice] : [unitPrice, kwhPrice];
   return (
@@ -257,6 +259,7 @@ export function FiltersPanel({
   onSelect: (id: string) => void;
   className?: string;
 }) {
+  const { t } = useI18n();
   const nearby = !filters.nationwide;
 
   return (
@@ -268,8 +271,8 @@ export function FiltersPanel({
             <SlidersHorizontal aria-hidden className="size-4" />
           </span>
           <div>
-            <h2 className="font-heading text-lg leading-tight font-semibold">Filtry</h2>
-            <p className="text-[11px] whitespace-nowrap text-muted-foreground">{activeCount > 0 ? `Aktivní: ${activeCount}` : "Bez omezení"}</p>
+            <h2 className="font-heading text-lg leading-tight font-semibold">{t("home.filters.title")}</h2>
+            <p className="text-[11px] whitespace-nowrap text-muted-foreground">{activeCount > 0 ? t("home.filters.active", { count: activeCount }) : t("home.filters.unrestricted")}</p>
           </div>
         </div>
         <button
@@ -279,13 +282,13 @@ export function FiltersPanel({
           className="flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
         >
           <RotateCcw aria-hidden className="size-3.5" />
-          Obnovit
+          {t("common.actions.reset")}
         </button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
         <div className="space-y-5 px-5 py-5">
-          <Section title="Palivo">
+          <Section title={t("home.filters.fuel")}>
             <div className="grid grid-cols-2 gap-1.5">
               {(["all", ...FUEL_CATEGORIES] as const).map((c) => {
                 const active = filters.category === c;
@@ -304,7 +307,7 @@ export function FiltersPanel({
                     )}
                   >
                     {c === "all" ? <LayoutGrid aria-hidden /> : <FuelIcon category={c} />}
-                    {c === "all" ? "Všechna paliva" : c === "wood" ? "Dřevo" : FUEL_META[c].short}
+                    {c === "all" ? t("common.allFuels") : FUEL_META[c].short}
                   </button>
                 );
               })}
@@ -312,11 +315,11 @@ export function FiltersPanel({
           </Section>
 
           <Section
-            title="Vzdálenost"
+            title={t("home.filters.distance")}
             aside={
               <label className="flex items-center gap-2 text-xs font-medium text-foreground">
-                Jen v okolí
-                <Switch size="sm" checked={nearby} onCheckedChange={(v) => onChange({ nationwide: !v })} aria-label="Jen v okolí" />
+                {t("home.filters.nearbyOnly")}
+                <Switch size="sm" checked={nearby} onCheckedChange={(v) => onChange({ nationwide: !v })} aria-label={t("home.filters.nearbyOnly")} />
               </label>
             }
           >
@@ -324,7 +327,7 @@ export function FiltersPanel({
               <p className="mb-3 flex items-center gap-1.5 text-xs text-muted-foreground">
                 <MapPin aria-hidden className="size-3.5 shrink-0 text-moss" />
                 <span className="truncate">
-                  od <span className="font-medium text-foreground">{locationLabel}</span>
+                  {t("home.filters.from")} <span className="font-medium text-foreground">{locationLabel}</span>
                 </span>
               </p>
               <div className="flex items-center gap-3">
@@ -335,7 +338,7 @@ export function FiltersPanel({
                   step={5}
                   disabled={!nearby}
                   onValueChange={(v) => onChange({ radiusKm: v[0] })}
-                  aria-label="Dojezdový rádius v km"
+                  aria-label={t("home.filters.radius")}
                   className="flex-1"
                 />
                 <span className="num w-14 text-right text-sm font-semibold text-foreground">{filters.radiusKm}{NBSP}km</span>
@@ -345,9 +348,9 @@ export function FiltersPanel({
 
           <DetailFilters filters={filters} onChange={onChange} />
 
-          <Section title="Řazení">
+          <Section title={t("home.filters.sort")}>
             <Select value={filters.sort} onValueChange={(v) => onChange({ sort: v as SortKey })}>
-              <SelectTrigger className="h-10 w-full rounded-xl bg-card text-sm" aria-label="Řazení">
+              <SelectTrigger className="h-10 w-full rounded-xl bg-card text-sm" aria-label={t("home.filters.sort")}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="z-[1200]">
@@ -364,9 +367,9 @@ export function FiltersPanel({
         {/* Výsledky */}
         <div className="border-t border-border px-3 py-4">
           <div className="mb-2 flex items-baseline justify-between px-2">
-            <h3 className="font-heading text-base font-semibold">Výsledky</h3>
+            <h3 className="font-heading text-base font-semibold">{t("home.filters.results")}</h3>
             <span className="num text-xs text-muted-foreground">
-              {loading ? "…" : `${matches.length} ${plural(matches.length, "prodejce", "prodejci", "prodejců")}`}
+              {loading ? "…" : t("common.sellers", { count: matches.length })}
             </span>
           </div>
           {loading ? (
@@ -377,7 +380,7 @@ export function FiltersPanel({
             </ul>
           ) : matches.length === 0 ? (
             <p className="px-2 py-6 text-center text-sm text-muted-foreground">
-              Žádný prodejce neodpovídá filtrům. Zkuste zvětšit okruh nebo zrušit filtry.
+              {t("home.filters.none")}
             </p>
           ) : (
             <ul className="space-y-0.5">

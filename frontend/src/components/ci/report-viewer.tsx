@@ -10,6 +10,8 @@ import { splitReport, parseSwot, type ReportSectionKey } from "@/lib/report-pars
 import { formatDateTime } from "@/lib/format";
 import { REGIONS } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n/use-i18n";
+import { t as tr, type MessageKey } from "@/lib/i18n/translate";
 import { useApi } from "@/hooks/use-api";
 import { EmptyState, FuelBadge } from "@/components/common";
 import { Button } from "@/components/ui/button";
@@ -18,12 +20,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Markdown } from "./markdown";
 import { SwotMatrix } from "./swot-matrix";
 
-const TAB_LABEL: Record<ReportSectionKey, string> = {
-  summary: "Shrnutí",
-  offering: "Nabídka a ceny",
-  positioning: "Pozice na trhu",
-  swot: "SWOT",
-  recommendations: "Doporučení",
+const TAB_LABEL: Record<ReportSectionKey, MessageKey> = {
+  summary: "ci.viewer.tabs.summary",
+  offering: "ci.viewer.tabs.offering",
+  positioning: "ci.viewer.tabs.positioning",
+  swot: "ci.viewer.tabs.swot",
+  recommendations: "ci.viewer.tabs.recommendations",
 };
 
 /** Vytáhne očíslované/odrážkové položky z Markdownu (pokračovací řádky se připojí k předchozí položce). */
@@ -70,9 +72,9 @@ function download(report: CrewAnalysisReport) {
 async function copyMd(report: CrewAnalysisReport) {
   try {
     await navigator.clipboard.writeText(report.report);
-    toast.success("Markdown zkopírován do schránky");
+    toast.success(tr("ci.viewer.copied"));
   } catch {
-    toast.error("Kopírování se nezdařilo");
+    toast.error(tr("ci.viewer.copyFailed"));
   }
 }
 
@@ -86,6 +88,7 @@ function Meta({ label, wide, children }: { label: string; wide?: boolean; childr
 }
 
 export function ReportViewer({ reportId }: { reportId: string }) {
+  const { t } = useI18n();
   const { data: report, loading, error } = useApi(() => getReport(reportId), [reportId]);
   const { data: sellers } = useApi(() => getSellers(), []);
   const [tab, setTab] = useState<ReportSectionKey>("summary");
@@ -108,8 +111,8 @@ export function ReportViewer({ reportId }: { reportId: string }) {
     return (
       <EmptyState
         icon={<FileText />}
-        title="Report nenalezen"
-        description={error ? error.message : `Report ${reportId} v archivu neexistuje.`}
+        title={t("ci.viewer.notFound")}
+        description={error ? error.message : t("ci.viewer.notFoundHint", { id: reportId })}
       />
     );
   }
@@ -126,10 +129,10 @@ export function ReportViewer({ reportId }: { reportId: string }) {
           </div>
           <div className="flex shrink-0 flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={() => void copyMd(report)}>
-              <Copy /> Kopírovat Markdown
+              <Copy /> {t("ci.viewer.copyMd")}
             </Button>
             <Button size="sm" onClick={() => download(report)}>
-              <Download /> Stáhnout .md
+              <Download /> {t("ci.viewer.downloadMd")}
             </Button>
           </div>
         </header>
@@ -148,7 +151,7 @@ export function ReportViewer({ reportId }: { reportId: string }) {
                     value={s.key}
                     className="h-8 flex-none rounded-xl border-border px-3 data-active:border-primary/40 data-active:bg-accent data-active:text-accent-foreground"
                   >
-                    {TAB_LABEL[s.key]}
+                    {t(TAB_LABEL[s.key])}
                   </TabsTrigger>
                 ))}
               </TabsList>
@@ -168,7 +171,7 @@ export function ReportViewer({ reportId }: { reportId: string }) {
                           className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
                         >
                           <ChevronDown className={cn("size-4 transition-transform", !rawOpen && "-rotate-90")} aria-hidden />
-                          Původní Markdown
+                          {t("ci.viewer.originalMd")}
                         </button>
                         {rawOpen && <Markdown className="mt-2">{swotBody}</Markdown>}
                       </div>
@@ -185,19 +188,19 @@ export function ReportViewer({ reportId }: { reportId: string }) {
         )}
       </div>
 
-      <section aria-label="Metadata reportu" className="rounded-2xl border border-border bg-card p-5">
-        <h4 className="mb-3 text-sm font-semibold">Metadata</h4>
+      <section aria-label={t("ci.viewer.meta.aria")} className="rounded-2xl border border-border bg-card p-5">
+        <h4 className="mb-3 text-sm font-semibold">{t("ci.viewer.meta.title")}</h4>
         {/* krátké hodnoty v mřížce, dlouhé (web, model, soubor) přes celou šířku – nic se neláme uprostřed slova */}
         <dl className="grid grid-cols-2 gap-x-6 gap-y-4 lg:grid-cols-4">
-          <Meta label="Vytvořeno">
+          <Meta label={t("ci.viewer.meta.created")}>
             <span className="num">{formatDateTime(report.created_at)}</span>
           </Meta>
-          <Meta label="Doba běhu">
-            <span className="num">{Math.round(report.duration_s)} s</span>
+          <Meta label={t("ci.viewer.meta.duration")}>
+            <span className="num">{t("ci.run.seconds", { value: Math.round(report.duration_s) })}</span>
           </Meta>
-          {report.region && <Meta label="Kraj">{REGIONS[report.region].name}</Meta>}
+          {report.region && <Meta label={t("ci.viewer.meta.region")}>{REGIONS[report.region].name}</Meta>}
           {report.categories && report.categories.length > 0 && (
-            <Meta label="Paliva">
+            <Meta label={t("ci.viewer.meta.fuels")}>
               <div className="flex flex-wrap gap-1">
                 {report.categories.map((c) => (
                   <FuelBadge key={c} category={c} size="sm" />
@@ -206,13 +209,13 @@ export function ReportViewer({ reportId }: { reportId: string }) {
             </Meta>
           )}
           {seller && (
-            <Meta label="Prodejce v katalogu">
+            <Meta label={t("ci.viewer.meta.seller")}>
               <Link href={`/prodejci/${seller.slug}`} className="inline-flex items-center gap-1 font-medium text-primary hover:underline">
                 <Store className="size-3.5" aria-hidden /> {seller.name}
               </Link>
             </Meta>
           )}
-          <Meta label="Web konkurenta" wide>
+          <Meta label={t("ci.viewer.meta.website")} wide>
             <a
               href={report.competitor_url}
               target="_blank"
@@ -223,10 +226,10 @@ export function ReportViewer({ reportId }: { reportId: string }) {
               <ExternalLink className="size-3 shrink-0" aria-hidden />
             </a>
           </Meta>
-          <Meta label="Model" wide>
+          <Meta label={t("ci.viewer.meta.model")} wide>
             <code className="font-mono text-xs">{report.model}</code>
           </Meta>
-          <Meta label="Soubor reportu" wide>
+          <Meta label={t("ci.viewer.meta.file")} wide>
             <code className="block truncate font-mono text-xs" title={report.report_path}>
               {report.report_path}
             </code>

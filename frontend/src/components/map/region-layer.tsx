@@ -6,7 +6,8 @@ import L, { type PathOptions } from "leaflet";
 import { GeoJSON, Marker, Polygon, Polyline, SVGOverlay, useMap, useMapEvents } from "react-leaflet";
 import type { CommodityKey, RegionCode, RegionStats } from "@/types";
 import { COMMODITY_META, REGIONS, REGION_CODES } from "@/lib/constants";
-import { formatNumber, NBSP } from "@/lib/format";
+import { formatMoneyNumber, formatNumber, NBSP } from "@/lib/format";
+import { t } from "@/lib/i18n";
 import { decodeRing } from "@/lib/geo-decode";
 import { makeFrame, renderHeatImage, ringsToPath } from "./heat-image";
 import { priceScale } from "./price-scale";
@@ -33,8 +34,8 @@ function normalizer(values: number[], metric: CommodityKey | null): (v: number) 
 }
 
 function labelText(s: RegionStats, metric: CommodityKey | null): string {
-  if (!metric) return `index ${formatNumber(s.priceIndex)}`;
-  return `${formatNumber(s.avgPrices[metric])}${NBSP}${COMMODITY_META[metric].unit}`;
+  if (!metric) return `${t("map.heat.index")} ${formatNumber(s.priceIndex)}`;
+  return `${formatMoneyNumber(s.avgPrices[metric])}${NBSP}${COMMODITY_META[metric].unit}`;
 }
 
 /* ------------------------------------------------------------------ */

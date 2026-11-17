@@ -1,10 +1,14 @@
+"use client";
+
 import { IS_MOCK } from "@/lib/api/config";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 /** Upozornění, že aplikace běží na lokálních mock datech (bez backendu). Mimo mock režim se nevykreslí. */
 export function MockModeBadge({ className }: { className?: string }) {
+  const { t } = useI18n();
   if (!IS_MOCK) return null;
 
   return (
@@ -18,11 +22,11 @@ export function MockModeBadge({ className }: { className?: string }) {
             className,
           )}
         >
-          Demo data
+          {t("map.ui.mockBadge")}
         </Badge>
       </TooltipTrigger>
       <TooltipContent side="bottom" className="max-w-64 text-center leading-snug">
-        Běží bez backendu – data jsou ukázková. Nastavte NEXT_PUBLIC_API_URL.
+        {t("map.ui.mockBadgeHint")}
       </TooltipContent>
     </Tooltip>
   );

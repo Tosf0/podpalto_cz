@@ -5,6 +5,7 @@ import { Building2, Home, Loader2, MapPin, Search, Store, X } from "lucide-react
 import { localPlaces, remotePlaces, type PlaceSuggestion } from "@/lib/geocoding";
 import { sellerMatchesQuery } from "@/lib/filters";
 import type { Seller } from "@/types";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type Option =
@@ -36,6 +37,7 @@ export function AddressSearch({
   onPickSeller: (sellerId: string) => void;
   className?: string;
 }) {
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [remote, setRemote] = useState<{ q: string; items: PlaceSuggestion[] }>({ q: "", items: [] });
@@ -184,7 +186,7 @@ export function AddressSearch({
           aria-controls={listId}
           aria-autocomplete="list"
           aria-activedescendant={showList && options[active] ? `${listId}-${active}` : undefined}
-          aria-label="Zadejte adresu, PSČ nebo obec"
+          aria-label={t("home.search.ariaLabel")}
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
@@ -193,7 +195,7 @@ export function AddressSearch({
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          placeholder={currentLabel ? `Vaše adresa… (teď: ${currentLabel})` : "Zadejte svou adresu, PSČ nebo obec…"}
+          placeholder={currentLabel ? t("home.search.placeholderCurrent", { label: currentLabel }) : t("home.search.placeholder")}
           className="h-full min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
         />
         {loading && <Loader2 aria-hidden className="size-4 shrink-0 animate-spin text-muted-foreground" />}
@@ -204,7 +206,7 @@ export function AddressSearch({
               setQuery("");
               inputRef.current?.focus();
             }}
-            aria-label="Smazat"
+            aria-label={t("home.search.clear")}
             className="flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <X aria-hidden className="size-4" />
@@ -214,27 +216,27 @@ export function AddressSearch({
 
       {showList && (
         <div className="absolute inset-x-0 top-[calc(100%+14px)] z-10 overflow-hidden rounded-2xl border border-border bg-popover p-2 shadow-float">
-          <ul id={listId} role="listbox" aria-label="Návrhy" className="max-h-[min(60vh,420px)] overflow-y-auto">
+          <ul id={listId} role="listbox" aria-label={t("home.search.suggestions")} className="max-h-[min(60vh,420px)] overflow-y-auto">
             {places.length > 0 && (
               <li role="presentation" className="px-3 pt-1 pb-1.5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-                Adresy a místa
+                {t("home.search.places")}
               </li>
             )}
             {places.map(renderOption)}
             {sellerOpts.length > 0 && (
               <li role="presentation" className="px-3 pt-3 pb-1.5 text-[11px] font-semibold tracking-wide text-muted-foreground uppercase">
-                Prodejci
+                {t("home.search.sellers")}
               </li>
             )}
             {sellerOpts.map(renderOption)}
             {options.length === 0 && (
               <li role="presentation" className="px-3 py-3 text-sm text-muted-foreground">
-                {loading ? "Hledám…" : "Nic jsme nenašli. Zkuste obec nebo PSČ."}
+                {loading ? t("home.search.searching") : t("home.search.none")}
               </li>
             )}
           </ul>
           <p className="border-t border-border px-3 pt-2 pb-0.5 text-[10px] text-muted-foreground">
-            Adresy © přispěvatelé OpenStreetMap
+            {t("home.search.attribution")}
           </p>
         </div>
       )}

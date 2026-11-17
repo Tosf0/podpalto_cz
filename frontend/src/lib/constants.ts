@@ -11,6 +11,30 @@ import type {
   StockLevel,
   CommodityKey,
 } from "@/types";
+import { t } from "@/lib/i18n/translate";
+import { moneyUnit } from "@/lib/format";
+
+/**
+ * Doplní objektům v mapě překládaný `label` (getter – čte aktuální jazyk při každém přístupu).
+ * Texty jsou ve slovníku `src/lib/i18n/messages/common.ts`.
+ */
+function withLabels<K extends string, V extends object, X extends object = object>(
+  src: Record<K, V>,
+  label: (key: K) => string,
+  extra?: (key: K) => X,
+): Record<K, V & { readonly label: string } & X> {
+  for (const key of Object.keys(src) as K[]) {
+    Object.defineProperty(src[key], "label", { get: () => label(key), enumerable: true });
+    if (extra) {
+      const more = extra(key);
+      for (const name of Object.keys(more)) {
+        const desc = Object.getOwnPropertyDescriptor(more, name);
+        if (desc) Object.defineProperty(src[key], name, { ...desc, enumerable: true });
+      }
+    }
+  }
+  return src as Record<K, V & { readonly label: string } & X>;
+}
 
 /* ------------------------------------------------------------------ */
 /* Paliva                                                              */
@@ -30,11 +54,9 @@ export interface FuelMeta {
   dotClassName: string;
 }
 
-export const FUEL_META: Record<FuelCategory, FuelMeta> = {
+const FUEL_META_BASE: Record<FuelCategory, Omit<FuelMeta, "label" | "short">> = {
   wood: {
     id: "wood",
-    label: "Palivové dřevo",
-    short: "Dřevo",
     emoji: "🪵",
     baseUnit: "PRMS",
     color: "#b08b62", // dub (světlé dřevo)
@@ -44,8 +66,6 @@ export const FUEL_META: Record<FuelCategory, FuelMeta> = {
   },
   pellets: {
     id: "pellets",
-    label: "Dřevěné pelety",
-    short: "Pelety",
     emoji: "🌾",
     baseUnit: "t",
     color: "#7e9a78", // mech
@@ -55,8 +75,6 @@ export const FUEL_META: Record<FuelCategory, FuelMeta> = {
   },
   briquettes: {
     id: "briquettes",
-    label: "Brikety",
-    short: "Brikety",
     emoji: "🧱",
     baseUnit: "t",
     color: "#7a5a43", // ořech (tmavé dřevo)
@@ -65,8 +83,6 @@ export const FUEL_META: Record<FuelCategory, FuelMeta> = {
   },
   coal: {
     id: "coal",
-    label: "Uhlí",
-    short: "Uhlí",
     emoji: "⚫",
     baseUnit: "t",
     color: "#4a4744", // uhel
@@ -76,52 +92,93 @@ export const FUEL_META: Record<FuelCategory, FuelMeta> = {
   },
 };
 
+export const FUEL_META: Record<FuelCategory, FuelMeta> = withLabels(
+  FUEL_META_BASE,
+  (k) => t(`common.fuels.${k}.label`),
+  (k) => ({
+    get short() {
+      return t(`common.fuels.${k}.short`);
+    },
+  }),
+);
+
 export const FUEL_CATEGORIES: FuelCategory[] = ["wood", "pellets", "briquettes", "coal"];
 
 /** Barvy komodit pro grafy (Recharts). */
-export const COMMODITY_META: Record<CommodityKey, { label: string; unit: string; color: string }> = {
-  hardWoodPrms: { label: "Tvrdé dřevo", unit: "Kč/PRMS", color: "#7a5a43" },
-  softWoodPrms: { label: "Měkké dřevo", unit: "Kč/PRMS", color: "#c9a97e" },
-  pelletsT: { label: "Pelety ENplus A1", unit: "Kč/t", color: "#6f8f69" },
-  briquettesT: { label: "Dřevěné brikety", unit: "Kč/t", color: "#b5826a" },
-  coalT: { label: "Hnědé uhlí", unit: "Kč/t", color: "#5e5b57" },
-};
+export const COMMODITY_META: Record<CommodityKey, { label: string; unit: string; color: string }> = withLabels(
+  {
+    hardWoodPrms: { baseUnit: "PRMS", color: "#7a5a43" },
+    softWoodPrms: { baseUnit: "PRMS", color: "#c9a97e" },
+    pelletsT: { baseUnit: "t", color: "#6f8f69" },
+    briquettesT: { baseUnit: "t", color: "#b5826a" },
+    coalT: { baseUnit: "t", color: "#5e5b57" },
+  },
+  (k) => t(`common.commodities.${k}`),
+  (k) => ({
+    /** „Kč/PRMS“ nebo „€/t“ podle zvolené měny. */
+    get unit() {
+      return moneyUnit(k.endsWith("Prms") ? "PRMS" : "t");
+    },
+  }),
+);
 
 /* ------------------------------------------------------------------ */
 /* Dřevo                                                               */
 /* ------------------------------------------------------------------ */
 
-export const WOOD_SPECIES: Record<WoodSpecies, { label: string; group: WoodGroup }> = {
-  buk: { label: "Buk", group: "hard" },
-  dub: { label: "Dub", group: "hard" },
-  habr: { label: "Habr", group: "hard" },
-  jasan: { label: "Jasan", group: "hard" },
-  "mix-tvrde": { label: "Mix tvrdých", group: "hard" },
-  briza: { label: "Bříza", group: "birch" },
-  smrk: { label: "Smrk", group: "soft" },
-  borovice: { label: "Borovice", group: "soft" },
-  modrin: { label: "Modřín", group: "soft" },
-  "mix-mekke": { label: "Mix měkkých", group: "soft" },
-};
+export const WOOD_SPECIES: Record<WoodSpecies, { label: string; group: WoodGroup }> = withLabels(
+  {
+    buk: { group: "hard" },
+    dub: { group: "hard" },
+    habr: { group: "hard" },
+    jasan: { group: "hard" },
+    "mix-tvrde": { group: "hard" },
+    briza: { group: "birch" },
+    smrk: { group: "soft" },
+    borovice: { group: "soft" },
+    modrin: { group: "soft" },
+    "mix-mekke": { group: "soft" },
+  } as Record<WoodSpecies, { group: WoodGroup }>,
+  (k) => t(`common.species.${k}`),
+);
 
-export const WOOD_GROUPS: Record<WoodGroup, { label: string; hint: string }> = {
-  hard: { label: "Tvrdé", hint: "buk, dub, habr, jasan" },
-  soft: { label: "Měkké", hint: "smrk, borovice, modřín" },
-  birch: { label: "Bříza", hint: "krb, rychlý zátop" },
-};
+export const WOOD_GROUPS: Record<WoodGroup, { label: string; hint: string }> = withLabels(
+  {
+    hard: {},
+    soft: {},
+    birch: {},
+  } as Record<WoodGroup, object>,
+  (k) => t(`common.woodGroups.${k}.label`),
+  (k) => ({
+    get hint() {
+      return t(`common.woodGroups.${k}.hint`);
+    },
+  }),
+);
 
-export const WOOD_FORMS: Record<WoodForm, { label: string; unit: string }> = {
-  sypane: { label: "Sypané štípané", unit: "PRMS" },
-  rovnane: { label: "Rovnané", unit: "PRM" },
-  metrovky: { label: "Metrové kulatiny", unit: "PRM" },
-  paleta: { label: "Palety / klece", unit: "paleta" },
-};
+export const WOOD_FORMS: Record<WoodForm, { label: string; unit: string }> = withLabels(
+  {
+    sypane: { unit: "PRMS" },
+    rovnane: { unit: "PRM" },
+    metrovky: { unit: "PRM" },
+    paleta: { unit: "paleta" },
+  },
+  (k) => t(`common.woodForms.${k}`),
+);
 
-export const MOISTURE: Record<Moisture, { label: string; hint: string }> = {
-  dry: { label: "Suché", hint: "< 20 % – k okamžitému topení" },
-  semi: { label: "Polosuché", hint: "20–35 % – dosušit do příští sezóny" },
-  fresh: { label: "Čerstvé / syrové", hint: "> 35 % – sušit 1,5–2 roky" },
-};
+export const MOISTURE: Record<Moisture, { label: string; hint: string }> = withLabels(
+  {
+    dry: {},
+    semi: {},
+    fresh: {},
+  } as Record<Moisture, object>,
+  (k) => t(`common.moisture.${k}.label`),
+  (k) => ({
+    get hint() {
+      return t(`common.moisture.${k}.hint`);
+    },
+  }),
+);
 
 export const LOG_LENGTHS: LogLengthCm[] = [25, 33, 40, 50];
 
@@ -298,25 +355,31 @@ export const ZIP_PREFIX_LOCATIONS: Record<string, { city: string; lat: number; l
 /* Štítky a stavy                                                      */
 /* ------------------------------------------------------------------ */
 
-export const SELLER_TAGS: Record<SellerTag, { label: string; tone: "green" | "orange" | "neutral" }> = {
-  skladem: { label: "Skladem", tone: "green" },
-  "hydraulicka-ruka": { label: "Hydraulická ruka", tone: "neutral" },
-  "enplus-a1": { label: "Certifikace ENplus A1", tone: "green" },
-  "suche-18": { label: "Suché < 18 %", tone: "green" },
-  "vlastni-doprava": { label: "Vlastní doprava", tone: "neutral" },
-  "osobni-odber": { label: "Osobní odběr", tone: "neutral" },
-  "platba-kartou": { label: "Platba kartou", tone: "neutral" },
-  "doprava-zdarma": { label: "Doprava zdarma v okolí", tone: "orange" },
-  "fsc-pefc": { label: "FSC / PEFC", tone: "green" },
-  "expres-48h": { label: "Expres do 48 h", tone: "orange" },
-};
+export const SELLER_TAGS: Record<SellerTag, { label: string; tone: "green" | "orange" | "neutral" }> = withLabels(
+  {
+    skladem: { tone: "green" },
+    "hydraulicka-ruka": { tone: "neutral" },
+    "enplus-a1": { tone: "green" },
+    "suche-18": { tone: "green" },
+    "vlastni-doprava": { tone: "neutral" },
+    "osobni-odber": { tone: "neutral" },
+    "platba-kartou": { tone: "neutral" },
+    "doprava-zdarma": { tone: "orange" },
+    "fsc-pefc": { tone: "green" },
+    "expres-48h": { tone: "orange" },
+  } as Record<SellerTag, { tone: "green" | "orange" | "neutral" }>,
+  (k) => t(`common.tags.${k}`),
+);
 
-export const STOCK_LEVELS: Record<StockLevel, { label: string; tone: "green" | "orange" | "red" | "neutral" }> = {
-  in_stock: { label: "Skladem", tone: "green" },
-  low: { label: "Poslední kusy", tone: "orange" },
-  out_of_stock: { label: "Vyprodáno", tone: "red" },
-  preorder: { label: "Na objednávku", tone: "neutral" },
-};
+export const STOCK_LEVELS: Record<StockLevel, { label: string; tone: "green" | "orange" | "red" | "neutral" }> = withLabels(
+  {
+    in_stock: { tone: "green" },
+    low: { tone: "orange" },
+    out_of_stock: { tone: "red" },
+    preorder: { tone: "neutral" },
+  } as Record<StockLevel, { tone: "green" | "orange" | "red" | "neutral" }>,
+  (k) => t(`common.stock.${k}`),
+);
 
 /** Hranice pro barvení cen: ±5 % vůči průměru kraje. */
 export const PRICE_TIER_THRESHOLD = 0.05;

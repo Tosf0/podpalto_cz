@@ -6,6 +6,7 @@ import { Archive, ChevronDown, FileText, Radar } from "lucide-react";
 import { API_URL, IS_MOCK, getReports } from "@/lib/api";
 import { useApi } from "@/hooks/use-api";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n/use-i18n";
 import { PageHeader } from "@/components/common";
 import { Badge } from "@/components/ui/badge";
 import { RunPanel } from "./run-panel";
@@ -32,6 +33,7 @@ function Disclosure({ title, children }: { title: string; children: React.ReactN
 
 /** Kompaktní schéma CrewAI flow – wrapuje se, žádný horizontální scroll. */
 function PipelineDiagram() {
+  const { t } = useI18n();
   const chip = "rounded-lg border border-border bg-card px-2.5 py-1.5 font-mono text-xs";
   return (
     <div className="space-y-2 text-xs text-muted-foreground">
@@ -44,12 +46,13 @@ function PipelineDiagram() {
         <li aria-hidden>→</li>
         <li className={chip}>outputs/YYYYMMDD-HHMMSS_slug.md</li>
       </ol>
-      <p>Dva CrewAI agenti (PageTextTool, SWOT a doporučení) projdou web konkurenta a uloží Markdown report.</p>
+      <p>{t("ci.studio.pipelineNote")}</p>
     </div>
   );
 }
 
 export function CiStudio() {
+  const { t } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -78,9 +81,9 @@ export function CiStudio() {
   return (
     <div className="mx-auto w-full max-w-7xl space-y-10 px-4 py-8 sm:px-6 lg:px-8">
       <PageHeader
-        title="CI Studio"
+        title={t("ci.studio.title")}
         icon={<Radar />}
-        description="AI analýza konkurence se SWOT a doporučeními."
+        description={t("ci.studio.description")}
         actions={
           <Badge
             variant="outline"
@@ -91,7 +94,7 @@ export function CiStudio() {
             }
           >
             <span className={`size-1.5 rounded-full ${IS_MOCK ? "bg-wood" : "bg-moss"}`} aria-hidden />
-            {IS_MOCK ? "Simulace" : `Připojeno: ${API_URL}`}
+            {IS_MOCK ? t("ci.studio.simulation") : t("ci.studio.connected", { url: API_URL })}
           </Badge>
         }
       />
@@ -101,7 +104,7 @@ export function CiStudio() {
       <section aria-labelledby="archive-title" className="space-y-4">
         <h2 id="archive-title" className="flex items-center gap-2 text-xl font-semibold">
           <Archive className="size-5 text-moss-strong" aria-hidden />
-          Reporty
+          {t("ci.studio.reports")}
         </h2>
         <div className="grid items-start gap-6 xl:grid-cols-[300px_minmax(0,1fr)]">
           <ReportArchive reports={reports} loading={loading} selectedId={selectedId} onSelect={select} />
@@ -111,19 +114,19 @@ export function CiStudio() {
             ) : (
               <div className="flex min-h-64 flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-secondary/40 p-8 text-center">
                 <FileText className="size-8 text-muted-foreground" aria-hidden />
-                <p className="font-heading text-lg font-semibold">Vyberte report</p>
-                <p className="text-sm text-muted-foreground">nebo spusťte novou analýzu výše.</p>
+                <p className="font-heading text-lg font-semibold">{t("ci.studio.pickReport")}</p>
+                <p className="text-sm text-muted-foreground">{t("ci.studio.pickReportHint")}</p>
               </div>
             )}
           </div>
         </div>
       </section>
 
-      <section className="space-y-4" aria-label="Pro vývojáře">
-        <Disclosure title="Jak to funguje">
+      <section className="space-y-4" aria-label={t("ci.studio.forDevs")}>
+        <Disclosure title={t("ci.studio.howItWorks")}>
           <PipelineDiagram />
         </Disclosure>
-        <Disclosure title="API kontrakt">
+        <Disclosure title={t("ci.studio.apiContract")}>
           <pre className="overflow-x-auto rounded-xl bg-[#1b221d] p-4 font-mono text-xs leading-relaxed text-[#e6e0d4]">
             {`POST /api/analyze
 {"competitor_url": "https://www.konkurent.cz"}

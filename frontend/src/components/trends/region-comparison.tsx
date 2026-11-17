@@ -7,7 +7,8 @@ import type { CommodityKey, RegionStats } from "@/types";
 import { PriceDelta } from "@/components/common";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { COMMODITY_META, REGIONS } from "@/lib/constants";
-import { formatCzk, formatNumber, formatPct } from "@/lib/format";
+import { formatCzk, formatMoneyNumber, formatNumber, formatPct, moneyUnit, toDisplayCurrency } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import {
   AXIS_LINE,
@@ -20,13 +21,6 @@ import {
 } from "./chart-parts";
 
 const KEYS: CommodityKey[] = ["hardWoodPrms", "softWoodPrms", "pelletsT", "briquettesT", "coalT"];
-const SHORT_LABEL: Record<CommodityKey, string> = {
-  hardWoodPrms: "Tvrdé dřevo",
-  softWoodPrms: "Měkké dřevo",
-  pelletsT: "Pelety",
-  briquettesT: "Brikety",
-  coalT: "Uhlí",
-};
 
 const GREEN: [number, number, number] = [111, 143, 105]; // moss
 const AMBER: [number, number, number] = [201, 169, 126]; // světlé dřevo
@@ -90,6 +84,7 @@ function SortHead({
 }
 
 export function RegionComparison({ regions }: { regions: RegionStats[] }) {
+  const { t } = useI18n();
   const [commodity, setCommodity] = useState<CommodityKey>("hardWoodPrms");
   const [sortKey, setSortKey] = useState<SortKey>("priceIndex");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
@@ -105,6 +100,7 @@ export function RegionComparison({ regions }: { regions: RegionStats[] }) {
           name: REGIONS[r.region].short,
           fullName: r.name,
           price: r.avgPrices[commodity],
+          value: toDisplayCurrency(r.avgPrices[commodity]),
         }))
         .sort((a, b) => a.price - b.price),
     [regions, commodity],
@@ -113,8 +109,10 @@ export function RegionComparison({ regions }: { regions: RegionStats[] }) {
   const avg = useMemo(() => chartData.reduce((s, d) => s + d.price, 0) / chartData.length, [chartData]);
   const cheapest = chartData[0];
   const priciest = chartData[chartData.length - 1];
-  const lo = Math.floor((cheapest.price * 0.9) / 50) * 50;
-  const hi = Math.ceil((priciest.price * 1.03) / 50) * 50;
+  // Osa je v zobrazované měně; krok zaokrouhlení se přizpůsobí (Kč vs. €).
+  const step = toDisplayCurrency(50) < 10 ? 2 : 50;
+  const lo = Math.floor((toDisplayCurrency(cheapest.price) * 0.9) / step) * step;
+  const hi = Math.ceil((toDisplayCurrency(priciest.price) * 1.03) / step) * step;
 
   const sorted = useMemo(() => {
     const dir = sortDir === "asc" ? 1 : -1;
@@ -140,15 +138,15 @@ export function RegionComparison({ regions }: { regions: RegionStats[] }) {
   return (
     <Section
       id="kraje"
-      title="Srovnání 14 krajů ČR"
-      description="Průměrné ceny podle sídla prodejců"
-      info="Barva sloupce ukazuje odchylku od průměru krajů: mechová = levněji, hlinitá = dráž. Osa nezačíná v nule, aby byly rozdíly čitelné. Ceny vč. DPH; dřevo v Kč/PRMS, ostatní paliva v Kč/t. Index: 100 = průměr ČR."
+      title={t("trends.region.title", { count: regions.length })}
+      description={t("trends.region.description")}
+      info={t("trends.region.info", { woodUnit: moneyUnit("PRMS"), otherUnit: moneyUnit("t") })}
       actions={
         <Segmented<CommodityKey>
-          label="Komodita"
+          label={t("trends.region.commodityLabel")}
           value={commodity}
           onChange={setCommodity}
-          options={KEYS.map((k) => ({ value: k, label: SHORT_LABEL[k] }))}
+          options={KEYS.map((k) => ({ value: k, label: t(`trends.commodityShort.${k}`) }))}
         />
       }
     >
@@ -158,7 +156,7 @@ export function RegionComparison({ regions }: { regions: RegionStats[] }) {
             <TrendingDown aria-hidden="true" className="size-4" />
           </span>
           <div className="min-w-0 text-sm">
-            <p className="text-xs font-semibold tracking-wide text-moss-strong uppercase">Nejlevnější</p>
+            <p className="text-xs font-semibold tracking-wide text-moss-strong uppercase">{t("trends.region.cheapest")}</p>
             <p className="font-medium text-foreground">{cheapest.fullName}</p>
             <p className="num text-muted-foreground">
               {formatCzk(cheapest.price)}/{unit} · {formatPct((cheapest.price / avg - 1) * 100)}
@@ -170,7 +168,7 @@ export function RegionComparison({ regions }: { regions: RegionStats[] }) {
             <TrendingUp aria-hidden="true" className="size-4" />
           </span>
           <div className="min-w-0 text-sm">
-            <p className="text-xs font-semibold tracking-wide text-clay-strong uppercase">Nejdražší</p>
+            <p className="text-xs font-semibold tracking-wide text-clay-strong uppercase">{t("trends.region.priciest")}</p>
             <p className="font-medium text-foreground">{priciest.fullName}</p>
             <p className="num text-muted-foreground">
               {formatCzk(priciest.price)}/{unit} · {formatPct((priciest.price / avg - 1) * 100)}
@@ -182,7 +180,7 @@ export function RegionComparison({ regions }: { regions: RegionStats[] }) {
       <div
         className="h-[26rem] w-full"
         role="img"
-        aria-label={`Sloupcový graf průměrné ceny (${meta.label}) podle krajů, seřazeno od nejlevnějšího`}
+        aria-label={t("trends.region.chartAria", { commodity: meta.label })}
       >
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData} layout="vertical" margin={{ top: 16, right: 16, left: 0, bottom: 0 }}>
@@ -213,24 +211,24 @@ export function RegionComparison({ regions }: { regions: RegionStats[] }) {
                 return (
                   <ChartTooltipFrame title={d.fullName}>
                     <ChartTooltipRow color={scaleColor(d.price, avg)} label={meta.label} value={`${formatCzk(d.price)}/${unit}`} />
-                    <ChartTooltipRow label="Oproti průměru" value={formatPct((d.price / avg - 1) * 100)} />
+                    <ChartTooltipRow label={t("trends.region.vsAverage")} value={formatPct((d.price / avg - 1) * 100)} />
                   </ChartTooltipFrame>
                 );
               }}
             />
             <ReferenceLine
-              x={avg}
+              x={toDisplayCurrency(avg)}
               stroke="var(--foreground)"
               strokeDasharray="4 3"
               strokeOpacity={0.6}
               label={{
-                value: `Průměr ${formatCzk(avg)}`,
+                value: t("trends.region.average", { price: formatCzk(avg) }),
                 position: "top",
                 fill: "var(--muted-foreground)",
                 fontSize: 11,
               }}
             />
-            <Bar dataKey="price" radius={[0, 6, 6, 0]} isAnimationActive={false} barSize={18}>
+            <Bar dataKey="value" radius={[0, 6, 6, 0]} isAnimationActive={false} barSize={18}>
               {chartData.map((d) => (
                 <Cell key={d.code} fill={scaleColor(d.price, avg)} />
               ))}
@@ -243,15 +241,15 @@ export function RegionComparison({ regions }: { regions: RegionStats[] }) {
         <Table className="text-[0.8125rem] [&_td]:px-1.5 @xl:[&_td]:px-3">
           <TableHeader>
             <TableRow>
-              <SortHead k="name" right={false} {...sh}>Kraj</SortHead>
+              <SortHead k="name" right={false} {...sh}>{t("trends.region.colRegion")}</SortHead>
               {KEYS.map((k) => (
                 <SortHead key={k} k={k} className={colCls(k, commodity)} {...sh}>
-                  {SHORT_LABEL[k]}
+                  {t(`trends.commodityShort.${k}`)}
                 </SortHead>
               ))}
-              <SortHead k="priceIndex" className="hidden @lg:table-cell" {...sh}>Index</SortHead>
-              <SortHead k="changePct" {...sh}>m/m</SortHead>
-              <SortHead k="sellerCount" className="hidden @4xl:table-cell" {...sh}>Prodejci</SortHead>
+              <SortHead k="priceIndex" className="hidden @lg:table-cell" {...sh}>{t("trends.region.colIndex")}</SortHead>
+              <SortHead k="changePct" {...sh}>{t("trends.region.colMonth")}</SortHead>
+              <SortHead k="sellerCount" className="hidden @4xl:table-cell" {...sh}>{t("trends.region.colSellers")}</SortHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -262,7 +260,7 @@ export function RegionComparison({ regions }: { regions: RegionStats[] }) {
                 </TableCell>
                 {KEYS.map((k) => (
                   <TableCell key={k} className={cn("num text-right", colCls(k, commodity), k === commodity && "bg-accent/60 font-medium")}>
-                    {formatNumber(r.avgPrices[k])}
+                    {formatMoneyNumber(r.avgPrices[k])}
                   </TableCell>
                 ))}
                 <TableCell

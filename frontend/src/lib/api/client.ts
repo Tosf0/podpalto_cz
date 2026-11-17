@@ -1,4 +1,5 @@
 import { API_URL, MOCK_LATENCY_MS } from "./config";
+import { t } from "@/lib/i18n/translate";
 
 export class ApiError extends Error {
   constructor(
@@ -28,7 +29,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     } catch {
       body = undefined;
     }
-    throw new ApiError(`API ${res.status} ${res.statusText} – ${path}`, res.status, body);
+    throw new ApiError(t("ci.api.error", { status: res.status, statusText: res.statusText, path }), res.status, body);
   }
   return (await res.json()) as T;
 }

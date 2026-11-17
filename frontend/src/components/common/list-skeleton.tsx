@@ -1,11 +1,15 @@
+"use client";
+
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
 /** Skeleton řádků ve tvaru karet – zobrazuje se během načítání seznamů. */
 export function ListSkeleton({ count = 4, className }: { count?: number; className?: string }) {
+  const { t } = useI18n();
   return (
     <div role="status" aria-live="polite" className={cn("flex flex-col gap-3", className)}>
-      <span className="sr-only">Načítání…</span>
+      <span className="sr-only">{t("map.ui.listLoading")}</span>
       {Array.from({ length: count }, (_, i) => (
         <div
           key={i}

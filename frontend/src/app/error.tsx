@@ -3,8 +3,10 @@
 import { useEffect } from "react";
 import { TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/lib/i18n";
 
 export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  const { t } = useI18n();
   useEffect(() => {
     console.error(error);
   }, [error]);
@@ -14,12 +16,12 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
       <div className="flex size-14 items-center justify-center rounded-2xl bg-clay-soft text-clay-strong">
         <TriangleAlert className="size-7" />
       </div>
-      <h1 className="text-3xl font-semibold">Něco se pokazilo</h1>
+      <h1 className="text-3xl font-semibold">{t("layout.error.title")}</h1>
       <p className="text-muted-foreground">
-        Nepodařilo se načíst data. Pokud je nastavené <code className="num">NEXT_PUBLIC_API_URL</code>, zkontrolujte,
-        že backend na Railway běží.
+        {t("layout.error.textBefore")} <code className="num">NEXT_PUBLIC_API_URL</code>
+        {t("layout.error.textAfter")}
       </p>
-      <Button onClick={reset}>Zkusit znovu</Button>
+      <Button onClick={reset}>{t("common.actions.retry")}</Button>
     </div>
   );
 }

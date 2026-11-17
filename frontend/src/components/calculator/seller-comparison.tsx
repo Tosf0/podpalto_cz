@@ -11,7 +11,8 @@ import { useApi } from "@/hooks/use-api";
 import { getSellers } from "@/lib/api";
 import { FUEL_META, FUEL_CATEGORIES } from "@/lib/constants";
 import { baseUnitLabel, mainProduct, pricePerBaseUnit, pricePerKwh, roadDistanceKm } from "@/lib/pricing";
-import { formatCzk, formatCzkPerUnit, formatKm, formatNumber } from "@/lib/format";
+import { currencySymbol, formatCzk, formatCzkPerUnit, formatKm, formatKwhPrice, formatNumber, toDisplayCurrency } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 import { usePreferences } from "@/components/providers/preferences-provider";
 import { cn } from "@/lib/utils";
 import type { Seller } from "@/types";
@@ -19,6 +20,7 @@ import type { Seller } from "@/types";
 const MAX_COMPARE = 4;
 
 export function SellerComparison() {
+  const { t } = useI18n();
   const { compareIds, toggleCompare, clearCompare, location } = usePreferences();
   const { data: sellers, loading } = useApi(() => getSellers(), []);
 
@@ -31,9 +33,9 @@ export function SellerComparison() {
 
   const picker = (
     <Select value="" onValueChange={(id) => id && toggleCompare(id)} disabled={selected.length >= MAX_COMPARE}>
-      <SelectTrigger className="h-10 w-full rounded-xl sm:w-64" aria-label="Přidat prodejce k porovnání">
+      <SelectTrigger className="h-10 w-full rounded-xl sm:w-64" aria-label={t("calculator.compare.addAria")}>
         <Plus />
-        <SelectValue placeholder={selected.length >= MAX_COMPARE ? "Maximum 4" : "Přidat prodejce"} />
+        <SelectValue placeholder={selected.length >= MAX_COMPARE ? t("calculator.compare.max") : t("calculator.compare.add")} />
       </SelectTrigger>
       <SelectContent position="popper" className="max-h-72">
         {available.map((s) => (
@@ -49,13 +51,13 @@ export function SellerComparison() {
     return (
       <EmptyState
         icon={<GitCompareArrows />}
-        title="Nic k porovnání"
-        description="Přidejte prodejce zde nebo na mapě."
+        title={t("calculator.compare.emptyTitle")}
+        description={t("calculator.compare.emptyDesc")}
         action={
           <div className="flex flex-col items-center gap-3 sm:flex-row">
             {picker}
             <Button asChild>
-              <Link href="/">Otevřít mapu</Link>
+              <Link href="/">{t("calculator.compare.openMap")}</Link>
             </Button>
           </div>
         }
@@ -80,7 +82,7 @@ export function SellerComparison() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         {picker}
         <Button variant="outline" size="sm" onClick={clearCompare}>
-          <X /> Vymazat vše
+          <X /> {t("calculator.compare.clearAll")}
         </Button>
       </div>
 
@@ -99,25 +101,25 @@ export function SellerComparison() {
                 variant="ghost"
                 size="icon-xs"
                 onClick={() => toggleCompare(s.id)}
-                aria-label={`Odebrat ${s.name} z porovnání`}
+                aria-label={t("calculator.compare.remove", { name: s.name })}
               >
                 <X />
               </Button>
             </div>
           ))}
 
-          <Row label="Hodnocení">
+          <Row label={t("calculator.compare.rating")}>
             {selected.map((s) => (
               <Cell key={s.id}>
                 <StarRating rating={s.rating} reviewCount={s.reviewCount} size="md" />
               </Cell>
             ))}
           </Row>
-          <Row label={`Vzdálenost od ${location.label}`}>
+          <Row label={t("calculator.compare.distanceFrom", { place: location.label })}>
             {selected.map((s) => (
               <Cell key={s.id}>
                 <span className="num font-medium">{formatKm(roadDistanceKm(s.location, location))}</span>
-                <span className="text-xs text-muted-foreground"> po silnici</span>
+                <span className="text-xs text-muted-foreground">{t("calculator.compare.byRoad")}</span>
               </Cell>
             ))}
           </Row>
@@ -126,7 +128,7 @@ export function SellerComparison() {
             <Row key={cat} label={FUEL_META[cat].label}>
               {selected.map((s) => {
                 const p = mainProduct(s, cat);
-                if (!p) return <Cell key={s.id}><span className="text-muted-foreground">nenabízí</span></Cell>;
+                if (!p) return <Cell key={s.id}><span className="text-muted-foreground">{t("calculator.compare.notOffered")}</span></Cell>;
                 const best = bestKwh[cat] !== undefined && pricePerKwh(p) === bestKwh[cat];
                 const unit = baseUnitLabel(cat);
                 return (
@@ -135,7 +137,7 @@ export function SellerComparison() {
                       {formatCzkPerUnit(pricePerBaseUnit(p), unit)}
                     </p>
                     <p className={cn("num text-xs", best ? "font-medium text-moss-strong" : "text-muted-foreground")}>
-                      {formatNumber(pricePerKwh(p), 2)} Kč/kWh
+                      {formatKwhPrice(pricePerKwh(p))}
                     </p>
                     <p className="text-xs text-muted-foreground">{p.name}</p>
                   </Cell>
@@ -144,36 +146,46 @@ export function SellerComparison() {
             </Row>
           ))}
 
-          <Row label="Doprava">
+          <Row label={t("calculator.compare.delivery")}>
             {selected.map((s) => {
               const d = s.delivery;
               return (
                 <Cell key={s.id}>
                   {d.ownDelivery ? (
                     <ul className="num space-y-0.5 text-xs">
-                      <li>Paušál {formatCzk(d.baseFee)}</li>
-                      <li>{formatNumber(d.pricePerKm, 1)} Kč/km</li>
-                      <li>Zdarma do {d.freeRadiusKm > 0 ? formatKm(d.freeRadiusKm) : "– (nikdy)"}</li>
-                      <li>Dojezd {formatKm(d.maxRadiusKm)}</li>
+                      <li>{t("calculator.compare.flatFee", { price: formatCzk(d.baseFee) })}</li>
+                      <li>
+                        {formatNumber(toDisplayCurrency(d.pricePerKm), currencySymbol() === "€" ? 2 : 1)} {currencySymbol()}/km
+                      </li>
+                      <li>
+                        {t("calculator.compare.freeUpTo", {
+                          distance: d.freeRadiusKm > 0 ? formatKm(d.freeRadiusKm) : t("calculator.compare.freeNever"),
+                        })}
+                      </li>
+                      <li>{t("calculator.compare.range", { distance: formatKm(d.maxRadiusKm) })}</li>
                     </ul>
                   ) : (
-                    <span className="text-xs text-muted-foreground">Bez vlastní dopravy</span>
+                    <span className="text-xs text-muted-foreground">{t("calculator.compare.noOwnDelivery")}</span>
                   )}
                   <p className="mt-1 text-xs">
-                    Hydraulická ruka:{" "}
+                    {t("calculator.compare.arm")}{" "}
                     <span className={d.hydraulicArm ? "font-medium text-moss-strong" : "text-muted-foreground"}>
-                      {d.hydraulicArm ? (d.hydraulicArmFee ? `ano (+${formatCzk(d.hydraulicArmFee)})` : "ano") : "ne"}
+                      {d.hydraulicArm
+                        ? d.hydraulicArmFee
+                          ? t("calculator.compare.yesWithFee", { price: formatCzk(d.hydraulicArmFee) })
+                          : t("calculator.compare.yes")
+                        : t("calculator.compare.no")}
                     </span>
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Osobní odběr: {d.pickupAvailable ? "ano" : "ne"}
+                    {t("calculator.compare.pickup", { value: d.pickupAvailable ? t("calculator.compare.yes") : t("calculator.compare.no") })}
                   </p>
                 </Cell>
               );
             })}
           </Row>
 
-          <Row label="Štítky">
+          <Row label={t("calculator.compare.tags")}>
             {selected.map((s) => (
               <Cell key={s.id}>
                 <SellerTags tags={s.tags} max={4} />
@@ -183,7 +195,7 @@ export function SellerComparison() {
         </div>
       </div>
       {selected.length < 2 && (
-        <p className="text-sm text-muted-foreground">Přidejte dalšího prodejce.</p>
+        <p className="text-sm text-muted-foreground">{t("calculator.compare.addMore")}</p>
       )}
     </div>
   );

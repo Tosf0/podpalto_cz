@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import { Flame } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 /**
@@ -16,11 +19,12 @@ export function Logo({
   tone?: "default" | "inverted";
   className?: string;
 }) {
+  const { t } = useI18n();
   const inverted = tone === "inverted";
   return (
     <Link
       href="/"
-      aria-label="podpalto.cz – úvodní stránka"
+      aria-label={t("map.ui.logoAria")}
       className={cn(
         "group inline-flex min-w-0 items-center gap-3 rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
         className,
@@ -45,7 +49,7 @@ export function Logo({
               inverted ? "text-sidebar-foreground/65" : "text-muted-foreground",
             )}
           >
-            Cenová mapa &amp; CI tuhých paliv
+            {t("map.ui.tagline")}
           </span>
         )}
       </span>

@@ -8,7 +8,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useApi } from "@/hooks/use-api";
 import { getEnergyCosts, getMarketPulse, getPriceTrends, getRegionStats } from "@/lib/api";
 import { COMMODITY_META, REGIONS } from "@/lib/constants";
-import { formatCzk, formatMonthGenitive, formatNumber } from "@/lib/format";
+import { formatCzk, formatMonthGenitive, formatMoneyNumber, formatNumber } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
+import { t } from "@/lib/i18n/translate";
 import { EnergyCostChart } from "./energy-cost-chart";
 import { PriceTrendChart } from "./price-trend-chart";
 import { RegionComparison } from "./region-comparison";
@@ -21,7 +23,7 @@ const PULSE_ICONS: Record<string, React.ReactNode> = {
   briquettesT: <BriquettesIcon />,
 };
 
-/** Krátký český text odvozený z dat. */
+/** Krátký text odvozený z daty (volá se při renderu, takže `t` je v aktuálním jazyce). */
 function buildInsight(pulse: MarketPulseItem[], trends: PriceTrendPoint[], regions: RegionStats[]): string {
   const parts: string[] = [];
   const hard = pulse.find((p) => p.key === "hardWoodPrms");
@@ -30,44 +32,41 @@ function buildInsight(pulse: MarketPulseItem[], trends: PriceTrendPoint[], regio
   if (hard) {
     const abs = Math.abs(hard.changePct);
     const pct = formatNumber(abs, 1);
-    if (abs < 0.1) parts.push("Cena tvrdého dřeva se za měsíc téměř nezměnila.");
+    if (abs < 0.1) parts.push(t("trends.insight.hardFlat"));
     else {
-      const verb = hard.changePct > 0 ? "podražilo" : "zlevnilo";
+      const up = hard.changePct > 0;
       let tail = "";
       if (latest) {
         const prevSame = trends
           .slice(0, -1)
-          .filter((t) => (hard.changePct > 0 ? t.hardWoodPrms >= latest.hardWoodPrms : t.hardWoodPrms <= latest.hardWoodPrms));
+          .filter((p) => (up ? p.hardWoodPrms >= latest.hardWoodPrms : p.hardWoodPrms <= latest.hardWoodPrms));
         if (prevSame.length === 0) {
-          tail = hard.changePct > 0 ? `, nejvýše za posledních ${trends.length} měsíců` : `, nejníže za posledních ${trends.length} měsíců`;
+          tail = t(up ? "trends.insight.peakHigh" : "trends.insight.peakLow", {
+            months: t("trends.months", { count: trends.length }),
+          });
         } else {
           const last = prevSame[prevSame.length - 1];
-          tail = hard.changePct > 0 ? `, nejvýrazněji od ${formatMonthGenitive(last.month)}` : `, nejníže od ${formatMonthGenitive(last.month)}`;
+          tail = t(up ? "trends.insight.sinceHigh" : "trends.insight.sinceLow", { month: formatMonthGenitive(last.month) });
         }
       }
-      parts.push(`Tvrdé dřevo ${verb} za měsíc o ${pct} %${tail}.`);
+      parts.push(t(up ? "trends.insight.hardUp" : "trends.insight.hardDown", { pct, tail }));
     }
   }
 
   if (latest) {
     const m = Number(latest.month.split("-")[1]);
-    parts.push(m >= 10 || m <= 3 ? "Topná sezóna je v plném proudu." : "Topná sezóna je pryč, ceny bývají nižší.");
+    parts.push(t(m >= 10 || m <= 3 ? "trends.insight.seasonOn" : "trends.insight.seasonOff"));
   }
 
   if (regions.length) {
     const sorted = [...regions].sort((a, b) => a.avgPrices.hardWoodPrms - b.avgPrices.hardWoodPrms);
     const c = sorted[0];
-    parts.push(`Nejlevnější tvrdé dřevo je v kraji ${REGIONS[c.region].short} (${formatCzk(c.avgPrices.hardWoodPrms)}/PRMS).`);
+    parts.push(
+      t("trends.insight.cheapestRegion", { region: REGIONS[c.region].short, price: formatCzk(c.avgPrices.hardWoodPrms) }),
+    );
   }
   return parts.join(" ");
 }
-
-const PULSE_LABELS: Record<string, string> = {
-  hardWoodPrms: "Tvrdé dřevo",
-  softWoodPrms: "Měkké dřevo",
-  pelletsT: "Pelety",
-  briquettesT: "Brikety",
-};
 
 /** KPI dlaždice: krátký popisek, hodnota, změna a sparkline; všechny dlaždice mají stejné rozložení. */
 function PulseTile({ item }: { item: MarketPulseItem }) {
@@ -77,14 +76,14 @@ function PulseTile({ item }: { item: MarketPulseItem }) {
         <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-accent text-accent-foreground [&_svg]:size-4">
           {PULSE_ICONS[item.key]}
         </span>
-        <span className="whitespace-nowrap">{PULSE_LABELS[item.key] ?? item.label}</span>
+        <span className="whitespace-nowrap">{t(`trends.commodityShort.${item.key}`)}</span>
       </div>
       <div className="flex items-end justify-between gap-3">
         <div className="min-w-0 space-y-1">
           <p className="num text-2xl font-semibold tracking-tight whitespace-nowrap text-foreground">
-            {formatNumber(item.value)}
+            {formatMoneyNumber(item.value)}
           </p>
-          <p className="text-xs whitespace-nowrap text-muted-foreground">{item.unit}</p>
+          <p className="text-xs whitespace-nowrap text-muted-foreground">{COMMODITY_META[item.key].unit}</p>
           <PriceDelta value={item.changePct} className="text-xs" />
         </div>
         {item.spark && item.spark.length > 1 && (
@@ -100,6 +99,7 @@ function SectionSkeleton({ height = "h-96" }: { height?: string }) {
 }
 
 export function TrendsView() {
+  const { t } = useI18n();
   const pulse = useApi(() => getMarketPulse(), []);
   const trends = useApi(() => getPriceTrends(12), []);
   const regions = useApi(() => getRegionStats(), []);
@@ -115,22 +115,22 @@ export function TrendsView() {
   return (
     <div className="mx-auto w-full max-w-7xl space-y-10 px-4 py-8 sm:px-6 lg:px-8">
       <PageHeader
-        eyebrow="Analytika trhu"
-        title="Trh a ceny v ČR"
+        eyebrow={t("trends.view.eyebrow")}
+        title={t("trends.view.title")}
         icon={<BarChart3 />}
-        description="Vývoj cen, kraje a cena za kWh."
+        description={t("trends.view.description")}
         actions={<MockModeBadge />}
       />
 
       {failed && (
         <EmptyState
-          title="Data trhu se nepodařilo načíst"
-          description="Zkuste stránku obnovit, případně to zkuste za chvíli."
+          title={t("trends.view.failedTitle")}
+          description={t("trends.view.failedDesc")}
         />
       )}
 
-      <section aria-label="Aktuální průměrné ceny" className="space-y-4">
-        <p className="text-sm text-muted-foreground">Průměrné ceny v ČR a změna oproti minulému měsíci</p>
+      <section aria-label={t("trends.view.pulseAria")} className="space-y-4">
+        <p className="text-sm text-muted-foreground">{t("trends.view.pulseIntro")}</p>
         <div className="grid auto-rows-fr gap-4 grid-cols-2 lg:grid-cols-4">
           {pulse.data
             ? pulse.data.map((p) => <PulseTile key={p.key} item={p} />)

@@ -2,6 +2,7 @@
 
 import { ChevronDown } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import {
   BOILER_EFFICIENCY,
@@ -45,15 +46,6 @@ function Table2({ head, rows }: { head: string[]; rows: (string | number)[][] })
   );
 }
 
-const KWH_ROWS: [string, number][] = [
-  ["Pelety", KWH_PER_KG.pellets],
-  ["Dřevěné brikety", KWH_PER_KG.briquettesWood],
-  ["Hnědouhelné brikety", KWH_PER_KG.briquettesCoal],
-  ["Hnědé uhlí", KWH_PER_KG.coalBrown],
-  ["Černé uhlí", KWH_PER_KG.coalBlack],
-  ["Koks", KWH_PER_KG.coke],
-];
-
 function Item({ title, children }: { title: string; children: ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
@@ -73,30 +65,39 @@ function Item({ title, children }: { title: string; children: ReactNode }) {
 }
 
 export function Methodology() {
+  const { t } = useI18n();
+  const kwhRows: [string, number][] = [
+    [t("calculator.method.heating.pellets"), KWH_PER_KG.pellets],
+    [t("calculator.method.heating.briquettesWood"), KWH_PER_KG.briquettesWood],
+    [t("calculator.method.heating.briquettesCoal"), KWH_PER_KG.briquettesCoal],
+    [t("calculator.method.heating.coalBrown"), KWH_PER_KG.coalBrown],
+    [t("calculator.method.heating.coalBlack"), KWH_PER_KG.coalBlack],
+    [t("calculator.method.heating.coke"), KWH_PER_KG.coke],
+  ];
   return (
     <div className="rounded-2xl border border-border bg-card px-5 shadow-soft">
-      <Item title="Převodní koeficienty objemu dřeva">
-        <p>Všechny objemy převádíme přes plnometr (PLM, čistá dřevní hmota).</p>
+      <Item title={t("calculator.method.volume.title")}>
+        <p>{t("calculator.method.volume.intro")}</p>
         <Table2
-          head={["Jednotka", "Podíl dřeva", "1 jednotka v PLM"]}
+          head={[t("calculator.method.volume.h1"), t("calculator.method.volume.h2"), t("calculator.method.volume.h3")]}
           rows={[
-            ["PLM – plnometr", "100 %", formatNumber(WOOD_SOLID_FACTOR.PLM, 2)],
-            ["PRM – prostorový metr rovnaný", `${Math.round(WOOD_SOLID_FACTOR.PRM * 100)} %`, formatNumber(WOOD_SOLID_FACTOR.PRM, 2)],
-            ["PRMS – prostorový metr sypaný", `${Math.round(WOOD_SOLID_FACTOR.PRMS * 100)} %`, formatNumber(WOOD_SOLID_FACTOR.PRMS, 2)],
+            [t("calculator.method.volume.plm"), "100 %", formatNumber(WOOD_SOLID_FACTOR.PLM, 2)],
+            [t("calculator.method.volume.prm"), `${Math.round(WOOD_SOLID_FACTOR.PRM * 100)} %`, formatNumber(WOOD_SOLID_FACTOR.PRM, 2)],
+            [t("calculator.method.volume.prms"), `${Math.round(WOOD_SOLID_FACTOR.PRMS * 100)} %`, formatNumber(WOOD_SOLID_FACTOR.PRMS, 2)],
           ]}
         />
       </Item>
 
-      <Item title="Energie ve dřevě a vliv vlhkosti">
+      <Item title={t("calculator.method.energy.title")}>
         <Table2
-          head={["Skupina dřeva", "kWh na 1 PLM (suché)"]}
+          head={[t("calculator.method.energy.group"), t("calculator.method.energy.perPlm")]}
           rows={(Object.keys(WOOD_KWH_PER_PLM) as WoodGroup[]).map((g) => [
             `${WOOD_GROUPS[g].label} (${WOOD_GROUPS[g].hint})`,
             formatNumber(WOOD_KWH_PER_PLM[g]),
           ])}
         />
         <Table2
-          head={["Vlhkost", "Koeficient využitelné energie"]}
+          head={[t("calculator.method.energy.moisture"), t("calculator.method.energy.factor")]}
           rows={(Object.keys(MOISTURE_ENERGY_FACTOR) as Moisture[]).map((m) => [
             `${MOISTURE[m].label} – ${MOISTURE[m].hint}`,
             formatNumber(MOISTURE_ENERGY_FACTOR[m], 2),
@@ -104,46 +105,33 @@ export function Methodology() {
         />
       </Item>
 
-      <Item title="Výhřevnost pelet, briket a uhlí">
-        <p>Pokud prodejce uvádí vlastní výhřevnost v MJ/kg, použijeme ji (1 kWh = 3,6 MJ). Jinak tabulkové hodnoty:</p>
-        <Table2 head={["Palivo", "kWh/kg"]} rows={KWH_ROWS.map(([n, v]) => [n, formatNumber(v, 1)])} />
+      <Item title={t("calculator.method.heating.title")}>
+        <p>{t("calculator.method.heating.intro")}</p>
+        <Table2
+          head={[t("calculator.method.heating.fuel"), "kWh/kg"]}
+          rows={kwhRows.map(([n, v]) => [n, formatNumber(v, 1)])}
+        />
       </Item>
 
-      <Item title="Účinnost kotlů a odhad spotřeby">
+      <Item title={t("calculator.method.efficiency.title")}>
         <Table2
-          head={["Palivo", "Účinnost"]}
+          head={[t("calculator.method.efficiency.fuel"), t("calculator.method.efficiency.efficiency")]}
           rows={(Object.keys(BOILER_EFFICIENCY) as FuelCategory[]).map((c) => [
             FUEL_META[c].label,
             `${Math.round(BOILER_EFFICIENCY[c] * 100)} %`,
           ])}
         />
-        <p>
-          Doporučené množství = roční potřeba tepla ÷ účinnost ÷ energie v jedné základní jednotce (PRMS u dřeva, tuna
-          u ostatních paliv).
-        </p>
+        <p>{t("calculator.method.efficiency.body")}</p>
       </Item>
 
-      <Item title="Doprava a srovnání s průměrem kraje">
-        <p>
-          Silniční vzdálenost odhadujeme jako vzdušnou čáru × 1,25. Doprava je zdarma do bezplatného rádia prodejce nebo
-          při dosažení limitu množství; nad rádius se účtuje paušál + cena za kilometr nad rádius. Mimo maximální dojezd
-          je možný pouze osobní odběr.
-        </p>
-        <p>
-          Průměr kraje = průměrná cena paliva v kraji × množství + průměrná cena dopravy mezi nalezenými nabídkami.
-          Úspora je rozdíl proti tomuto průměru.
-        </p>
-        <p>
-          Množství se u každého prodejce zaokrouhluje nahoru na prodejní jednotku (palety, pytle po celých kusech, dřevo
-          na 0,5, tuny na 0,1).
-        </p>
+      <Item title={t("calculator.method.delivery.title")}>
+        <p>{t("calculator.method.delivery.p1")}</p>
+        <p>{t("calculator.method.delivery.p2")}</p>
+        <p>{t("calculator.method.delivery.p3")}</p>
       </Item>
 
-      <Item title="Upozornění">
-        <p>
-          Ceny jsou orientační, uvedené včetně DPH a mohou se lišit od aktuálního ceníku prodejce. Skutečná výhřevnost
-          závisí na konkrétní dodávce, uložení a spotřebiči. Před objednávkou si cenu a dopravu ověřte u prodejce.
-        </p>
+      <Item title={t("calculator.method.disclaimer.title")}>
+        <p>{t("calculator.method.disclaimer.body")}</p>
       </Item>
     </div>
   );

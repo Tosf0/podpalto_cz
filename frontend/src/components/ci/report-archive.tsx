@@ -6,6 +6,7 @@ import type { CrewAnalysisReportSummary, FuelCategory, RegionCode } from "@/type
 import { FUEL_CATEGORIES, FUEL_META } from "@/lib/constants";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n/use-i18n";
 import { EmptyState, ListSkeleton, RegionSelect } from "@/components/common";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,6 +22,7 @@ export function ReportArchive({
   selectedId: string | null;
   onSelect: (id: string) => void;
 }) {
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [region, setRegion] = useState<RegionCode | "all">("all");
   const [category, setCategory] = useState<FuelCategory | "all">("all");
@@ -48,19 +50,19 @@ export function ReportArchive({
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Hledat report…"
-            aria-label="Hledat v reportech"
+            placeholder={t("ci.archive.searchPlaceholder")}
+            aria-label={t("ci.archive.searchLabel")}
             className="h-9 rounded-xl bg-card pl-9"
           />
         </div>
         <div className="grid grid-cols-2 gap-2">
           <RegionSelect value={region} onChange={setRegion} className="w-full min-w-0" />
           <Select value={category} onValueChange={(v) => setCategory(v as FuelCategory | "all")}>
-            <SelectTrigger aria-label="Kategorie paliva" className="w-full min-w-0 bg-card">
-              <SelectValue placeholder="Palivo" />
+            <SelectTrigger aria-label={t("ci.archive.fuelLabel")} className="w-full min-w-0 bg-card">
+              <SelectValue placeholder={t("ci.archive.fuelPlaceholder")} />
             </SelectTrigger>
             <SelectContent className="z-[1200]">
-              <SelectItem value="all">Všechna paliva</SelectItem>
+              <SelectItem value="all">{t("ci.archive.allFuels")}</SelectItem>
               {FUEL_CATEGORIES.map((c) => (
                 <SelectItem key={c} value={c}>
                   {FUEL_META[c].label}
@@ -72,23 +74,21 @@ export function ReportArchive({
       </div>
 
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>
-          <span className="num">{filtered.length}</span> z <span className="num">{reports?.length ?? 0}</span> reportů
-        </span>
+        <span className="num">{t("ci.archive.count", { shown: filtered.length, count: reports?.length ?? 0 })}</span>
         <button
           type="button"
           onClick={() => setSort((v) => (v === "desc" ? "asc" : "desc"))}
           className="inline-flex items-center gap-1 rounded-lg px-1.5 py-1 font-medium hover:bg-muted hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
         >
           <ArrowDownUp className="size-3.5" aria-hidden />
-          {sort === "desc" ? "Nejnovější" : "Nejstarší"}
+          {sort === "desc" ? t("ci.archive.newest") : t("ci.archive.oldest")}
         </button>
       </div>
 
       {loading && !reports ? (
         <ListSkeleton count={4} />
       ) : filtered.length === 0 ? (
-        <EmptyState icon={<Archive />} title="Žádné reporty" description="Upravte hledání nebo filtry." />
+        <EmptyState icon={<Archive />} title={t("ci.archive.emptyTitle")} description={t("ci.archive.emptyHint")} />
       ) : (
         <ul className="max-h-72 space-y-1.5 overflow-y-auto pr-1 xl:max-h-[640px]">
           {filtered.map((r) => {

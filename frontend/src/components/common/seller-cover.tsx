@@ -1,4 +1,7 @@
+"use client";
+
 import type { FuelCategory, Seller } from "@/types";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 function hash(s: string): number {
@@ -86,6 +89,7 @@ const MAIN_FUEL_ORDER: FuelCategory[] = ["wood", "pellets", "briquettes", "coal"
  * (`seller.photoUrl`). Deterministická podle ID – každý prodejce má trochu jinou scénu.
  */
 export function SellerCover({ seller, fuel, className }: { seller: Seller; fuel?: FuelCategory; className?: string }) {
+  const { t } = useI18n();
   if (seller.photoUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element -- externí fotky od prodejců (libovolná doména)
@@ -101,7 +105,7 @@ export function SellerCover({ seller, fuel, className }: { seller: Seller; fuel?
   }));
 
   return (
-    <svg viewBox="0 0 640 260" preserveAspectRatio="xMidYMid slice" role="img" aria-label={`Ilustrace: ${seller.name}`} className={cn("h-full w-full", className)}>
+    <svg viewBox="0 0 640 260" preserveAspectRatio="xMidYMid slice" role="img" aria-label={t("map.ui.illustration", { name: seller.name })} className={cn("h-full w-full", className)}>
       <defs>
         <linearGradient id={`sky-${seller.id}`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor="#eef2ea" />

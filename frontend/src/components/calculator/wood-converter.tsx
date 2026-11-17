@@ -6,19 +6,25 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { KWH_PER_KG, MOISTURE, WOOD_GROUPS, WOOD_SOLID_FACTOR } from "@/lib/constants";
 import { convertWoodVolume, woodKwhPerUnit, type WoodVolumeUnit } from "@/lib/pricing";
 import { formatNumber } from "@/lib/format";
+import { t } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import type { Moisture, WoodGroup } from "@/types";
 import { Collapsible, NumberField, Panel, Segmented, parseNum } from "./fields";
 
 const UNITS: WoodVolumeUnit[] = ["PRMS", "PRM", "PLM"];
 
-const UNIT_INFO: Record<WoodVolumeUnit, { name: string; short: string; desc: string }> = {
-  PRMS: { name: "Prostorový metr sypaný", short: "sypaný", desc: "Štípané dříví nasypané na hromadu (např. z valníku)." },
-  PRM: { name: "Prostorový metr rovnaný", short: "rovnaný", desc: "Dříví úhledně srovnané do hranice 1 × 1 × 1 m." },
-  PLM: { name: "Plnometr", short: "plnometr", desc: "1 m³ čisté dřevní hmoty bez mezer – jednotka lesníků." },
-};
+/** Název a popis jednotky (překládá se při renderu). */
+function unitInfo(unit: WoodVolumeUnit) {
+  return {
+    name: t(`common.units.${unit}`),
+    short: t(`calculator.converter.unitShort.${unit}`),
+    desc: t(`calculator.converter.unitDesc.${unit}`),
+  };
+}
 
-const MOISTURE_LABEL: Record<Moisture, string> = { dry: "Suché", semi: "Polosuché", fresh: "Syrové" };
+function moistureLabel(m: Moisture): string {
+  return t(`calculator.converter.moistureShort.${m}`);
+}
 
 /** Znázornění zaplnění: nasypané / rovnané / plná hmota. */
 function FillCard({ unit, active }: { unit: WoodVolumeUnit; active: boolean }) {
@@ -34,7 +40,7 @@ function FillCard({ unit, active }: { unit: WoodVolumeUnit; active: boolean }) {
         viewBox="0 0 80 80"
         className="size-20"
         role="img"
-        aria-label={`${unit}: dřevo vyplňuje ${Math.round(ratio * 100)} % objemu`}
+        aria-label={t("calculator.converter.fillAria", { unit, percent: Math.round(ratio * 100) })}
       >
         <rect x="6" y="6" width="68" height="68" rx="4" className="fill-secondary stroke-border" strokeWidth="1.5" />
         {unit === "PLM" ? (
@@ -63,7 +69,7 @@ function FillCard({ unit, active }: { unit: WoodVolumeUnit; active: boolean }) {
       <div>
         <p className="num text-xl font-semibold">{Math.round(ratio * 100)} %</p>
         <p className="text-sm font-medium">{unit}</p>
-        <p className="mt-1 text-xs text-muted-foreground">{UNIT_INFO[unit].desc}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{unitInfo(unit).desc}</p>
       </div>
     </div>
   );
@@ -91,24 +97,24 @@ export function WoodConverter() {
     <div className="space-y-4">
       <div className="grid items-stretch gap-4 lg:grid-cols-2">
         <Panel className="space-y-4">
-          <NumberField id="conv-amount" label="Množství" value={amount} onChange={setAmount} step="0.5" suffix={unit} />
+          <NumberField id="conv-amount" label={t("calculator.converter.amount")} value={amount} onChange={setAmount} step="0.5" suffix={unit} />
           <Segmented
-            label="Jednotka"
+            label={t("calculator.converter.unit")}
             value={unit}
             onChange={setUnit}
-            options={UNITS.map((u) => ({ value: u, label: u, title: UNIT_INFO[u].name }))}
+            options={UNITS.map((u) => ({ value: u, label: u, title: unitInfo(u).name }))}
             tip={
               <>
                 {UNITS.map((u) => (
                   <p key={u}>
-                    <strong className="text-foreground">{u}</strong> – {UNIT_INFO[u].name}. {UNIT_INFO[u].desc}
+                    <strong className="text-foreground">{u}</strong> – {unitInfo(u).name}. {unitInfo(u).desc}
                   </p>
                 ))}
               </>
             }
           />
           <Segmented
-            label="Dřevo"
+            label={t("calculator.converter.wood")}
             value={group}
             onChange={setGroup}
             options={(Object.keys(WOOD_GROUPS) as WoodGroup[]).map((g) => ({
@@ -118,19 +124,19 @@ export function WoodConverter() {
             }))}
           />
           <Segmented
-            label="Vlhkost"
+            label={t("calculator.converter.moisture")}
             value={moisture}
             onChange={setMoisture}
             options={(Object.keys(MOISTURE) as Moisture[]).map((m) => ({
               value: m,
-              label: MOISTURE_LABEL[m],
+              label: moistureLabel(m),
               title: MOISTURE[m].hint,
             }))}
             tip={
               <>
                 {(Object.keys(MOISTURE) as Moisture[]).map((m) => (
                   <p key={m}>
-                    <strong className="text-foreground">{MOISTURE_LABEL[m]}</strong> – {MOISTURE[m].hint}
+                    <strong className="text-foreground">{moistureLabel(m)}</strong> – {MOISTURE[m].hint}
                   </p>
                 ))}
               </>
@@ -140,7 +146,7 @@ export function WoodConverter() {
 
         <Panel className="flex flex-col justify-between gap-4 border-primary/30 bg-accent/40">
           <div>
-            <p className="text-sm font-medium text-muted-foreground">Energie ve dřevě</p>
+            <p className="text-sm font-medium text-muted-foreground">{t("calculator.converter.energyTitle")}</p>
             <p className="num text-5xl font-semibold tracking-tight text-primary">
               {formatNumber(kwh)} <span className="text-xl font-medium text-muted-foreground">kWh</span>
             </p>
@@ -162,34 +168,33 @@ export function WoodConverter() {
                     <p className="num text-lg font-semibold tracking-tight">
                       {formatNumber(convertWoodVolume(value, unit, u), 2)}
                     </p>
-                    <p className="text-xs text-muted-foreground">{UNIT_INFO[u].short}</p>
+                    <p className="text-xs text-muted-foreground">{unitInfo(u).short}</p>
                   </div>
                 </TooltipTrigger>
-                <TooltipContent>{UNIT_INFO[u].name}</TooltipContent>
+                <TooltipContent>{unitInfo(u).name}</TooltipContent>
               </Tooltip>
             ))}
           </div>
 
           <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">Stejnou energii má přibližně</p>
+            <p className="text-xs font-medium text-muted-foreground">{t("calculator.converter.sameEnergy")}</p>
             <div className="grid grid-cols-3 gap-2">
-              <Equivalent label="Pelet" kg={kwh / KWH_PER_KG.pellets} />
-              <Equivalent label="Briket" kg={kwh / KWH_PER_KG.briquettesWood} />
-              <Equivalent label="Hnědého uhlí" kg={kwh / KWH_PER_KG.coalBrown} />
+              <Equivalent label={t("calculator.converter.pellets")} kg={kwh / KWH_PER_KG.pellets} />
+              <Equivalent label={t("calculator.converter.briquettes")} kg={kwh / KWH_PER_KG.briquettesWood} />
+              <Equivalent label={t("calculator.converter.brownCoal")} kg={kwh / KWH_PER_KG.coalBrown} />
             </div>
           </div>
         </Panel>
       </div>
 
-      <Collapsible title="Jak vypadá 1 m³ podle jednotky" icon={<Eye className="size-4 text-moss-strong" />}>
+      <Collapsible title={t("calculator.converter.visualTitle")} icon={<Eye className="size-4 text-moss-strong" />}>
         <div className="grid gap-3 sm:grid-cols-3">
           {UNITS.map((u) => (
             <FillCard key={u} unit={u} active={u === unit} />
           ))}
         </div>
         <p className="mt-3 text-sm text-muted-foreground">
-          1 PRMS = jen {Math.round(WOOD_SOLID_FACTOR.PRMS * 100)} % dřeva z 1 PLM, proto ceny „za metr“ nelze porovnávat
-          bez přepočtu.
+          {t("calculator.converter.visualNote", { percent: Math.round(WOOD_SOLID_FACTOR.PRMS * 100) })}
         </p>
       </Collapsible>
     </div>

@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { formatCzk, formatNumber } from "@/lib/format";
+import { useI18n } from "@/lib/i18n";
 import { offerTotal } from "@/lib/pricing";
 import type { FuelProduct, Seller, UserLocation } from "@/types";
 
@@ -31,6 +32,7 @@ export function OrderDialog({
   open: boolean;
   onOpenChange: (v: boolean) => void;
 }) {
+  const { t } = useI18n();
   const products = seller.products.filter((p) => p.stock !== "out_of_stock");
   const [productId, setProductId] = useState(initialProduct.id);
   const [quantity, setQuantity] = useState(String(initialProduct.minOrder ?? (initialProduct.category === "wood" ? 5 : 1)));
@@ -48,9 +50,9 @@ export function OrderDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle className="font-heading text-xl">Objednat u prodejce</DialogTitle>
+          <DialogTitle className="font-heading text-xl">{t("home.order.title")}</DialogTitle>
           <DialogDescription>
-            {seller.name} · {seller.address.city}. Prodejce vás bude kontaktovat a potvrdí termín dovozu.
+            {t("home.order.description", { seller: seller.name, city: seller.address.city })}
           </DialogDescription>
         </DialogHeader>
 
@@ -60,15 +62,15 @@ export function OrderDialog({
             e.preventDefault();
             if (!canSubmit) return;
             onOpenChange(false);
-            toast.success("Poptávka připravena", {
-              description: `${formatNumber(qty, qty % 1 ? 1 : 0)} × ${product.unit} · celkem ~ ${formatCzk(offer.total)}. (Demo – nic se neodeslalo.)`,
+            toast.success(t("home.order.toastTitle"), {
+              description: t("home.order.toastDesc", { qty: formatNumber(qty, qty % 1 ? 1 : 0), unit: product.unit, total: formatCzk(offer.total) }),
               icon: <CheckCircle2 className="size-4" />,
             });
           }}
         >
           <div className="grid grid-cols-[1fr_7.5rem] gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="order-product">Produkt</Label>
+              <Label htmlFor="order-product">{t("home.order.product")}</Label>
               <Select value={productId} onValueChange={setProductId}>
                 <SelectTrigger id="order-product" className="h-10 w-full rounded-xl">
                   <SelectValue />
@@ -83,30 +85,30 @@ export function OrderDialog({
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="order-qty">Množství ({product.unit})</Label>
+              <Label htmlFor="order-qty">{t("home.order.quantity", { unit: product.unit })}</Label>
               <Input id="order-qty" inputMode="decimal" value={quantity} onChange={(e) => setQuantity(e.target.value)} className="num h-10 rounded-xl" />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label htmlFor="order-name">Jméno</Label>
+              <Label htmlFor="order-name">{t("home.order.name")}</Label>
               <Input id="order-name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className="h-10 rounded-xl" />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="order-phone">Telefon</Label>
+              <Label htmlFor="order-phone">{t("home.order.phone")}</Label>
               <Input id="order-phone" type="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="h-10 rounded-xl" />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="order-note">Poznámka (příjezd, složení, termín)</Label>
+            <Label htmlFor="order-note">{t("home.order.note")}</Label>
             <Textarea id="order-note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} className="rounded-xl" />
           </div>
 
           {seller.delivery.hydraulicArm && (
             <label className="flex items-center justify-between rounded-xl border border-border px-3 py-2.5 text-sm">
-              Složit hydraulickou rukou
+              {t("home.order.arm")}
               <Switch checked={arm} onCheckedChange={setArm} />
             </label>
           )}
@@ -114,25 +116,25 @@ export function OrderDialog({
           {/* Souhrn */}
           <div className="grid grid-cols-3 gap-2 rounded-2xl bg-secondary p-3 text-center">
             <div>
-              <p className="text-[11px] text-secondary-foreground/70">Palivo</p>
+              <p className="text-[11px] text-secondary-foreground/70">{t("home.order.fuel")}</p>
               <p className="num text-sm font-semibold text-secondary-foreground">{formatCzk(offer.goods)}</p>
             </div>
             <div>
               <p className="flex items-center justify-center gap-1 text-[11px] text-secondary-foreground/70">
-                <Truck aria-hidden className="size-3" /> Doprava
+                <Truck aria-hidden className="size-3" /> {t("home.order.delivery")}
               </p>
               <p className="num text-sm font-semibold text-secondary-foreground">
-                {offer.delivery.outOfRange ? "odběr" : offer.delivery.free ? "zdarma" : formatCzk(offer.delivery.fee)}
+                {offer.delivery.outOfRange ? t("home.order.pickup") : offer.delivery.free ? t("home.order.free") : formatCzk(offer.delivery.fee)}
               </p>
             </div>
             <div>
-              <p className="text-[11px] text-secondary-foreground/70">Celkem</p>
+              <p className="text-[11px] text-secondary-foreground/70">{t("home.order.total")}</p>
               <p className="num text-sm font-bold text-wood-strong">{formatCzk(offer.total)}</p>
             </div>
           </div>
 
           <Button type="submit" size="lg" className="w-full" disabled={!canSubmit}>
-            Odeslat poptávku
+            {t("home.order.submit")}
           </Button>
         </form>
       </DialogContent>

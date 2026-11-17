@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 /** Převod textového vstupu (čárka i tečka) na nezáporné číslo. */
@@ -32,7 +33,9 @@ export function PanelTitle({ children, tip, className }: { children: ReactNode; 
 }
 
 /** Malé (i) – vysvětlení po najetí / kliknutí. */
-export function InfoTip({ children, label = "Více informací" }: { children: ReactNode; label?: string }) {
+export function InfoTip({ children, label }: { children: ReactNode; label?: string }) {
+  const { t } = useI18n();
+  label ??= t("calculator.fields.moreInfo");
   return (
     <Popover>
       <Tooltip>

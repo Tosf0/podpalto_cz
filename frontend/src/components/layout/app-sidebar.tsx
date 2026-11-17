@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Logo } from "@/components/common/logo";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n";
 import { NAV_LINKS, isActivePath } from "./nav-links";
 import { SettingsDialog } from "./settings-dialog";
 
@@ -40,6 +41,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { resolvedTheme, setTheme } = useTheme();
   const mounted = useSyncExternalStore(subscribe, () => true, () => false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const { t } = useI18n();
   const isDark = mounted && resolvedTheme === "dark";
 
   return (
@@ -48,7 +50,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <div className="flex h-[72px] shrink-0 items-center justify-between gap-2 border-b border-sidebar-border pr-3 pl-5">
         <Logo tone="inverted" compact className="min-w-0" />
         <PanelIconButton
-          label={mounted ? (isDark ? "Přepnout na světlý režim" : "Přepnout na tmavý režim") : "Přepnout motiv"}
+          label={mounted ? (isDark ? t("layout.theme.toLight") : t("layout.theme.toDark")) : t("layout.theme.toggle")}
           onClick={() => setTheme(isDark ? "light" : "dark")}
         >
           {isDark ? <Sun aria-hidden /> : <Moon aria-hidden />}
@@ -56,10 +58,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       {/* Navigace – posouvá se, patička zůstává dole */}
-      <nav aria-label="Hlavní navigace" className="min-h-0 flex-1 overflow-y-auto p-4">
-        <p className="mb-2 px-3 text-[11px] font-semibold tracking-[0.12em] text-sidebar-foreground/50 uppercase">Menu</p>
+      <nav aria-label={t("layout.nav.aria")} className="min-h-0 flex-1 overflow-y-auto p-4">
+        <p className="mb-2 px-3 text-[11px] font-semibold tracking-[0.12em] text-sidebar-foreground/50 uppercase">{t("layout.nav.menu")}</p>
         <ul className="space-y-1">
-          {NAV_LINKS.map(({ href, label, hint, icon: Icon, badge }) => {
+          {NAV_LINKS.map(({ href, key, icon: Icon, badge }) => {
             const active = isActivePath(pathname, href);
             return (
               <li key={href}>
@@ -84,7 +86,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-2 text-sm font-semibold">
-                      {label}
+                      {t(`layout.nav.${key}.label`)}
                       {badge && (
                         <span
                           className={cn(
@@ -102,7 +104,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                         active ? "text-sidebar-primary-foreground/70" : "text-sidebar-foreground/50",
                       )}
                     >
-                      {hint}
+                      {t(`layout.nav.${key}.hint`)}
                     </span>
                   </span>
                 </Link>
@@ -116,7 +118,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       <div className="shrink-0 space-y-3 border-t border-sidebar-border p-4">
         <button type="button" onClick={() => setSettingsOpen(true)} className={cn(widgetButton, "h-11 w-full bg-sidebar-accent text-sm")}>
           <Settings aria-hidden />
-          Nastavení
+          {t("layout.settings.open")}
         </button>
 
         <div className="flex items-center gap-3 px-1">
@@ -124,14 +126,14 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
             CH
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-semibold text-sidebar-foreground">Chalupář</span>
-            <span className="block truncate text-[11px] text-sidebar-foreground/55">Demo účet</span>
+            <span className="block truncate text-sm font-semibold text-sidebar-foreground">{t("layout.account.name")}</span>
+            <span className="block truncate text-[11px] text-sidebar-foreground/55">{t("layout.account.demo")}</span>
           </span>
           <PanelIconButton
-            label="Odhlásit se"
+            label={t("layout.account.logout")}
             onClick={() =>
-              toast("Přihlašování zatím není zapojené", {
-                description: "Odhlášení bude fungovat po napojení uživatelských účtů.",
+              toast(t("layout.account.logoutToast"), {
+                description: t("layout.account.logoutToastDesc"),
               })
             }
           >
@@ -150,6 +152,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
  */
 export function AppSidebar() {
   const [open, setOpen] = useState(false);
+  const { t } = useI18n();
 
   return (
     <>
@@ -165,14 +168,14 @@ export function AppSidebar() {
       {/* Mobil: horní lišta */}
       <div className="sticky top-0 z-40 flex h-14 items-center justify-between bg-sidebar px-4 text-sidebar-foreground lg:hidden">
         <Logo tone="inverted" compact />
-        <PanelIconButton label="Otevřít menu" onClick={() => setOpen(true)}>
+        <PanelIconButton label={t("layout.nav.openMenu")} onClick={() => setOpen(true)}>
           <Menu aria-hidden />
         </PanelIconButton>
       </div>
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent side="left" className="w-[300px] border-none bg-sidebar p-0 text-sidebar-foreground">
-          <SheetTitle className="sr-only">Menu</SheetTitle>
-          <SheetDescription className="sr-only">Navigace a nastavení</SheetDescription>
+          <SheetTitle className="sr-only">{t("layout.nav.menu")}</SheetTitle>
+          <SheetDescription className="sr-only">{t("layout.nav.menuDescription")}</SheetDescription>
           <SidebarContent onNavigate={() => setOpen(false)} />
         </SheetContent>
       </Sheet>
