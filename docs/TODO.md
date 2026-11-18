@@ -198,7 +198,7 @@ API klíč mezi Vercelem a Railway.
       `seller_intel`) a **analýza `url`** (formulář v CI Studiu) – v `handlers.py` je místo nich
       `not_ready(…)`: běh skončí srozumitelnou chybou místo věčného čekání ve frontě.
 - [x] **4. Railway** (viz níže) a test end-to-end (18. 11. 2026): projekt `podpalto`, služby
-      `tools` a `worker` běží z větve `dev` (push nasadí jen dotčenou službu). Test: job
+      `tools` a `worker` běží z větve **`main`** (produkční, viz „Vydání“ níže). Test: job
       `collect` s `source_ids: ["peletypremium"]` převzal `railway-worker`, sběr na Railway,
       export (snímek 1000001, 4 ceny) a přepočet statistik za 12 s. Další naplánovaný sběr
       1. 12. ve 3:00 (všechny zdroje, ceníky přes Claude API; volume `/data` na Railway
@@ -256,6 +256,18 @@ nahraje ji. Mapování polí je v `docs/agent-output-spec.md` (kap. 4–8, 10, 1
 `data_source` scraper seller manual. Nový prodejce / cena s blokujícím příznakem (`flags`) jde
 sám do ruční kontroly (`review_status = needs_review`, admin → Data od agentů).
 
+#### Vydání: `dev` → `main` (od 18. 11. 2026)
+
+- **`dev`** = vývoj, pushuje se kdykoli; nic se z něj automaticky nenasazuje na Railway.
+- **`main`** = produkce. Railway (`tools`, `worker`) nasazuje každý push do `main`.
+  `main` byl 18. 11. posunut na tehdejší `dev` (commit `627117a`), dřív obsahoval jen
+  „Initial commit“.
+- **Vydání:** na GitHubu pull request `dev` → `main` (testy prošly, lokálně ověřeno), merge.
+  Před vydáním zkontrolovat, že neběží job (redeploy rozdělaný běh ukončí).
+- [ ] **Lukáš:** na Vercelu nastavit *Production Branch* na `main` (pokud dnes produkce
+      jede z `dev`), aby web a agenti vydávali stejně; `dev` jako Preview.
+- [ ] Na GitHubu zvážit ochranu `main` (jen přes pull request) a `main` jako výchozí větev.
+
 #### Railway – krok za krokem (poprvé)
 
 **Stav 18. 11. 2026 večer:** projekt `podpalto` je založený přes API Railway (token
@@ -305,8 +317,9 @@ import čísla do ~100 už použil.
 5. **Test:** na webu admin → **Agenti** → u „Přehled trhu“ *Spustit nyní* → do minuty
    „Běží“ (hláška „Worker … naposledy převzal běh“), na konci „Hotovo“ a report v CI Studiu.
    „Sběr cen“ skončí chybou, dokud nebude `worker/export.py` – to je v pořádku.
-6. **Provoz:** každý push do `dev` znovu nasadí jen dotčenou službu (watch patterns
-   v `railway/*.json`). Rozdělaný běh při redeployi skončí „Worker se ukončil … spusťte znovu“.
+6. **Provoz:** Railway nasazuje z větve **`main`**, ne z `dev` (od 18. 11. 2026): worker
+   zapisuje do jediné, produkční Supabase, takže na Railway smí jen vydaný kód. Push do `main`
+   znovu nasadí jen dotčenou službu (watch patterns v nastavení služby). Rozdělaný běh při redeployi skončí „Worker se ukončil … spusťte znovu“.
    V Anthropic konzoli nastav měsíční limit útraty. Služba `app` s HTTP API (`/runs`)
    na Railway **není potřeba**.
 
