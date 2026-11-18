@@ -149,11 +149,16 @@ API klíč mezi Vercelem a Railway.
         (`ico`, `lat`/`lng`, `website`…), příznaky ano. `valid_in_regions` jde u každé ceny.
         Sklad Ridera Ostrava je samostatný prodejce (s `ridepal` by se stal celostátním
         a zmizel z mapy).
-      - [ ] **První import (s `SUPABASE_SECRET_KEY`):** databáze je od 18. 11. prázdná
-        (čistý start), `link_sellers` už není potřeba.
-        1. `uv run uvicorn podpalto_tools.api:app --port 8001` (lokální data v `data/`),
-        2. `uv run python -m podpalto_app.worker.export --dry-run`, kontrola počtů, pak bez
-           `--dry-run`, nakonec `select public.refresh_market_stats();`.
+      - [x] **První import proběhl** (18. 11. 2026 večer, z lokálních dat): 34 prodejců
+        (všichni `ok`, všichni se souřadnicemi), 574 produktů (4 akce, 16 množstevních cen),
+        574 cen, 35 běhů; vynecháno 39 řádků (20× dřevo v nejasných m³, 17× neznámé balení,
+        baumax bez adresy, Havelka `export: false`). **4 produkty čekají na kontrolu**
+        (`outlier_vs_market`) v administraci → Data od agentů. `refresh_market_stats()`
+        spuštěno: mediány ČR i 13 krajů (chybí Pardubický).
+        Postup pro další ruční import: `uv run uvicorn podpalto_tools.api:app --port 8001`,
+        `uv run python -m podpalto_app.worker.export --dry-run`, pak bez `--dry-run`, nakonec
+        `select public.refresh_market_stats();`. Pozor: `tools` po změně kódu restartovat
+        (uvicorn bez `--reload` drží starý kód i model registru).
       - [x] Akční a množstevní ceny (18. 11. 2026): export je pozná z textu varianty
         (`price_tier`, `is_promo`, `base_product_key`, spec §7). Cenová pásma Havelky
         sloučí do jednoho produktu s cenou „od“. Na lokálních datech 13 množstevních cen
