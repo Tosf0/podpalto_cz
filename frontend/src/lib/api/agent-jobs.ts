@@ -29,6 +29,14 @@ export interface AgentJob {
 
 export type AgentJobSchedule = Pick<AgentJob, "enabled" | "frequency" | "day_of_month" | "weekday" | "hour">;
 
+/** Řádek logu běhu (worker zapisuje po každém kroku, u sběru po každém zdroji). */
+export interface JobLogEntry {
+  ts: string;
+  step?: string;
+  level: "info" | "tool" | "thought" | "success" | "error";
+  message: string;
+}
+
 export interface AgentJobRun {
   id: string;
   job: AgentJobKey;
@@ -41,6 +49,7 @@ export interface AgentJobRun {
   updated_at: string;
   progress: number;
   summary: Record<string, unknown>;
+  logs: JobLogEntry[];
   error: string | null;
 }
 
@@ -72,7 +81,7 @@ export async function getAgentJobs(): Promise<AgentJob[]> {
 export async function getAgentJobRuns(limit = 25): Promise<AgentJobRun[]> {
   const { data, error } = await db()
     .from("agent_job_runs")
-    .select("id, job, trigger, status, requested_at, claimed_by, started_at, finished_at, updated_at, progress, summary, error")
+    .select("id, job, trigger, status, requested_at, claimed_by, started_at, finished_at, updated_at, progress, summary, logs, error")
     .order("requested_at", { ascending: false })
     .limit(limit);
   check(error);
