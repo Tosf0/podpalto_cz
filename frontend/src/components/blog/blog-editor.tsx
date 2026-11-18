@@ -26,6 +26,7 @@ import {
   Table2,
   Trash2,
   Clock,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import type { BlogCategory, BlogPost, BlogPostStatus } from "@/types";
@@ -74,7 +75,7 @@ interface Draft {
   excerpt: string;
   category: BlogCategory;
   tags: string;
-  cover: { url: string; alt: string } | null;
+  cover: { url: string; alt: string; credit?: string } | null;
   content: string;
   status: BlogPostStatus;
   publishDate: string;
@@ -116,7 +117,7 @@ function fromPost(p: BlogPost): Draft {
     excerpt: p.excerpt,
     category: p.category,
     tags: p.tags.join(", "),
-    cover: p.cover ? { url: p.cover.url, alt: p.cover.alt } : null,
+    cover: p.cover ? { url: p.cover.url, alt: p.cover.alt, credit: p.cover.credit ?? "" } : null,
     content: p.content,
     status: p.status,
     publishDate: (p.published_at ?? new Date().toISOString()).slice(0, 10),
@@ -171,6 +172,87 @@ function Field({ label, hint, htmlFor, children }: { label: string; hint?: strin
       </Label>
       {children}
       {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+    </div>
+  );
+}
+
+const splitTags = (s: string) => s.split(",").map((x) => x.trim()).filter(Boolean);
+
+/** Štítky jako pilulky: Enter nebo čárka přidá, × / Backspace odebere, návrhy z existujících štítků. */
+function TagInput({ value, onChange, suggestions }: { value: string; onChange: (v: string) => void; suggestions: string[] }) {
+  const { t } = useI18n();
+  const [text, setText] = useState("");
+  const tags = splitTags(value);
+  const lower = new Set(tags.map((x) => x.toLocaleLowerCase("cs")));
+  const add = (raw: string) => {
+    const tag = raw.replace(/,/g, " ").trim().slice(0, 40);
+    if (!tag || lower.has(tag.toLocaleLowerCase("cs"))) return;
+    onChange([...tags, tag].join(", "));
+  };
+  const remove = (tag: string) => onChange(tags.filter((x) => x !== tag).join(", "));
+  const q = text.trim().toLocaleLowerCase("cs");
+  const offer = suggestions.filter((s) => !lower.has(s.toLocaleLowerCase("cs")) && (!q || s.toLocaleLowerCase("cs").includes(q))).slice(0, 14);
+
+  return (
+    <div className="space-y-2">
+      <div className="flex min-h-9 flex-wrap items-center gap-1.5 rounded-xl border border-input px-2 py-1.5 focus-within:ring-3 focus-within:ring-ring/30">
+        {tags.map((tag) => (
+          <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-secondary py-0.5 pr-1 pl-2.5 text-xs font-medium text-secondary-foreground">
+            {tag}
+            <button
+              type="button"
+              onClick={() => remove(tag)}
+              aria-label={t("blog.editor.fields.tagRemove", { tag })}
+              className="flex size-4 items-center justify-center rounded-full hover:bg-foreground/10"
+            >
+              <X className="size-3" aria-hidden />
+            </button>
+          </span>
+        ))}
+        <input
+          id="post-tags"
+          value={text}
+          onChange={(e) => {
+            const v = e.target.value;
+            if (v.includes(",")) {
+              v.split(",").slice(0, -1).forEach(add);
+              setText(v.split(",").at(-1) ?? "");
+            } else setText(v);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              add(text);
+              setText("");
+            } else if (e.key === "Backspace" && !text && tags.length) {
+              remove(tags[tags.length - 1]);
+            }
+          }}
+          onBlur={() => {
+            if (text.trim()) {
+              add(text);
+              setText("");
+            }
+          }}
+          placeholder={tags.length ? "" : t("blog.editor.fields.tagsPlaceholder")}
+          className="h-6 min-w-24 flex-1 bg-transparent text-sm outline-none"
+        />
+      </div>
+      {offer.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-xs text-muted-foreground">{t("blog.editor.fields.tagsSuggest")}:</span>
+          {offer.map((s) => (
+            <button
+              key={s}
+              type="button"
+              onClick={() => add(s)}
+              className="rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
+            >
+              + {s}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -339,13 +421,16 @@ export function BlogEditor({ drafts, canPublish, initialId }: { drafts: BlogPost
         content: ready.content,
         cover_url: ready.cover?.url ?? null,
         cover_alt: ready.cover?.alt ?? null,
-        cover_credit: null,
+        cover_credit: ready.cover?.credit?.trim() || null,
         category: ready.category,
         tags: ready.tags.split(",").map((x) => x.trim()).filter(Boolean),
         // při úpravě existujícího článku (třeba adminem) zůstává původní autor
         author_id: ready.id ? (ready.authorId ?? user.id) : user.id,
-        author_name: ready.id && ready.authorName ? ready.authorName : profile?.full_name?.trim() || t("account.editor.anonymousAuthor"),
-        author_role: ready.id ? (ready.authorRole ?? null) : null,
+        // editor/admin může jméno a roli autora nastavit ručně (podpis článku)
+        author_name:
+          (canPublish && ready.authorName?.trim()) ||
+          (ready.id && ready.authorName ? ready.authorName : profile?.full_name?.trim() || t("account.editor.anonymousAuthor")),
+        author_role: canPublish ? ready.authorRole?.trim() || null : ready.id ? (ready.authorRole ?? null) : null,
         author_avatar_url: ready.id ? null : (profile?.avatar_url ?? null),
         status,
         published_at: publishedAt,
@@ -409,6 +494,13 @@ export function BlogEditor({ drafts, canPublish, initialId }: { drafts: BlogPost
   };
 
   /* ------------------------------ odvozené ------------------------------ */
+
+  /** Štítky, které už na blogu jsou (seřazené podle četnosti) – návrhy pro TagInput. */
+  const knownTags = useMemo(() => {
+    const count = new Map<string, number>();
+    for (const p of drafts) for (const tag of p.tags) count.set(tag, (count.get(tag) ?? 0) + 1);
+    return [...count.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "cs")).map(([tag]) => tag);
+  }, [drafts]);
 
   const words = useMemo(() => plainText(draft.content).split(" ").filter(Boolean).length, [draft.content]);
   const minutes = estimateReadingMinutes(draft.content);
@@ -554,7 +646,7 @@ export function BlogEditor({ drafts, canPublish, initialId }: { drafts: BlogPost
                   />
                 </div>
               </Field>
-              <div className="grid grid-cols-2 gap-4">
+              <div>
                 <Field label={t("blog.editor.fields.category")}>
                   <Select value={draft.category} onValueChange={(v) => update("category", v as BlogCategory)}>
                     <SelectTrigger className="h-9 w-full rounded-xl">
@@ -569,14 +661,10 @@ export function BlogEditor({ drafts, canPublish, initialId }: { drafts: BlogPost
                     </SelectContent>
                   </Select>
                 </Field>
-                <Field label={t("blog.editor.fields.tags")} htmlFor="post-tags">
-                  <Input
-                    id="post-tags"
-                    value={draft.tags}
-                    onChange={(e) => update("tags", e.target.value)}
-                    placeholder={t("blog.editor.fields.tagsPlaceholder")}
-                    className="h-9 rounded-xl"
-                  />
+              </div>
+              <div className="md:col-span-2">
+                <Field label={t("blog.editor.fields.tags")} htmlFor="post-tags" hint={t("blog.editor.fields.tagsHint")}>
+                  <TagInput value={draft.tags} onChange={(v) => update("tags", v)} suggestions={knownTags} />
                 </Field>
               </div>
               <div className="md:col-span-2">
@@ -619,6 +707,16 @@ export function BlogEditor({ drafts, canPublish, initialId }: { drafts: BlogPost
                     disabled={!draft.cover}
                     onChange={(e) => setDraft((d) => (d.cover ? { ...d, cover: { ...d.cover, alt: e.target.value } } : d))}
                     placeholder={t("blog.editor.fields.coverAltPlaceholder")}
+                    className="h-9 rounded-xl"
+                  />
+                </Field>
+                <Field label={t("blog.editor.fields.coverCredit")} htmlFor="cover-credit">
+                  <Input
+                    id="cover-credit"
+                    value={draft.cover?.credit ?? ""}
+                    disabled={!draft.cover}
+                    onChange={(e) => setDraft((d) => (d.cover ? { ...d, cover: { ...d.cover, credit: e.target.value } } : d))}
+                    placeholder={t("blog.editor.fields.coverCreditPlaceholder")}
                     className="h-9 rounded-xl"
                   />
                 </Field>
@@ -737,6 +835,28 @@ export function BlogEditor({ drafts, canPublish, initialId }: { drafts: BlogPost
                 ))}
               </div>
             </Field>
+            )}
+            {!contributor && USES_DB && (
+              <>
+                <Field label={t("blog.editor.side.author")} htmlFor="post-author">
+                  <Input
+                    id="post-author"
+                    value={draft.authorName ?? ""}
+                    onChange={(e) => update("authorName", e.target.value)}
+                    placeholder={profile?.full_name ?? ""}
+                    className="h-9 rounded-xl"
+                  />
+                </Field>
+                <Field label={t("blog.editor.side.authorRole")} htmlFor="post-author-role">
+                  <Input
+                    id="post-author-role"
+                    value={draft.authorRole ?? ""}
+                    onChange={(e) => update("authorRole", e.target.value)}
+                    placeholder={t("blog.editor.side.authorRolePlaceholder")}
+                    className="h-9 rounded-xl"
+                  />
+                </Field>
+              </>
             )}
             {!contributor && (
               <Field label={t("blog.editor.side.date")} htmlFor="post-date">
