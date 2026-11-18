@@ -659,6 +659,16 @@ a `podpalto-verify-sellers`. Adresy jsou z PDF; před zápisem je ověřit.
       vedle celostátního e-shopu `ridepal`). Ostatní stránky Ridery: Karviná-Barbora jen recyklát, Dolní Suchá a Malé
       Březno bez ceníku. Akční paleta Ridery („E-SHOP – AKČNÍ NABÍDKA“ v nadpisu, ne v řádku)
       se jako akce nepozná.
+- [x] **Kraje bez prodejce a s jedním prodejcem** (19. 11. 2026, handoff #04 bod 3), lokálně
+      ověřeno sběrem, **v produkci až po vydání `dev` → `main` a jobu „Sběr cen“**:
+      Pardubický `lesy_policka` (Městské lesy Polička, 5 cen) a `dmdrevo` (Starý Mateřov,
+      8 cen); Olomoucký `olin` (OL-IN Šternberk, 12 cen) a `drevoludwig` (Samotišky, 5 cen);
+      Plzeňský `palivamakovy` (Chocenický Újezd, 8 cen). Nenalezeno s ceníkem v HTML:
+      Městské lesy Litomyšl (jen .doc), Městské lesy Vysoké Mýto, Raledo, Dřevo Zámrsk (bez
+      adresy skladu), okpaliva.cz (shazuje spojení). Jihomoravský kraj a Praha: hledání
+      vrací jen adresáře (Firmy.cz) bez ceníků – zbývá. Kandidáti mimo slabé kraje: Uhlí
+      Doležal (`uhlidolezal.cz`, sklad Uhlířská Lhota, STC), Uhelné sklady Jan Maria
+      (`uhli-janmaria.cz`, MSK).
 - [ ] **SD Bílina, velkoobchodní PDF ceník** (`sd-bilinskeuhli.cz/dokumenty/cenik-2025.pdf`):
       ceny bez DPH a bez spotřební daně, jen jako referenční velkoobchodní cena, ne cena
       pro domácnosti; rozmyslet, jak ji v datech odlišit (PDF s. 10)

@@ -581,6 +581,121 @@ sources:
     consent: none
     notes: Municipal forests; columns without and with 21 % VAT, prm and m3.
 
+  # Checked on 2026-11-19 (Pardubice region had no seller): robots.txt allows the page, the
+  # price table is in the HTML. Not added: Městské lesy Litomyšl (price list only as a .doc
+  # download), Dřevo Zámrsk (Shoptet, delivery only, no yard address; operator AMAO service
+  # s.r.o. is a Brno office), okpaliva.cz (resets the connection of our client).
+
+  - id: lesy_policka
+    seller: lesy.policka.org
+    name: Městské lesy Polička
+    location:
+      ruian: 1814770
+      note: "/kontakty: Město Polička – odbor lesního hospodářství, Pomezí 351; odvoz i z výrobního skladu."
+    ico: "00277177"
+    base_url: https://lesy.policka.org
+    kind: static_html
+    pillar: 4
+    page_paths: [/palivove-drevo]
+    region: Pardubický kraj
+    price_region: Pardubický kraj
+    consent: none
+    notes: >-
+      Municipal forests of Polička. Price per prm (stacked) without and with VAT, split
+      25/33/50 cm and 1 m logs, soft and hard. Also wood from forest landings per m3 (solid)
+      and self-harvest prices (samovýroba), which are not firewood offers.
+
+  # Checked on 2026-11-19 (regions with one or no seller): robots.txt allows the pages, the
+  # prices are in the HTML. Not added: Raledo (no prices on the web, e-shop with an invalid
+  # TLS certificate), Městské lesy Vysoké Mýto (no price list found).
+
+  - id: dmdrevo
+    seller: dmdrevo.cz
+    name: Palivové DMdřevo
+    location:
+      ruian: 85383023
+      note: "/kontakt: provozovna, sklad a expedice Starý Mateřov 450 (sídlo Pardubice-Polabiny)."
+    ico: "74664301"
+    base_url: https://www.dmdrevo.cz
+    kind: static_html
+    pillar: 4
+    page_paths: [/produkty]
+    region: Pardubický kraj
+    price_region: Pardubický kraj
+    consent: none
+    notes: >-
+      Firewood seller near Pardubice. Product list with prices per PRMS (split logs), PRMR (2-4 m
+      logs) and per net bag; also shavings and storage bags, which are not fuel.
+
+  - id: olin
+    seller: ol-in.cz
+    name: OL-IN Šternberk
+    location:
+      ruian: 27570371
+      note: "/prodejna/: prodejna a provozovna Litovelská 2510/12, Šternberk."
+    ico: "02160021"
+    base_url: https://www.ol-in.cz
+    kind: static_html
+    pillar: 3
+    page_paths:
+      - /produkt/brikety-ruf-mix-smes-tvrdeho-a-mekkeho-dreva/
+      - /produkt/brikety-ruf-tvrde-drevo/
+      - /produkt/brikety-valcove-tvrde-drevo/
+      - /produkt/brikety-valcove-tvrde-top/
+      - /produkt/palivove-drevo-buk-suche-paleta/
+      - /produkt/palivove-drevo-tvrde/
+      - /produkt/pelety-drevene-enplus-a1/
+      - /produkt/raselinove-brikety/
+      - /produkt/smrkove-stipane-drevo-sypane/
+      - /produkt/uhelne-brikety-rekord-2/
+      - /produkt/uhli-bilina-orech-1/
+      - /produkt/uhli-bilina-orech-2/
+    region: Olomoucký kraj
+    price_region: Olomoucký kraj
+    consent: none
+    notes: >-
+      Builders' merchant with a fuel shop (WooCommerce). The category page /eshop/paliva/ shows
+      prices without units, so the 12 product pages are read: price with and without VAT, pack
+      size and price per kg. New fuel products need a new path here.
+
+  - id: drevoludwig
+    seller: drevo-ludwig.cz
+    name: Dřevo Ludwig
+    location:
+      ruian: 16241576
+      note: "Patička webu: Bablerovo náměstí 19/4, Samotišky (u Olomouce)."
+    ico: "21371008"
+    base_url: https://drevo-ludwig.cz
+    kind: static_html
+    pillar: 4
+    page_paths: [/produkty]
+    region: Olomoucký kraj
+    price_region: Olomoucký kraj
+    price_includes_vat: true
+    consent: none
+    notes: >-
+      Firewood seller around Olomouc (delivery up to 60 km). Not a VAT payer: "ceny na webu
+      jsou konečné", so prices count as final prices incl. VAT. Prices "od" per PRMS / PRMR.
+
+  - id: palivamakovy
+    seller: palivamakovy.cz
+    name: Paliva Makový
+    location:
+      ruian: 947580
+      note: "/kontakt: PALIVA MAKOVÝ, Chocenický Újezd 1, Letiny (sídlo Plzeň)."
+    ico: "02352541"
+    base_url: https://www.palivamakovy.cz
+    kind: static_html
+    pillar: 2
+    page_paths: [/]
+    region: Plzeňský kraj
+    price_region: Plzeňský kraj
+    consent: none
+    notes: >-
+      Coal yard south of Plzeň. Price list on the home page: coal and briquettes per q, firewood
+      per prmr. A heading "01.04.2024 Ceník paliv" is an old news item; the table above it is
+      the current list.
+
   - id: drevopraha
     seller: drevopraha.cz
     name: DřevoPraha

@@ -243,6 +243,60 @@
   "note": ""
  },
  {
+  "seller_key": "dmdrevo",
+  "source_id": "dmdrevo",
+  "address": {
+   "street": "Starý Mateřov 450",
+   "city": "Starý Mateřov",
+   "zip": "530 02",
+   "region": "PAK",
+   "ruian_address_code": 85383023
+  },
+  "location": {
+   "lat": 50.000388,
+   "lng": 15.707452,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "74664301",
+   "name": "David Mlynář",
+   "seat": "Lonkova 466, Polabiny, 53009 Pardubice"
+  },
+  "checked_at": "2026-11-18T22:08:30+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "/kontakt: provozovna, sklad a expedice Starý Mateřov 450 (sídlo Pardubice-Polabiny)."
+ },
+ {
+  "seller_key": "drevoludwig",
+  "source_id": "drevoludwig",
+  "address": {
+   "street": "Bablerovo náměstí 19/4",
+   "city": "Samotišky",
+   "zip": "779 00",
+   "region": "OLK",
+   "ruian_address_code": 16241576
+  },
+  "location": {
+   "lat": 49.632732,
+   "lng": 17.327543,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "21371008",
+   "name": "Jiří Ludwig",
+   "seat": "Bablerovo náměstí 19/4, 77900 Samotišky"
+  },
+  "checked_at": "2026-11-18T22:08:34+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "Patička webu: Bablerovo náměstí 19/4, Samotišky (u Olomouce)."
+ },
+ {
   "seller_key": "drevopraha",
   "source_id": "drevopraha",
   "address": {
@@ -493,6 +547,33 @@
   "note": "Úvodní stránka: výroba Londýnská ulice, Liberec – Růžodol I (vedle ČOV), bez čísla; bod = střed ulice."
  },
  {
+  "seller_key": "lesy_policka",
+  "source_id": "lesy_policka",
+  "address": {
+   "street": "Pomezí 351",
+   "city": "Pomezí",
+   "zip": "569 71",
+   "region": "PAK",
+   "ruian_address_code": 1814770
+  },
+  "location": {
+   "lat": 49.705008,
+   "lng": 16.342367,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "00277177",
+   "name": "Město Polička",
+   "seat": "Palackého nám. 160, Polička-Město, 57201 Polička"
+  },
+  "checked_at": "2026-11-18T22:02:56+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "/kontakty: Město Polička – odbor lesního hospodářství, Pomezí 351; odvoz i z výrobního skladu."
+ },
+ {
   "seller_key": "mountfield",
   "source_id": "mountfield",
   "address": {
@@ -522,6 +603,33 @@
   "note": ""
  },
  {
+  "seller_key": "olin",
+  "source_id": "olin",
+  "address": {
+   "street": "Litovelská 2510/12",
+   "city": "Šternberk",
+   "zip": "785 01",
+   "region": "OLK",
+   "ruian_address_code": 27570371
+  },
+  "location": {
+   "lat": 49.725226,
+   "lng": 17.280902,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "02160021",
+   "name": "Online-olin s.r.o.",
+   "seat": "Litovelská 2510/12, 78501 Šternberk"
+  },
+  "checked_at": "2026-11-18T22:08:32+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "/prodejna/: prodejna a provozovna Litovelská 2510/12, Šternberk."
+ },
+ {
   "seller_key": "olvan",
   "source_id": "olvan",
   "address": {
@@ -549,6 +657,33 @@
   ],
   "detail": "",
   "note": ""
+ },
+ {
+  "seller_key": "palivamakovy",
+  "source_id": "palivamakovy",
+  "address": {
+   "street": "Chocenický Újezd 1",
+   "city": "Letiny",
+   "zip": "336 01",
+   "region": "PLK",
+   "ruian_address_code": 947580
+  },
+  "location": {
+   "lat": 49.567358,
+   "lng": 13.479967,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "02352541",
+   "name": "Paliva Ludako s.r.o.",
+   "seat": "Na Celchu 917/2, Lobzy, 32600 Plzeň"
+  },
+  "checked_at": "2026-11-18T22:08:41+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "/kontakt: PALIVA MAKOVÝ, Chocenický Újezd 1, Letiny (sídlo Plzeň)."
  },
  {
   "seller_key": "palivapolice",
