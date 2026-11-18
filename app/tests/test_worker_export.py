@@ -250,3 +250,19 @@ def test_a_key_set_by_the_export_is_never_replaced() -> None:
     exported = [{"seller_key": "palivos", "website": "https://palivos.cz", "company_ico": None}]
     lines = link(db, {"sellers": exported}, apply=True)  # type: ignore[arg-type]
     assert lines[0].startswith("palivos          SKIP") and db.writes == []
+
+
+def test_tiers_and_promotions_point_to_their_regular_product() -> None:
+    data = payload(items={"/cenik/#o2-do-15q": 6790, "/cenik/#o2-nad-15q": 6650})
+    tier = data["products"][1]
+    tier |= {"price_tier": {"min_quantity": 1.5, "unit": "t"},
+             "base_product_key": "demosklad:/cenik/#o2-do-15q"}  # fmt: skip
+    data["products"].reverse()  # the variant first: the writer must still insert the base first
+    db = MemoryDb()
+    write_export(data, db)  # type: ignore[arg-type]
+    rows = {row["external_id"]: row for row in db.tables["products"]}
+    base, variant = rows["/cenik/#o2-do-15q"], rows["/cenik/#o2-nad-15q"]
+    assert (base["base_product_id"], base["price_tier_min_quantity"], base["is_promo"]) == (
+        None, None, False)  # fmt: skip
+    assert variant["base_product_id"] == base["id"]
+    assert (variant["price_tier_min_quantity"], variant["price_tier_unit"]) == (1.5, "t")

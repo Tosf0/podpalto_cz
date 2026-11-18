@@ -150,10 +150,13 @@ API klíč mezi Vercelem a Railway.
            Jejich staré produkty pak export deaktivuje (nic nemaže),
         3. `uv run python -m podpalto_app.worker.export --dry-run`, kontrola počtů, pak bez
            `--dry-run`, nakonec `select public.refresh_market_stats();`.
-      - Známá omezení: akční a množstevní ceny (bod 1 rozhodnutí) se zatím nerozpoznávají,
-        jdou jako běžné produkty (např. OLVAN „do 15 q / nad 15 q“); dřevo na paletě bez
-        objemu (`package_prm`) a „m³“ bez upřesnění se neposílají; doprava prodejce je
-        `null` (neuvedeno).
+      - [x] Akční a množstevní ceny (18. 11. 2026): export je pozná z textu varianty
+        (`price_tier`, `is_promo`, `base_product_key`, spec §7). Cenová pásma Havelky
+        sloučí do jednoho produktu s cenou „od“. Na lokálních datech 13 množstevních cen
+        (OLVAN, kb_uhli), 2 + 4 u Lesů Liberec (bez základu, je nejednoznačný), Havelka
+        z 36 řádků na 9 produktů.
+      - Známá omezení: dřevo na paletě bez objemu (`package_prm`) a „m³“ bez upřesnění
+        se neposílají; doprava prodejce je `null` (neuvedeno).
       - [x] Příprava dat (18. 11. 2026): klíč prodejce = `id` zdroje, rozpětí cen podle
         paliva, kód kraje (`Region.code`), klíč položky ceníku ze slugu názvu a jednotky
         (`/cenik/#koks-20-40-mm-q` místo `#<pořadí>`), adresa a poloha prodejců z ARES
@@ -448,7 +451,7 @@ musí být hotový dřív, než do produkce zapíšeme první reálná data.
 Kontrola `docs/agent-output-spec.md` proti schématu Supabase (`frontend/supabase/migrations/`)
 a frontendu. Čísla odpovídají bodům kontroly.
 
-- [ ] **(1) Akční a množstevní ceny = samostatný produkt.** DB a §7 specu hotové; zbývá zobrazení variant na detailu prodejce. Trigger `apply_price_observation`
+- [ ] **(1) Akční a množstevní ceny = samostatný produkt.** DB a §7 specu hotové, export je rozpoznává (18. 11.); zbývá ověřit zobrazení variant na detailu prodejce s reálnými daty. Trigger `apply_price_observation`
       přepisuje aktuální cenu produktu posledním zjištěním, takže akční cena nebo cena
       „od 10 PRMS“ poslaná ke stejnému produktu by na mapě nahradila běžnou cenu.
       - Akce a množstevní pásmo dostanou vlastní `product_key` (např.

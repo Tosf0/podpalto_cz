@@ -401,6 +401,20 @@ Ceny variant se posílají jako běžné `price_observation` s `product_key` var
 srovnání a statistiky berou jen běžné produkty (`is_promo = false`, bez pásma); detail
 prodejce ukáže varianty zvlášť. Na mapě ukazujeme běžnou cenu za nejmenší rozumné množství.
 
+**Jak to pozná export (18. 11. 2026, `variant_of` v `tools/.../collect/export.py`):** řádky
+ceníku mají název „<produkt> – <varianta>“. Podle textu varianty:
+
+| Text varianty | Výsledek |
+|---|---|
+| „cena nad 15q“, „při odběru 1t a více“, „při odběru 10 a více PRM“ | `price_tier` (`1,5 t`, `1 t`, `10 PRM`; q a kg se převádí na t) |
+| „paletový prodej“, „celá paleta“ | `price_tier` `1 paleta` |
+| „cena do 15q“, „kusový prodej“ | běžný produkt (základ variant) |
+| „věrnostní sleva“, „akce“, „výprodej“, „sleva“ | `is_promo` |
+| „0.–III. cenové pásmo“ | cena podle oblasti dodání: zůstane jen nejlevnější pásmo jako běžný produkt (název bez pásma, příznak `price_from`, když se ceny liší), ostatní pásma jdou do `skipped` (`price_zone_variant`). Oblasti zatím neumíme mapovat (Havelka). |
+
+`base_product_key` se vyplní jen tehdy, když je v ceníku právě jeden běžný produkt se
+stejným základem názvu, jednotkou a balením. Jinak zůstane prázdný a nic se nehádá.
+
 ---
 
 ## 8. Běh agenta (`scrape_run`)

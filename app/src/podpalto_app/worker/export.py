@@ -220,30 +220,50 @@ def write_export(
             existing_products[(row["seller_id"], row["external_id"])] = row
 
     product_ids: dict[str, str] = {}
-    to_update, to_insert = [], []
-    for key, product in by_key.items():
-        seller_id = seller_ids[product["seller_key"]]
-        columns = {name: product.get(name) for name in PRODUCT_COLUMNS}
-        columns |= {"seller_id": seller_id, "external_id": product["item_id"]}
-        row = existing_products.get((seller_id, product["item_id"]))
-        if row is not None:
-            product_ids[key] = row["id"]
-            # The current price stays as it is: the price trigger compares it with the new one.
-            to_update.append(columns | {"price_czk": row["price_czk"]})
-        elif key in first_price:
-            price = first_price[key]
-            to_insert.append(
-                columns
-                | {"price_czk": price["price_czk"], "price_updated_at": price["observed_at"]}
-            )
-    counts["products_updated"], counts["products_new"] = len(to_update), len(to_insert)
-    if not dry_run:
+    key_of_seller = {seller_id: key for key, seller_id in seller_ids.items()}
+
+    def write_products(keys: list[str]) -> None:
+        to_update, to_insert = [], []
+        for key in keys:
+            product = by_key[key]
+            seller_id = seller_ids[product["seller_key"]]
+            tier = product.get("price_tier") or {}
+            columns = {name: product.get(name) for name in PRODUCT_COLUMNS}
+            columns |= {
+                "seller_id": seller_id,
+                "external_id": product["item_id"],
+                "is_promo": bool(product.get("is_promo")),
+                "promo_valid_until": product.get("promo_valid_until"),
+                "price_tier_min_quantity": tier.get("min_quantity"),
+                "price_tier_unit": tier.get("unit"),
+                # Bases are written first, so their ids are known here.
+                "base_product_id": product_ids.get(product.get("base_product_key") or ""),
+            }
+            row = existing_products.get((seller_id, product["item_id"]))
+            if row is not None:
+                product_ids[key] = row["id"]
+                # The current price stays: the price trigger compares it with the new one.
+                to_update.append(columns | {"price_czk": row["price_czk"]})
+            elif key in first_price:
+                price = first_price[key]
+                to_insert.append(
+                    columns
+                    | {"price_czk": price["price_czk"], "price_updated_at": price["observed_at"]}
+                )
+        counts["products_updated"] += len(to_update)
+        counts["products_new"] += len(to_insert)
+        if dry_run:
+            return
         for batch in _chunks(to_update):
             db.insert("products", batch, on_conflict="seller_id,external_id")
         for batch in _chunks(to_insert):
             for row in db.insert("products", batch, on_conflict="seller_id,external_id"):
-                seller_key = next(k for k, v in seller_ids.items() if v == row["seller_id"])
-                product_ids[f"{seller_key}:{row['external_id']}"] = row["id"]
+                product_ids[f"{key_of_seller[row['seller_id']]}:{row['external_id']}"] = row["id"]
+
+    # Regular products first, then promotions and quantity tiers that point to them.
+    variants = [k for k, p in by_key.items() if p.get("base_product_key") in by_key]
+    write_products([k for k in by_key if k not in set(variants)])
+    write_products(variants)
 
     # Products no longer in a source that was read successfully now.
     exported_ok = {run["seller_key"] for run in new_runs if run["status"] == "ok"}

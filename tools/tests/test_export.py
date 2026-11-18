@@ -8,6 +8,7 @@ from podpalto_tools.collect.export import (
     coal_attributes,
     display_name,
     pellet_attributes,
+    variant_of,
     wood_attributes,
 )
 from podpalto_tools.collect.locate import LocatedSeller
@@ -204,3 +205,53 @@ def test_export_endpoint(collected):
     # The fixture shop is not in the committed locations: no seller, the reason is listed.
     assert payload["sellers"] == [] and payload["skipped"][0]["reason"] == "seller_not_located"
     assert api.get("/export?since=yesterday").status_code == 422
+
+
+@pytest.mark.parametrize(
+    ("name", "unit", "kind", "tier"),
+    [
+        ("OŘECH 1 - BÍLINA – cena do 15q", "t", "regular", None),
+        ("OŘECH 1 - BÍLINA – cena nad 15q", "t", "tier", {"min_quantity": 1.5, "unit": "t"}),
+        ("DŘEVĚNÉ EKOBRIKETY – Při odběru 1t a více", "t", "tier",
+         {"min_quantity": 1.0, "unit": "t"}),
+        ("jehličnaté – PŘI ODBĚRU 10 A VÍCE PRM JSOU PLATNÉ NÍŽE UVEDENÉ BONUSOVÉ CENY!!!", "PRM",
+         "tier", {"min_quantity": 10.0, "unit": "PRM"}),
+        ("OŘECH 1 – paletový prodej", "pytel", "tier", {"min_quantity": 1, "unit": "paleta"}),
+        ("OŘECH 1 – kusový prodej", "pytel", "regular", None),
+        ("jehličnaté – VĚRNOSTNÍ SLEVA - PRO ZÁKAZNÍKY, KTEŘÍ V ROCE 2025 ODEBRALI 10 PRM",
+         "PRM", "promo", None),
+        ("Hruboprach – II. Cenové pásmo", "t", "zone", None),
+        ("Buk – prms", "PRMS", "regular", None),
+        ("Palivové dřevo – cca 1 PRM; tvrdé listnaté (mix)", "PRM", "regular", None),
+    ],
+)  # fmt: skip
+def test_variant_from_the_row_name(name, unit, kind, tier):
+    variant = variant_of(name, unit)
+    assert (variant.kind, variant.tier) == (kind, tier)
+
+
+ZONE_ROWS = [
+    record("Kotlová směs – 0. Cenové pásmo", 629, "q", FuelType.BROWN_COAL, "/#ks-0"),
+    record("Kotlová směs – I. Cenové pásmo", 629, "q", FuelType.BROWN_COAL, "/#ks-i"),
+    record("Kotlová směs – II. Cenové pásmo", 639, "q", FuelType.BROWN_COAL, "/#ks-ii"),
+    record("Ořech 2 – cena do 15q", 679, "q", FuelType.BROWN_COAL, "/#o2-do-15"),
+    record("Ořech 2 – cena nad 15q", 665, "q", FuelType.BROWN_COAL, "/#o2-nad-15"),
+    record("Ořech 2 – Věrnostní sleva", 600, "q", FuelType.BROWN_COAL, "/#o2-sleva"),
+]
+
+
+def test_zones_merge_into_one_from_price_and_tiers_link_to_their_base(data_dir):
+    store = Store(data_dir / "prices.sqlite")
+    store.add_snapshot(source_id="demosklad", fetched_at=T2, status="ok", records=ZONE_ROWS)
+    payload = build_export(store, [SOURCE], {"demosklad": LOCATED})
+    products = {p.item_id: p for p in payload.products}
+    prices = {p.product_key.split(":", 1)[1]: p for p in payload.price_observations}
+    assert set(products) == {"/#ks-0", "/#o2-do-15", "/#o2-nad-15", "/#o2-sleva"}
+    assert products["/#ks-0"].name == "Kotlová směs" and "price_from" in prices["/#ks-0"].flags
+    assert sorted(s.item_id for s in payload.skipped if s.reason == "price_zone_variant") == [
+        "/#ks-i", "/#ks-ii"]  # fmt: skip
+    tier, promo = products["/#o2-nad-15"], products["/#o2-sleva"]
+    assert tier.price_tier == {"min_quantity": 1.5, "unit": "t"} and not tier.is_promo
+    assert tier.base_product_key == promo.base_product_key == "demosklad:/#o2-do-15"
+    assert promo.is_promo and promo.price_tier is None
+    assert payload.runs[0].exported_count == 4 and payload.runs[0].skipped_count == 2

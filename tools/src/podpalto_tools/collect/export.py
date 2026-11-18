@@ -103,6 +103,15 @@ class ExportProduct(BaseModel):
     coal_origin: str | None = None
     grain_mm: str | None = None
     quality_raw: str | None = None
+    # variants (spec section 7): the map and the statistics show only regular products
+    is_promo: bool = False
+    promo_valid_until: str | None = None
+    price_tier: dict[str, Any] | None = Field(
+        None, description='Quantity price: {"min_quantity": 1.5, "unit": "t"}'
+    )
+    base_product_key: str | None = Field(
+        None, description="The regular product this variant belongs to, when unambiguous"
+    )
     flags: list[str] = Field(default_factory=list)
 
 
@@ -496,6 +505,108 @@ def export_record(
     return product, observation
 
 
+# --- variants: promotions, quantity tiers, price zones (spec section 7) -------------------------
+
+# Price-list rows are named "<product> – <variant>" (pricelist.verify_row); the variant text
+# says whether the row is a quantity price, a promotion or a delivery-zone price.
+_VARIANT_SEP = " – "
+_ZONE = re.compile(r"^(0|i{1,3}|iv|\d)\.?\s*cenove pasmo$")
+_PROMO = re.compile(r"vernostni slev|\bakce\b|\bakcni\b|vyprodej|\bsleva\b")
+_REGULAR_TIER = re.compile(r"^(?:cena )?do \d+(?:[.,]\d+)?\s*q$|kusov\w* prodej")
+_PALLET_TIER = re.compile(r"paletov\w* prodej|(?:cela|celou) palet")
+_TIER = re.compile(
+    r"(?:nad|od|pri odberu)\s+(\d+(?:[.,]\d+)?)\s*(q|t|kg|prms|prm|palet\w*)?"
+    r"(?:\s+a\s+vice)?(?:\s+(q|t|kg|prms|prm|palet\w*))?\b"
+)
+_TIER_UNITS = {"q": ("t", 0.1), "t": ("t", 1.0), "kg": ("t", 0.001), "prm": ("PRM", 1.0),
+               "prms": ("PRMS", 1.0)}  # fmt: skip
+
+
+class Variant(BaseModel):
+    kind: Literal["regular", "tier", "promo", "zone"] = "regular"
+    base_name: str
+    tier: dict[str, Any] | None = None
+
+
+def variant_of(name: str, unit: str) -> Variant:
+    """What the text after the last ' – ' says about the row (regular when nothing)."""
+    base, sep, suffix = name.rpartition(_VARIANT_SEP)
+    if not sep:
+        return Variant(base_name=name)
+    text = fold(" ".join(suffix.split())).rstrip("!. ")
+    if _ZONE.match(text):
+        return Variant(kind="zone", base_name=base)
+    if _PROMO.search(text):
+        return Variant(kind="promo", base_name=base)
+    if _REGULAR_TIER.search(text):
+        return Variant(base_name=base)
+    if _PALLET_TIER.search(text):
+        return Variant(kind="tier", base_name=base, tier={"min_quantity": 1, "unit": "paleta"})
+    if match := _TIER.search(text):
+        amount = float(match.group(1).replace(",", "."))
+        raw_unit = (match.group(2) or match.group(3) or "").lower()
+        if raw_unit.startswith("palet"):
+            tier_unit, factor = "paleta", 1.0
+        else:
+            tier_unit, factor = _TIER_UNITS.get(raw_unit, (unit, 1.0))
+        tier = {"min_quantity": round(amount * factor, 3), "unit": tier_unit}
+        return Variant(kind="tier", base_name=base, tier=tier)
+    return Variant(base_name=name)  # e.g. "Buk – prms": the variant is the product itself
+
+
+Row = tuple[SolidFuelPriceRecord, ExportProduct, ExportPrice]
+
+
+def apply_variants(rows: list[Row]) -> list[tuple[SolidFuelPriceRecord, str]]:
+    """Mark promotions and quantity tiers, link them to their regular product, and merge
+    delivery-zone prices; returns the rows left out (record, reason). Works on one snapshot.
+
+    Zone prices (Havelka "0.–III. cenové pásmo") depend on the customer's delivery zone, which
+    the web app cannot map yet: the cheapest zone stays as one product with ``price_from``.
+    """
+    dropped: list[tuple[SolidFuelPriceRecord, str]] = []
+    variants = [variant_of(product.name_raw, product.unit) for _, product, _ in rows]
+
+    zones: dict[tuple, list[int]] = {}
+    for index, ((_, product, _), variant) in enumerate(zip(rows, variants, strict=True)):
+        if variant.kind == "zone":
+            key = (variant.base_name, product.unit, product.package_kg)
+            zones.setdefault(key, []).append(index)
+    keep = set(range(len(rows)))
+    for members in zones.values():
+        cheapest = min(members, key=lambda i: rows[i][2].price_czk)
+        _, product, observation = rows[cheapest]
+        product.name = variants[cheapest].base_name[:200]
+        variants[cheapest] = Variant(base_name=variants[cheapest].base_name)
+        if (
+            len({rows[i][2].price_czk for i in members}) > 1
+            and "price_from" not in observation.flags
+        ):
+            observation.flags.append("price_from")
+        for index in members:
+            if index != cheapest:
+                keep.discard(index)
+                dropped.append((rows[index][0], "price_zone_variant"))
+
+    regular: dict[tuple, list[str]] = {}
+    for index in keep:
+        _, product, _ = rows[index]
+        if variants[index].kind == "regular":
+            key = (variants[index].base_name, product.unit, product.package_kg)
+            regular.setdefault(key, []).append(product.product_key)
+    for index in keep:
+        _, product, _ = rows[index]
+        variant = variants[index]
+        if variant.kind not in ("tier", "promo"):
+            continue
+        product.is_promo = variant.kind == "promo"
+        product.price_tier = variant.tier
+        bases = regular.get((variant.base_name, product.unit, product.package_kg), [])
+        product.base_product_key = bases[0] if len(bases) == 1 else None
+    rows[:] = [row for index, row in enumerate(rows) if index in keep]
+    return dropped
+
+
 # --- the payload -------------------------------------------------------------------------------
 
 
@@ -568,17 +679,22 @@ def build_export(
                 sellers[seller_key] = seller
             elif source_id not in seller.source_ids:
                 seller.source_ids.append(source_id)
+            rows: list[Row] = []
+            left_out: list[tuple[SolidFuelPriceRecord, str]] = []
             for record in store.records(snapshot.id):
                 result = export_record(record, source, seller_key, snapshot.id)
                 if isinstance(result, str):
-                    run.skipped_count += 1
-                    payload.skipped.append(
-                        Skipped(source_id=source_id, item_id=record.item_id, reason=result)
-                    )
-                    continue
-                product, observation = result
+                    left_out.append((record, result))
+                else:
+                    rows.append((record, *result))
+            left_out += apply_variants(rows)
+            for record, reason in left_out:
+                payload.skipped.append(
+                    Skipped(source_id=source_id, item_id=record.item_id, reason=reason)
+                )
+            for _, product, observation in rows:
                 payload.products.append(product)
                 payload.price_observations.append(observation)
-                run.exported_count += 1
+            run.exported_count, run.skipped_count = len(rows), len(left_out)
     payload.sellers = list(sellers.values())
     return payload
