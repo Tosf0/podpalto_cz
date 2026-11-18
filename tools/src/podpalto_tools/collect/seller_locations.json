@@ -299,6 +299,33 @@
   "note": "eshop.drevosrot.cz/kontakty: Sklad paliv Louny, Husova 434, Černčice. Druhý sklad Hůrecká 379/36, Lišov (RÚIAN 25152823)."
  },
  {
+  "seller_key": "golem",
+  "source_id": "golem",
+  "address": {
+   "street": "Hornická 787",
+   "city": "Habartov",
+   "zip": "357 09",
+   "region": "KVK",
+   "ruian_address_code": 2618354
+  },
+  "location": {
+   "lat": 50.18833,
+   "lng": 12.557121,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "25234323",
+   "name": "GOLEM - paliva s.r.o.",
+   "seat": "Hornická 787, Kluč, 35709 Habartov"
+  },
+  "checked_at": "2026-11-18T20:27:35+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "/kontakt/: uhelné sklady Lítov, Hornická 787, Habartov = sídlo."
+ },
+ {
   "seller_key": "havelka",
   "source_id": "havelka",
   "address": {
@@ -632,6 +659,33 @@
   "flags": [],
   "detail": "",
   "note": "/kontakty: prodejna Sluneční 892, Nový Bor."
+ },
+ {
+  "seller_key": "peletypremium",
+  "source_id": "peletypremium",
+  "address": {
+   "street": "Chotěbořská 788",
+   "city": "Golčův Jeníkov",
+   "zip": "582 82",
+   "region": "VYS",
+   "ruian_address_code": 86241290
+  },
+  "location": {
+   "lat": 49.810031,
+   "lng": 15.488351,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "19110821",
+   "name": "PREMIUM PELLETS s.r.o.",
+   "seat": "Chotěbořská 788, 58282 Golčův Jeníkov"
+  },
+  "checked_at": "2026-11-18T20:27:39+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "/kontakt/: výrobní závod, expedice a osobní odběr Chotěbořská 788, Golčův Jeníkov = sídlo."
  },
  {
   "seller_key": "ridepal",

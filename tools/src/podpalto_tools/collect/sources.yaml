@@ -402,6 +402,45 @@ sources:
       Uhlí Morava s.r.o., branch Velké Hoštice near Opava; same shop system as uhli_pribor
       but its own prices (e.g. brown coal 690 vs 680 Kč/q).
 
+  # Checked on 2026-11-18 (stage 1, regions with few sellers in the pipeline).
+
+  - id: golem
+    seller: golem-paliva.cz
+    name: Uhelné sklady Lítov (GOLEM)
+    location:
+      ruian: 2618354
+      note: "/kontakt/: uhelné sklady Lítov, Hornická 787, Habartov = sídlo."
+    ico: "25234323"
+    base_url: https://www.golem-paliva.cz
+    kind: static_html
+    pillar: 2
+    page_paths: [/aktualni-cenik-produktu/]
+    region: Karlovarský kraj
+    price_region: Karlovarský kraj
+    consent: none
+    notes: >-
+      Coal yard Lítov near Sokolov, the only seller of the Karlovy Vary region so far. Prices
+      incl. VAT per q, "Cena při dovozu" (without the delivery fee) and "ze skladu" are the
+      same; sand and gravel rows on the same list are not fuel.
+
+  - id: peletypremium
+    seller: pelety-premium.cz
+    name: PREMIUM PELLETS
+    location:
+      ruian: 86241290
+      note: "/kontakt/: výrobní závod, expedice a osobní odběr Chotěbořská 788, Golčův Jeníkov = sídlo."
+    ico: "19110821"
+    base_url: https://www.pelety-premium.cz
+    kind: heureka_feed
+    feed_path: /heureka/export/products.xml
+    region: Kraj Vysočina
+    price_region: CZ
+    consent: none
+    notes: >-
+      Pellet producer (Shoptet). robots.txt disallows /export/ only, not the Heureka feed
+      under /heureka/export/. Prices "VČETNĚ DOPRAVY" for some items, pickup at the plant is
+      cheaper. The site warns about fake shops using its name and IČO.
+
   # --- pillar 1 (continued): producer with prices from ("od") -----------------------------
 
   - id: waldera
