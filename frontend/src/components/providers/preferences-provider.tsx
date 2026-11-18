@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { Fragment, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "next-themes";
 import type { PriceMode, RegionCode, UserLocation } from "@/types";
 import { DEFAULT_LOCATION, ZIP_PREFIX_LOCATIONS } from "@/lib/constants";
@@ -125,7 +125,14 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
     }
   }, [hydrated, priceMode, location, compareIds, lang, currency, mapShowRegions, mapStripOpen]);
 
-  // 2) přihlášený uživatel: načíst preference z databáze (mají přednost před localStorage)
+  // `setTheme` z next-themes mění identitu při každé změně motivu – kdyby byl v závislostech
+  // efektu níže, každé přepnutí by znovu načetlo (ještě neuložený) motiv z databáze a vrátilo ho zpět.
+  const setThemeRef = useRef(setTheme);
+  useEffect(() => {
+    setThemeRef.current = setTheme;
+  }, [setTheme]);
+
+  // 2) přihlášený uživatel: načíst preference z databáze (mají přednost před localStorage) – jen jednou po přihlášení
   useEffect(() => {
     const supabase = getSupabaseBrowser();
     if (!hydrated || !supabase || !userId) return;
@@ -153,14 +160,14 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
           }
           setCompareIds((row.compare_seller_ids ?? []).slice(0, MAX_COMPARE));
           setMapStripOpen(row.map_strip_open);
-          if (row.theme === "light" || row.theme === "dark") setTheme(row.theme);
+          if (row.theme === "light" || row.theme === "dark" || row.theme === "system") setThemeRef.current(row.theme);
         }
         setSyncedUserId(userId);
       });
     return () => {
       cancelled = true;
     };
-  }, [hydrated, userId, setTheme]);
+  }, [hydrated, userId]);
 
   // 3) změny ukládat do databáze (s krátkým zpožděním, ať se neposílá každé kliknutí zvlášť)
   useEffect(() => {
@@ -172,7 +179,7 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
         lang,
         currency,
         price_mode: priceMode,
-        theme: theme === "dark" ? "dark" : "light",
+        theme: theme === "dark" || theme === "light" ? theme : "system",
         location_label: location.label.slice(0, 200),
         location_lat: location.lat,
         location_lng: location.lng,
