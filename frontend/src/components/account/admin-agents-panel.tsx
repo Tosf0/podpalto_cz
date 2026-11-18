@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { AlertTriangle, Bot, CalendarClock, Check, Database, Loader2, Play, RotateCw, X } from "lucide-react";
+import { Fragment, useEffect, useState } from "react";
+import { AlertTriangle, Bot, CalendarClock, Check, ChevronDown, Database, Loader2, Play, RotateCw, X } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/common";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ import {
   type AgentJobRun,
   type AgentJobSchedule,
   type JobFrequency,
+  type JobLogEntry,
   type JobRunStatus,
 } from "@/lib/api/agent-jobs";
 import { formatDateTime, formatRelative } from "@/lib/format";
@@ -95,6 +96,33 @@ function SummaryText({ run }: { run: AgentJobRun }) {
         </>
       )}
     </span>
+  );
+}
+
+const LOG_TONE: Record<JobLogEntry["level"], string> = {
+  info: "text-foreground/80",
+  tool: "text-muted-foreground",
+  thought: "text-muted-foreground",
+  success: "text-moss-strong",
+  error: "text-clay-strong",
+};
+
+/** Log běhu (nejnovější dole); `last` = zobrazit jen posledních N řádků. */
+function RunLog({ logs, last }: { logs: JobLogEntry[]; last?: number }) {
+  const rows = last ? logs.slice(-last) : logs;
+  if (!rows.length) return <p className="text-xs text-muted-foreground">Zatím bez záznamu v logu.</p>;
+  return (
+    <ol className="max-h-72 space-y-0.5 overflow-y-auto rounded-lg bg-background/60 p-2 font-mono text-[11px] leading-relaxed">
+      {last && logs.length > last && <li className="text-muted-foreground">… {logs.length - last} starších řádků</li>}
+      {rows.map((e, i) => (
+        <li key={`${e.ts}-${i}`} className={cn("flex gap-2", LOG_TONE[e.level] ?? LOG_TONE.info)}>
+          <time className="shrink-0 text-muted-foreground" dateTime={e.ts}>
+            {new Date(e.ts).toLocaleTimeString("cs-CZ")}
+          </time>
+          <span className="min-w-0 break-words">{e.message}</span>
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -191,7 +219,12 @@ function JobCard({ job, runs, onChanged }: { job: AgentJob; runs: AgentJobRun[];
               </Button>
             )}
           </div>
-          {active.status === "running" && <Progress value={active.progress} aria-label="Průběh jobu" />}
+          {active.status === "running" && (
+            <>
+              <Progress value={active.progress} aria-label="Průběh jobu" />
+              <RunLog logs={active.logs ?? []} last={8} />
+            </>
+          )}
         </div>
       )}
 
@@ -305,6 +338,8 @@ function JobCard({ job, runs, onChanged }: { job: AgentJob; runs: AgentJobRun[];
 export function AdminAgentsPanel() {
   const jobs = useApi(() => getAgentJobs(), []);
   const runs = useApi(() => getAgentJobRuns(), []);
+  /** Rozbalený log v historii běhů (id běhu). */
+  const [openLog, setOpenLog] = useState<string | null>(null);
   const reloadJobs = jobs.reload;
   const reloadRuns = runs.reload;
   const anyActive = runs.data?.some(isActive) ?? false;
@@ -398,25 +433,50 @@ export function AdminAgentsPanel() {
                   <th className="px-3 py-2 font-medium">Zadáno</th>
                   <th className="px-3 py-2 font-medium">Doba</th>
                   <th className="px-3 py-2 font-medium">Výsledek</th>
+                  <th className="px-3 py-2 font-medium">
+                    <span className="sr-only">Log</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {history.map((r) => (
-                  <tr key={r.id} className="border-t border-border">
-                    <td className="px-3 py-2">{jobs.data?.find((j) => j.job === r.job)?.title ?? r.job}</td>
-                    <td className="px-3 py-2">{r.trigger === "manual" ? "ručně" : "plán"}</td>
-                    <td className="px-3 py-2">
-                      <span className={cn("rounded-md px-2 py-0.5 text-xs font-medium", STATUS[r.status].cls)}>
-                        {STATUS[r.status].label}
-                        {r.status === "running" && ` ${r.progress} %`}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap">{formatDateTime(r.requested_at)}</td>
-                    <td className="px-3 py-2 whitespace-nowrap">{duration(r) ?? "–"}</td>
-                    <td className="px-3 py-2">
-                      <SummaryText run={r} />
-                    </td>
-                  </tr>
+                  <Fragment key={r.id}>
+                    <tr className="border-t border-border">
+                      <td className="px-3 py-2">{jobs.data?.find((j) => j.job === r.job)?.title ?? r.job}</td>
+                      <td className="px-3 py-2">{r.trigger === "manual" ? "ručně" : "plán"}</td>
+                      <td className="px-3 py-2">
+                        <span className={cn("rounded-md px-2 py-0.5 text-xs font-medium", STATUS[r.status].cls)}>
+                          {STATUS[r.status].label}
+                          {r.status === "running" && ` ${r.progress} %`}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">{formatDateTime(r.requested_at)}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{duration(r) ?? "–"}</td>
+                      <td className="px-3 py-2">
+                        <SummaryText run={r} />
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        {(r.logs?.length ?? 0) > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setOpenLog((id) => (id === r.id ? null : r.id))}
+                            aria-expanded={openLog === r.id}
+                            className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                          >
+                            Log
+                            <ChevronDown className={cn("size-3.5 transition-transform", openLog === r.id && "rotate-180")} />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                    {openLog === r.id && (
+                      <tr className="bg-muted/30">
+                        <td colSpan={7} className="px-3 py-2">
+                          <RunLog logs={r.logs ?? []} />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
