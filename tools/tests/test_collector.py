@@ -123,11 +123,11 @@ def test_packaged_registry_is_valid(monkeypatch):
     assert Counter(source.kind.value for source in sources if source.enabled) == {
         "heureka_feed": 5,
         "shoptet_html": 5,
-        "static_html": 19,
+        "static_html": 22,
         "rendered_html": 1,
         "image_ocr": 1,
     }
-    assert Counter(source.pillar for source in sources) == {1: 11, 2: 10, 3: 5, 4: 5}
+    assert Counter(source.pillar for source in sources) == {1: 11, 2: 13, 3: 5, 4: 5}
     assert all(source.entry_url.startswith("https://") for source in sources)
 
 

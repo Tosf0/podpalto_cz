@@ -346,6 +346,62 @@ sources:
       delivered across CZ; black coal from Ostrava to Bohemia has a postcode surcharge in
       the basket, which is not read.
 
+  # Checked on 2026-11-18 (stage 1, Moravian-Silesian region had no price): robots.txt allows
+  # the pages below and their prices are in the HTML.
+
+  - id: ridera_ostrava
+    seller: ridera.cz
+    seller_key: ridepal
+    ico: "26847833"
+    base_url: https://ridera.cz
+    kind: static_html
+    pillar: 2
+    page_paths: [/provozovny/ostrava-marianske-hory/]
+    region: Moravskoslezský kraj
+    price_region: Moravskoslezský kraj
+    consent: none
+    notes: >-
+      Price list of the Ridera coal yard in Ostrava-Mariánské Hory, the same yard as the
+      ridepal.eu e-shop (Švermova 171/120), so both export to one seller. Prices without and
+      with VAT side by side. Other branch pages: Karviná-Barbora sells recycled aggregates
+      only, Dolní Suchá and Malé Březno publish no price list.
+
+  - id: uhli_pribor
+    seller: uhli-pribor.cz
+    name: Uhlí Morava Příbor
+    location:
+      ruian: 26214229
+      note: "/Kontakt-a2_0.htm: pobočka Štramberská 1589, Příbor (sídlo Oldřišov)."
+    ico: "02457571"
+    base_url: https://www.uhli-pribor.cz
+    kind: static_html
+    pillar: 2
+    page_paths: [/Hnede-uhli-c3_0_1.htm, /Cerne-uhli-c2_0_1.htm, /Pytlovane-uhli-a-koks-c8_0_1.htm]
+    region: Moravskoslezský kraj
+    price_region: Moravskoslezský kraj
+    consent: none
+    notes: >-
+      Uhlí Morava s.r.o., branch Příbor. Category pages list prices with VAT and without VAT
+      ("680 Kč", "562 Kč bez DPH"). The Opava branch (uhli_opava) has its own prices.
+
+  - id: uhli_opava
+    seller: uhli-opava.cz
+    name: Uhlí Morava Opava
+    location:
+      ruian: 4451503
+      note: "/Kontakt-a2_0.htm: pobočka Nádražní 202, Velké Hoštice (sídlo Oldřišov)."
+    ico: "02457571"
+    base_url: https://www.uhli-opava.cz
+    kind: static_html
+    pillar: 2
+    page_paths: [/Hnede-uhli-c3_0_1.htm, /Cerne-uhli-c2_0_1.htm, /Pytlovane-uhli-a-koks-c8_0_1.htm]
+    region: Moravskoslezský kraj
+    price_region: Moravskoslezský kraj
+    consent: none
+    notes: >-
+      Uhlí Morava s.r.o., branch Velké Hoštice near Opava; same shop system as uhli_pribor
+      but its own prices (e.g. brown coal 690 vs 680 Kč/q).
+
   # --- pillar 1 (continued): producer with prices from ("od") -----------------------------
 
   - id: waldera

@@ -655,7 +655,7 @@
    "name": "Ridera Bohemia a.s.",
    "seat": "28. října 2092/216, Mariánské Hory, 70900 Ostrava"
   },
-  "checked_at": "2026-11-18T19:30:22+00:00",
+  "checked_at": "2026-11-18T20:14:01+00:00",
   "flags": [],
   "detail": "",
   "note": "/kontakt: Uhelný sklad Ridera, Švermova 171/120, Ostrava-Mariánské Hory. Druhý sklad Malé Březno 74 u Mostu (RÚIAN 25376152)."
@@ -686,6 +686,60 @@
   "flags": [],
   "detail": "",
   "note": "Úvodní stránka: provozovna Libkovodská ulice, Pelhřimov – za areálem Spokar, bez čísla; bod = areál SPOKAR (Libkovodská 1428)."
+ },
+ {
+  "seller_key": "uhli_opava",
+  "source_id": "uhli_opava",
+  "address": {
+   "street": "Nádražní 202",
+   "city": "Velké Hoštice",
+   "zip": "747 31",
+   "region": "MSK",
+   "ruian_address_code": 4451503
+  },
+  "location": {
+   "lat": 49.95458,
+   "lng": 17.964064,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "02457571",
+   "name": "Uhlí Morava s.r.o.",
+   "seat": "Opavská 94, 74733 Oldřišov"
+  },
+  "checked_at": "2026-11-18T20:13:59+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "/Kontakt-a2_0.htm: pobočka Nádražní 202, Velké Hoštice (sídlo Oldřišov)."
+ },
+ {
+  "seller_key": "uhli_pribor",
+  "source_id": "uhli_pribor",
+  "address": {
+   "street": "Štramberská 1589",
+   "city": "Příbor",
+   "zip": "742 58",
+   "region": "MSK",
+   "ruian_address_code": 26214229
+  },
+  "location": {
+   "lat": 49.625414,
+   "lng": 18.133108,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "02457571",
+   "name": "Uhlí Morava s.r.o.",
+   "seat": "Opavská 94, 74733 Oldřišov"
+  },
+  "checked_at": "2026-11-18T20:13:57+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "/Kontakt-a2_0.htm: pobočka Štramberská 1589, Příbor (sídlo Oldřišov)."
  },
  {
   "seller_key": "unihobby",

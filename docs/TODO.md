@@ -622,9 +622,13 @@ a `podpalto-verify-sellers`. Adresy jsou z PDF; před zápisem je ověřit.
 - [ ] **uhlipro.cz** (`/Cenik`), **uhlinemcova.cz** (`/cenik`) (PDF s. 13–14)
 - [ ] palivamakovy.cz, cdpaliva.cz (`/cenik`, uhlí i dřevo), coxys.cz (`/cenik`),
       golem-paliva.cz (`/aktualni-cenik-produktu/`), paliva-police.cz (`/cenik/`, uhlí; jiný
-      web než palivapolice.cz se dřevem), uhli-pribor.cz, uhli-opava.cz (PDF s. 14–15)
-- [ ] ridera.cz: statický ceník skladu Ostrava (`/provozovny/ostrava-marianske-hory/`), bez
-      DPH i s DPH; doplní e-shop ridepal.eu (PDF s. 11–12)
+      web než palivapolice.cz se dřevem) (PDF s. 14–15)
+- [x] **Moravskoslezský kraj** (18. 11. 2026): `uhli_pribor` a `uhli_opava` (Uhlí Morava,
+      pobočky Příbor a Velké Hoštice, každá s vlastním ceníkem, 18 + 18 cen) a
+      `ridera_ostrava` (ceník skladu Ostrava-Mariánské Hory, 17 cen, sdílí prodejce s
+      `ridepal`). Ostatní stránky Ridery: Karviná-Barbora jen recyklát, Dolní Suchá a Malé
+      Březno bez ceníku. Akční paleta Ridery („E-SHOP – AKČNÍ NABÍDKA“ v nadpisu, ne v řádku)
+      se jako akce nepozná.
 - [ ] **SD Bílina, velkoobchodní PDF ceník** (`sd-bilinskeuhli.cz/dokumenty/cenik-2025.pdf`):
       ceny bez DPH a bez spotřební daně, jen jako referenční velkoobchodní cena, ne cena
       pro domácnosti; rozmyslet, jak ji v datech odlišit (PDF s. 10)
