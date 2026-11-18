@@ -49,6 +49,7 @@ from podpalto_tools.collect.pricelist import (
 from podpalto_tools.collect.shoptet import parse_product_page, parse_sitemap, product_candidates
 from podpalto_tools.collect.source_registry import Source, SourceKind, enabled_sources, load_sources
 from podpalto_tools.collect.store import Store
+from podpalto_tools.collect.worddoc import WordError
 from podpalto_tools.settings import Settings, get_settings
 
 MAX_RESPONSE_BYTES = 50_000_000
@@ -566,6 +567,8 @@ def fetch_price_pages(
                 add(url, document_to_text(content))
             except PdfError as exc:
                 raise _Failure("error", f"{url} is not a readable PDF: {exc}", 200) from exc
+            except WordError as exc:
+                raise _Failure("error", f"{url} is not a readable Word file: {exc}", 200) from exc
     except _Failure as failure:
         store.add_snapshot(
             source_id=source.id, fetched_at=fetched_at, status=failure.status,

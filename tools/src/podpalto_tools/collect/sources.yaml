@@ -582,9 +582,30 @@ sources:
     notes: Municipal forests; columns without and with 21 % VAT, prm and m3.
 
   # Checked on 2026-11-19 (Pardubice region had no seller): robots.txt allows the page, the
-  # price table is in the HTML. Not added: Městské lesy Litomyšl (price list only as a .doc
-  # download), Dřevo Zámrsk (Shoptet, delivery only, no yard address; operator AMAO service
-  # s.r.o. is a Brno office), okpaliva.cz (resets the connection of our client).
+  # price table is in the HTML. Not added: Dřevo Zámrsk (Shoptet, delivery only, no yard
+  # address; operator AMAO service s.r.o. is a Brno office), okpaliva.cz (resets the
+  # connection of our client).
+
+  - id: lesy_litomysl
+    seller: litomysl.cz
+    name: Městské lesy Litomyšl
+    location:
+      ruian: 15959872
+      note: "/mestske_lesy/kontakty: odbor městské lesy, Strakov 15; dříví se vyrábí v areálu „Heliport“ v Litomyšli (adresa neuvedena)."
+    ico: "00276944"
+    base_url: https://www.litomysl.cz
+    kind: static_html
+    pillar: 4
+    page_paths: [/mestske_lesy/palivove_drivi]
+    document_link: soubor/.*cenik.*\.docx?
+    region: Pardubický kraj
+    price_region: Pardubický kraj
+    consent: none
+    notes: >-
+      Municipal forests of Litomyšl. The price list is only a Word 97 file linked from the page
+      ("Ceník 8-2026", /soubor/<id>_cenik_8_2026.doc; the name changes), read by worddoc.py.
+      Prices incl. VAT per prm / prms / prmr; also self-harvest (samovýroba), pulpwood and a
+      delivery price list, which are not firewood offers.
 
   - id: lesy_policka
     seller: lesy.policka.org

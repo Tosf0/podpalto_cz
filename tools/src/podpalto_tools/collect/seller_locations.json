@@ -547,6 +547,33 @@
   "note": "Úvodní stránka: výroba Londýnská ulice, Liberec – Růžodol I (vedle ČOV), bez čísla; bod = střed ulice."
  },
  {
+  "seller_key": "lesy_litomysl",
+  "source_id": "lesy_litomysl",
+  "address": {
+   "street": "Strakov 15",
+   "city": "Strakov",
+   "zip": "570 01",
+   "region": "PAK",
+   "ruian_address_code": 15959872
+  },
+  "location": {
+   "lat": 49.865048,
+   "lng": 16.372249,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "00276944",
+   "name": "Město Litomyšl",
+   "seat": "Bří Šťastných 1000, Litomyšl-Město, 57001 Litomyšl"
+  },
+  "checked_at": "2026-11-18T22:25:40+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "/mestske_lesy/kontakty: odbor městské lesy, Strakov 15; dříví se vyrábí v areálu „Heliport“ v Litomyšli (adresa neuvedena)."
+ },
+ {
   "seller_key": "lesy_policka",
   "source_id": "lesy_policka",
   "address": {

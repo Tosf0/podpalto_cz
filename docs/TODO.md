@@ -663,8 +663,11 @@ a `podpalto-verify-sellers`. Adresy jsou z PDF; před zápisem je ověřit.
       ověřeno sběrem, **v produkci až po vydání `dev` → `main` a jobu „Sběr cen“**:
       Pardubický `lesy_policka` (Městské lesy Polička, 5 cen) a `dmdrevo` (Starý Mateřov,
       8 cen); Olomoucký `olin` (OL-IN Šternberk, 12 cen) a `drevoludwig` (Samotišky, 5 cen);
-      Plzeňský `palivamakovy` (Chocenický Újezd, 8 cen). Nenalezeno s ceníkem v HTML:
-      Městské lesy Litomyšl (jen .doc), Městské lesy Vysoké Mýto, Raledo, Dřevo Zámrsk (bez
+      Plzeňský `palivamakovy` (Chocenický Újezd, 8 cen). Pardubický navíc `lesy_litomysl`
+      (Městské lesy Litomyšl, 7 cen) – ceník je jen Word 97 (.doc); čte ho nový
+      `collect/worddoc.py` (.doc i .docx standardní knihovnou, bez nové závislosti; zdroj
+      typu `static_html` s `document_link` jako u PDF). Nenalezeno s ceníkem:
+      Městské lesy Vysoké Mýto, Raledo, Dřevo Zámrsk (bez
       adresy skladu), okpaliva.cz (shazuje spojení). Jihomoravský kraj a Praha: hledání
       vrací jen adresáře (Firmy.cz) bez ceníků – zbývá. Kandidáti mimo slabé kraje: Uhlí
       Doležal (`uhlidolezal.cz`, sklad Uhlířská Lhota, STC), Uhelné sklady Jan Maria

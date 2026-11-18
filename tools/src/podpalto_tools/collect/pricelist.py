@@ -37,6 +37,7 @@ from podpalto_tools.collect.normalize import (
     weights_in,
 )
 from podpalto_tools.collect.source_registry import Source
+from podpalto_tools.collect.worddoc import doc_to_text, docx_to_text, is_doc, is_docx
 from podpalto_tools.schemas import FuelType
 
 MAX_PAGE_CHARS = 40_000
@@ -107,9 +108,14 @@ def pdf_to_text(content: bytes) -> str:
 
 
 def document_to_text(content: bytes) -> str:
-    """Visible text of a downloaded price list: PDF or HTML."""
+    """Visible text of a downloaded price list: PDF, Word (.doc, .docx) or HTML, recognised
+    by the file's content, not its name. Raises ``WordError`` for a broken Word file."""
     if content.lstrip()[:5] == b"%PDF-":
         return pdf_to_text(content)
+    if is_doc(content):
+        return doc_to_text(content)
+    if is_docx(content):
+        return docx_to_text(content)
     return page_to_text(content.decode("utf-8", errors="replace"))
 
 
@@ -318,7 +324,9 @@ def verify_row(
     if includes_vat is None:
         includes_vat = source.price_includes_vat
         flags.append("vat_assumed_from_registry")
-    name = f"{row.product_name} – {row.variant_text}" if row.variant_text else row.product_name
+    # A bullet before the variant ("- sypané 25 cm" in a Word cell) is not part of its name.
+    variant = (row.variant_text or "").lstrip("-–—•· ").strip()
+    name = f"{row.product_name} – {variant}" if variant else row.product_name
     raw = RawPrice(
         fuel=row.fuel_category,
         name=name,
