@@ -139,7 +139,12 @@ export function BlogArticle({
 
       {post.cover && (
         <figure className="mt-8">
-          <BlogCover image={post.cover} priority className="aspect-[1200/630] w-full rounded-3xl border border-border" />
+          <BlogCover
+            image={post.cover}
+            priority
+            sizes="(min-width: 1024px) 960px, 100vw"
+            className="aspect-[1200/630] w-full rounded-3xl border border-border"
+          />
           {post.cover.credit && <figcaption className="mt-2 text-right text-xs text-muted-foreground">{post.cover.credit}</figcaption>}
         </figure>
       )}

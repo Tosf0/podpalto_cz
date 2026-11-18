@@ -1,9 +1,10 @@
 import { isValidElement, type ReactNode } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import ReactMarkdown, { defaultUrlTransform, type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Lightbulb } from "lucide-react";
-import { slugify } from "@/lib/blog/utils";
+import { canOptimizeImage, slugify } from "@/lib/blog/utils";
 import { cn } from "@/lib/utils";
 
 /**
@@ -42,19 +43,22 @@ const components: Components = {
     if (only && only.type === "element" && only.tagName === "img") return <>{children}</>;
     return <p className="my-5 text-[1.0625rem] leading-8 text-foreground/85">{children}</p>;
   },
-  img: ({ src, alt, title }) => (
-    <figure className="my-9">
-      {/* eslint-disable-next-line @next/next/no-img-element -- URL z Supabase Storage / /public, libovolný rozměr */}
-      <img
-        src={typeof src === "string" ? src : undefined}
-        alt={alt ?? ""}
-        loading="lazy"
-        decoding="async"
-        className="w-full rounded-2xl border border-border bg-muted object-cover"
-      />
-      {(title || alt) && <figcaption className="mt-2.5 px-1 text-center text-sm text-muted-foreground">{title || alt}</figcaption>}
-    </figure>
-  ),
+  img: ({ src, alt, title }) => {
+    const url = typeof src === "string" ? src : undefined;
+    const cls = "h-auto w-full rounded-2xl border border-border bg-muted object-cover";
+    return (
+      <figure className="my-9">
+        {url && canOptimizeImage(url) ? (
+          // zmenšená verze na šířku sloupce textu (~44 rem); poměr stran určí fotka sama (h-auto)
+          <Image src={url} alt={alt ?? ""} width={1408} height={880} sizes="(min-width: 768px) 704px, 100vw" className={cls} />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element -- náhled v editoru (blob:) nebo cizí URL
+          <img src={url} alt={alt ?? ""} loading="lazy" decoding="async" className={cls} />
+        )}
+        {(title || alt) && <figcaption className="mt-2.5 px-1 text-center text-sm text-muted-foreground">{title || alt}</figcaption>}
+      </figure>
+    );
+  },
   a: ({ href = "", children }) =>
     href.startsWith("/") || href.startsWith("#") ? (
       <Link href={href} className="font-medium text-primary underline decoration-primary/30 underline-offset-4 hover:decoration-primary">

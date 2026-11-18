@@ -51,3 +51,14 @@ export function estimateReadingMinutes(markdown: string): number {
 
 /** Základní URL webu pro kanonické odkazy, sitemapu a Open Graph. */
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://podpalto.cz").replace(/\/+$/, "");
+
+const SUPABASE_PUBLIC_PREFIX = `${(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").replace(/\/+$/, "")}/storage/v1/object/public/`;
+
+/**
+ * Smí obrázek přes next/image (zmenšení na velikost dlaždice)? Jen naše Storage a soubory z /public –
+ * stejné hranice jako `images.remotePatterns` v next.config.ts. Náhled v editoru (blob:) a cizí URL ne.
+ */
+export function canOptimizeImage(url: string): boolean {
+  if (url.startsWith("/") && !url.startsWith("//")) return true;
+  return SUPABASE_PUBLIC_PREFIX.startsWith("https://") && url.startsWith(SUPABASE_PUBLIC_PREFIX);
+}

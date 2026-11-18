@@ -1,8 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { CalendarDays, Clock, Newspaper } from "lucide-react";
 import type { BlogCategory, BlogImage, BlogPostSummary } from "@/types";
+import { canOptimizeImage } from "@/lib/blog/utils";
 import { formatDate } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -28,13 +30,42 @@ export function CategoryBadge({ category, className }: { category: BlogCategory;
   );
 }
 
-/** Úvodní obrázek; bez fotky zobrazí decentní dřevěnou plochu s ikonou. */
-export function BlogCover({ image, className, priority }: { image: BlogImage | null; className?: string; priority?: boolean }) {
+/**
+ * Úvodní obrázek; bez fotky zobrazí decentní dřevěnou plochu s ikonou.
+ * `sizes` = jak široký je obrázek na stránce – prohlížeč stáhne jen potřebnou velikost
+ * (fotky z mobilu mají i 5 MB a v mřížce článků zasekávaly scroll).
+ */
+export function BlogCover({
+  image,
+  className,
+  priority,
+  sizes = "(min-width: 1280px) 400px, (min-width: 640px) 50vw, 100vw",
+}: {
+  image: BlogImage | null;
+  className?: string;
+  priority?: boolean;
+  sizes?: string;
+}) {
   if (!image) {
     return (
       <div className={cn("flex items-center justify-center bg-wood-soft text-wood dark:bg-wood/10", className)} aria-hidden>
         <Newspaper className="size-10" />
       </div>
+    );
+  }
+  if (canOptimizeImage(image.url)) {
+    return (
+      <span className={cn("relative block overflow-hidden bg-muted", className)}>
+        <Image
+          src={image.url}
+          alt={image.alt}
+          fill
+          sizes={sizes}
+          preload={priority}
+          loading={priority ? "eager" : "lazy"}
+          className="object-cover"
+        />
+      </span>
     );
   }
   return (
@@ -99,7 +130,7 @@ export function PostCard({ post, className }: { post: BlogPostSummary; className
       )}
     >
       <div className="aspect-[1200/630] overflow-hidden">
-        <BlogCover image={post.cover} className="size-full transition-transform duration-500 group-hover:scale-[1.03]" />
+        <BlogCover image={post.cover} className="size-full transition-transform duration-300 motion-safe:group-hover:scale-[1.03]" />
       </div>
       <div className="flex flex-1 flex-col gap-3 p-5">
         <CategoryBadge category={post.category} className="self-start" />

@@ -24,7 +24,12 @@ function FeaturedPost({ post }: { post: BlogPostSummary }) {
   return (
     <article className="group relative grid overflow-hidden rounded-3xl border border-border bg-card shadow-soft lg:grid-cols-[1.3fr_1fr]">
       <div className="aspect-[1200/630] overflow-hidden lg:aspect-auto lg:min-h-[320px]">
-        <BlogCover image={post.cover} priority className="size-full transition-transform duration-700 group-hover:scale-[1.02]" />
+        <BlogCover
+          image={post.cover}
+          priority
+          sizes="(min-width: 1280px) 720px, (min-width: 1024px) 56vw, 100vw"
+          className="size-full transition-transform duration-300 motion-safe:group-hover:scale-[1.02]"
+        />
       </div>
       <div className="flex flex-col justify-center gap-4 p-6 sm:p-8">
         <div className="flex flex-wrap items-center gap-2">
