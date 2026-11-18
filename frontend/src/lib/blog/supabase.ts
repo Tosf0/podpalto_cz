@@ -113,10 +113,43 @@ export function blogImageUrl(path: string): string {
   return `${SUPABASE_URL}/storage/v1/object/public/${BLOG_IMAGES_BUCKET}/${path.replace(/^\/+/, "")}`;
 }
 
-/** Nahraje fotku do složky autora v bucketu `blog-images` a vrátí její veřejnou URL. */
-export async function uploadBlogImage(file: File, userId: string): Promise<string> {
+/** Nejdelší strana nahrané fotky (px) – víc web nikde nepotřebuje (obálka článku ~1 900 px na retině). */
+const MAX_IMAGE_EDGE = 2400;
+
+/**
+ * Zmenší velkou fotku před nahráním (fotky z mobilu mají 4 000+ px a několik MB). Menší soubory,
+ * GIF a SVG nechá beze změny; PNG zůstane PNG (průhlednost), ostatní se uloží jako JPEG.
+ * Když prohlížeč zmenšení neumí, nahraje originál.
+ */
+export async function shrinkImage(file: File): Promise<File> {
+  if (!/^image\/(jpeg|png|webp|heic|heif)$/.test(file.type) || typeof createImageBitmap !== "function") return file;
+  try {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, MAX_IMAGE_EDGE / Math.max(bitmap.width, bitmap.height));
+    if (scale === 1 && file.size <= 1_000_000) {
+      bitmap.close();
+      return file;
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    bitmap.close();
+    const type = file.type === "image/png" ? "image/png" : "image/jpeg";
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, 0.85));
+    if (!blob || blob.size >= file.size) return file;
+    const name = file.name.replace(/\.[^.]+$/, "") + (type === "image/png" ? ".png" : ".jpg");
+    return new File([blob], name, { type, lastModified: file.lastModified });
+  } catch {
+    return file;
+  }
+}
+
+/** Nahraje fotku (zmenšenou) do složky autora v bucketu `blog-images` a vrátí její veřejnou URL. */
+export async function uploadBlogImage(original: File, userId: string): Promise<string> {
   const supabase = getSupabaseBrowser();
   if (!supabase) throw new Error("Supabase není nakonfigurovaný.");
+  const file = await shrinkImage(original);
   const ext = (file.name.split(".").pop() ?? "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
   const path = `${userId}/${new Date().toISOString().slice(0, 7)}/${crypto.randomUUID()}.${ext}`;
   const { error } = await supabase.storage.from(BLOG_IMAGES_BUCKET).upload(path, file, { contentType: file.type, upsert: false });
