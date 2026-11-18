@@ -380,8 +380,10 @@ Teď to nedává smysl (data nebo doména ještě nejsou), proto až později:
 - [ ] **`llms-full.txt`** s plným textem metodiky a článků, až bude obsahu víc.
 - [ ] **Recenze a hodnocení** v JSON-LD (`AggregateRating`) – jen z vlastních ověřených recenzí,
       ne z převzatých hodnocení Google (porušuje pravidla rich results).
-- [ ] **Autoři článků**: stránka autora (`/blog/autor/<slug>`) s bio a JSON-LD `Person`, až budou
-      psát skuteční lidé (dnes vše „Redakce podpalto.cz“; smyšlené autory jsme odstranili).
+- [ ] **Autoři článků**: články podepisují členové týmu (František Martinovský, Lukáš Voplakal,
+      František Tošner, Lukáš Danko – jméno v `blog_posts.author_name` a na konci textu, JSON-LD
+      `Person`). Doplnit stránku autora (`/blog/autor/<slug>`) s fotkou, krátkým bio a odkazy
+      (LinkedIn apod.) – posílí E-E-A-T; pak `author.url` v JSON-LD článku.
 - [ ] **Core Web Vitals**: po spuštění sledovat ve Search Console (mapa s Leafletem je těžká –
       na úvodní stránce pro hosty zvážit statický náhled místo plné mapy).
 - [ ] **Historie cen pro `/ceny`**: dnes je v grafu vývoj z měsíčních průměrů; s reálnými daty
