@@ -63,3 +63,18 @@ export function deliveryShort(s: Seller): string {
   if (d.pickupAvailable) return t("sellers.delivery.shortPickup");
   return t("sellers.delivery.unspecified");
 }
+
+/** Vzdálenost k prodejci pro zobrazení; u celostátního prodejce „celá ČR“ místo km od sídla. */
+export function distanceLabel(s: Seller, km: number): string {
+  return s.nationwide ? t("sellers.location.nationwideShort") : formatKm(km);
+}
+
+export type LocationNoteKind = "nationwide" | "registeredOffice" | "approximate";
+
+/** Upozornění k poloze prodejce (celostátní / sídlo firmy / přibližná poloha), jinak null. */
+export function locationNote(s: Seller): LocationNoteKind | null {
+  if (s.nationwide) return "nationwide";
+  if (s.registeredOffice) return "registeredOffice";
+  if (s.locationPrecision === "street" || s.locationPrecision === "municipality") return "approximate";
+  return null;
+}

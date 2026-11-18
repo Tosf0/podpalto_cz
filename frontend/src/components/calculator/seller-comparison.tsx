@@ -14,6 +14,7 @@ import { baseUnitLabel, mainProduct, pricePerBaseUnit, pricePerKwh, roadDistance
 import { currencySymbol, formatCzk, formatCzkPerUnit, formatKm, formatKwhPrice, formatNumber, toDisplayCurrency } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { usePreferences } from "@/components/providers/preferences-provider";
+import { distanceLabel } from "@/components/sellers/seller-utils";
 import { cn } from "@/lib/utils";
 import type { Seller } from "@/types";
 
@@ -118,7 +119,7 @@ export function SellerComparison() {
           <Row label={t("calculator.compare.distanceFrom", { place: location.label })}>
             {selected.map((s) => (
               <Cell key={s.id}>
-                <span className="num font-medium">{formatKm(roadDistanceKm(s.location, location))}</span>
+                <span className="num font-medium">{distanceLabel(s, roadDistanceKm(s.location, location))}</span>
                 <span className="text-xs text-muted-foreground">{t("calculator.compare.byRoad")}</span>
               </Cell>
             ))}

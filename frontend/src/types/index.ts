@@ -221,6 +221,12 @@ export interface Seller {
   photoUrl?: string;
   address: Address;
   location: GeoPoint;
+  /** Přesnost polohy (RÚIAN / geokodér); `street` a `municipality` = přibližná poloha. */
+  locationPrecision?: "address_point" | "building" | "street" | "municipality";
+  /** Poloha je sídlo firmy, ne sklad (příznak `location_is_registered_office`, neblokující). */
+  registeredOffice?: boolean;
+  /** Ceny platí pro celou ČR (e-shop, řetězec) – na mapě bez špendlíku, bez filtru okruhem. */
+  nationwide?: boolean;
   /** Velikost firmy; chybí = neuvedeno. */
   size?: SellerSize;
   foundedYear?: number;

@@ -25,7 +25,8 @@ import {
   type SellerMatch,
   type SortKey,
 } from "@/lib/filters";
-import { formatCzkPerUnit, formatKm, formatKwhPrice, NBSP } from "@/lib/format";
+import { distanceLabel } from "@/components/sellers/seller-utils";
+import { formatCzkPerUnit, formatKwhPrice, NBSP } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 import { PRICE_TIER_META } from "@/lib/pricing";
 import type { FuelCategory, Moisture, PriceMode, WoodForm, WoodGroup } from "@/types";
@@ -218,7 +219,7 @@ function ResultRow({
             <span className="num pl-3.5 text-[11px] whitespace-nowrap text-muted-foreground">{secondary}</span>
           </span>
           <span className="block truncate text-xs text-muted-foreground">
-            {seller.address.city} · {formatKm(match.distanceKm)}
+            {seller.address.city} · {distanceLabel(seller, match.distanceKm)}
           </span>
         </span>
       </button>

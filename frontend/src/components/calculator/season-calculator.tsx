@@ -22,9 +22,10 @@ import {
   woodKwhPerUnit,
   type OfferTotal,
 } from "@/lib/pricing";
-import { formatCzk, formatKm, formatKwhNumber, formatKwhPrice, formatNumber, moneyUnit } from "@/lib/format";
+import { formatCzk, formatKwhNumber, formatKwhPrice, formatNumber, moneyUnit } from "@/lib/format";
 import { t, useI18n } from "@/lib/i18n";
 import { locationFromZip, usePreferences } from "@/components/providers/preferences-provider";
+import { distanceLabel } from "@/components/sellers/seller-utils";
 import { cn } from "@/lib/utils";
 import type { FuelCategory, FuelProduct, Seller, WoodGroup } from "@/types";
 import { Collapsible, InfoTip, NumberField, Panel, parseNum } from "./fields";
@@ -394,7 +395,7 @@ function ResultRow({ row: r, rank }: { row: Row; rank: number }) {
             {productLine(r)}
           </p>
         </div>
-        <span className="num text-right text-sm whitespace-nowrap">{formatKm(r.offer.delivery.distanceKm)}</span>
+        <span className="num text-right text-sm whitespace-nowrap">{distanceLabel(r.seller, r.offer.delivery.distanceKm)}</span>
         <span className="text-right text-sm whitespace-nowrap">
           <DeliveryCell row={r} />
         </span>
@@ -424,7 +425,7 @@ function ResultRow({ row: r, rank }: { row: Row; rank: number }) {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 pl-8 text-xs text-muted-foreground">
-          <span className="num whitespace-nowrap">{formatKm(r.offer.delivery.distanceKm)}</span>
+          <span className="num whitespace-nowrap">{distanceLabel(r.seller, r.offer.delivery.distanceKm)}</span>
           <span className="whitespace-nowrap">
             {t("calculator.season.deliveryLabel")} <DeliveryCell row={r} />
           </span>
