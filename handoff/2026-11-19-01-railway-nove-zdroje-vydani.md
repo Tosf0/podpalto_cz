@@ -74,4 +74,22 @@ u PDF (`document_link`).
 - **Doprava prodejců** je u všech `null`, takže kalkulačka nemá data. Je to další velký
   krok na naší straně. Hodí se ti spíš paušál a Kč/km, nebo pásma podle vzdálenosti?
 
+## 6. Doplněno po prvním plném sběru na Railway (19. 11. kolem 0:15)
+
+Vydání do `main` proběhlo (`12e3abc`) a „Sběr cen“ byl spuštěný z administrace. Přitom se
+ukázaly dvě vady, obě jsou opravené v `dev` (`43a4bb7`, `4edfd19`), **zatím ne v `main`**:
+
+- **Postup v administraci stál na 5 %** celý sběr (desítky minut), protože worker zapisoval
+  postup jen na začátku a na konci. Nově po každém zdroji: 5–70 % podle počtu hotových zdrojů
+  a řádek v logu běhu („22/41 olvan: ok, 27 záznamů“, chyby zdroje jako `error`). Frontend
+  stav obnovuje každých 5 s, ten je v pořádku.
+- **Na Railway byly v logu workeru samé „errory“**, ale šlo o běžné INFO zprávy: Python psal
+  do stderr a Railway každý řádek ze stderr barví jako chybu. Nově jde běžný log na stdout.
+
+**Vydat až po prázdné frontě:** ve frontě je za sběrem ještě „Přehled trhu“ (spuštěný ručně)
+a nové nasazení workeru by rozdělaný běh ukončilo.
+
+**Railway pro tebe:** pozvánku do projektu ti můžu poslat (role na čtení stačí na logy
+a stav nasazení). Napiš, jestli chceš a na jaký e-mail.
+
 Podrobný stav všeho je v `docs/TODO.md`, sekce „Přehled k 19. 11. 2026“.
