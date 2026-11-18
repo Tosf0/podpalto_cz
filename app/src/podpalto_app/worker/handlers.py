@@ -43,8 +43,23 @@ def run_collect(run: dict[str, Any], ctx: RunContext, db: SupabaseClient) -> Job
     # Only the snapshots of this collection go to Supabase; params.export_all sends the newest
     # snapshot of every source (e.g. the first run, with data collected before).
     since = None if params.get("export_all") else datetime.now(timezone.utc).isoformat()
-    ctx.progress(5, "Spouštím CollectionFlow (všechny povolené zdroje)")
-    state = run_collection(params.get("source_ids") or None)
+    only = params.get("source_ids") or None
+    ctx.progress(
+        5, f"Spouštím CollectionFlow ({', '.join(only) if only else 'všechny povolené zdroje'})"
+    )
+
+    def source_done(result: Any, done: int, total: int) -> None:
+        # 5 % at the start, 70 % when every source is collected; export follows.
+        counts = f", {result.records} záznamů" if result.records is not None else ""
+        message = f"{done}/{total} {result.source_id}: {result.status}{counts}"
+        percent = 5 + round(65 * done / max(total, 1))
+        if result.status in COLLECTION_FAILED:
+            ctx.progress(percent)
+            ctx.log(f"{message} – {result.detail[:200]}".rstrip(" –"), level="error")
+        else:
+            ctx.progress(percent, message)
+
+    state = run_collection(only, on_source=source_done)
 
     failed = [r for r in state.results if r.status in COLLECTION_FAILED]
     for r in failed:

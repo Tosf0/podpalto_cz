@@ -99,3 +99,16 @@ def test_secret_key_headers() -> None:
     legacy = SupabaseClient("https://x.supabase.co/", "eyJhbGciOi.legacy")
     assert legacy.headers["Authorization"] == "Bearer eyJhbGciOi.legacy"
     assert legacy.base == "https://x.supabase.co/rest/v1"
+
+
+def test_worker_logs_progress_to_stdout_and_errors_to_stderr(capsys) -> None:
+    import logging
+
+    from podpalto_app.worker.__main__ import configure_logging
+
+    configure_logging()
+    logging.getLogger("podpalto.test").info("job started")
+    logging.getLogger("podpalto.test").error("job failed")
+    captured = capsys.readouterr()
+    assert "job started" in captured.out and "job started" not in captured.err
+    assert "job failed" in captured.err and "job failed" not in captured.out

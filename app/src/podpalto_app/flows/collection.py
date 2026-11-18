@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any
 
@@ -51,6 +52,7 @@ class FuelPipelineState(BaseModel):
         False, description="Price lists: extract the stored pages again, download nothing"
     )
     queue: list[dict[str, Any]] = Field(default_factory=list)
+    total: int = Field(0, description="Sources to collect in this run")
     current: dict[str, Any] | None = None
     results: list[SourceRun] = Field(default_factory=list)
     summary_path: str = ""
@@ -91,7 +93,13 @@ def make_guardrail(client: ToolsClient, source_id: str, page_id: str):
     return check_rows_against_page
 
 
+SourceDone = Callable[[SourceRun, int, int], None]
+"""Called after each source with (its result, sources done, sources in this run)."""
+
+
 class CollectionFlow(Flow[FuelPipelineState]):
+    on_source: SourceDone | None = None
+
     @property
     def _client(self) -> ToolsClient:
         return get_tools_client()
@@ -104,6 +112,11 @@ class CollectionFlow(Flow[FuelPipelineState]):
         )  # fmt: skip
         log.info("%s %s %s %s", run.source_id, run.route, run.status, run.detail)
         self.state.results.append(run)
+        if self.on_source is not None:
+            try:  # progress reporting must never stop the collection
+                self.on_source(run, len(self.state.results), self.state.total)
+            except Exception as exc:
+                log.warning("progress callback failed: %s", exc)
 
     @start()
     def load_sources(self) -> None:
@@ -123,6 +136,7 @@ class CollectionFlow(Flow[FuelPipelineState]):
             for source in registry
             if source["enabled"] and (not wanted or source["id"] in wanted)
         ]
+        self.state.total = len(self.state.queue)
 
     @router(or_(load_sources, "source_done"))
     def next_source(self) -> str:
@@ -229,14 +243,19 @@ class CollectionFlow(Flow[FuelPipelineState]):
 
 
 def run_collection(
-    source_ids: list[str] | None = None, *, reextract: bool = False
+    source_ids: list[str] | None = None,
+    *,
+    reextract: bool = False,
+    on_source: SourceDone | None = None,
 ) -> FuelPipelineState:
     """Run the collection flow synchronously (CLI and API).
 
     ``reextract`` sends the stored pages of price lists through the crew again (after the
     extraction rules changed) without downloading anything; other sources are collected
-    as usual, so combine it with ``source_ids`` of price lists.
+    as usual, so combine it with ``source_ids`` of price lists. ``on_source`` is called
+    after each source (the worker turns it into progress on the admin page).
     """
     flow = CollectionFlow()
+    flow.on_source = on_source
     flow.kickoff(inputs={"only": source_ids or [], "reextract": reextract})
     return flow.state
