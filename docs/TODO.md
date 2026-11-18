@@ -44,14 +44,14 @@ Frontend:
 
 **Co je teď na straně `app` / `tools` (Franta):**
 
-1. **Worker fronty analýz** v `app` podle `frontend/README.md` kap. 5.2 (`claim_analysis_run`,
-   průběžný zápis `progress/steps/logs`, report do `analysis_reports`, `status`).
+1. **Worker** – smyčka obou front je hotová (`app/src/podpalto_app/worker/`); zbývá doplnit
+   export a chybějící flows, viz „Napojení agentů na web: Vercel + Supabase + Railway“ níže.
 2. **Zápis do Supabase** (export podle `docs/agent-output-spec.md`, upsert přes
    `sellers.external_key` a `products (seller_id, external_id)`; při vložení produktu
    `price_updated_at = observed_at` první ceny).
 3. **`market_stats`** (bod 5) – v databázi je hotová funkce `public.refresh_market_stats()`
-   (migrace `…170000_refresh_market_stats.sql`): po každém importu ji stačí zavolat
-   (`select public.refresh_market_stats();`, service role). Mediány ze schválených nabídek,
+   (migrace `…170000_refresh_market_stats.sql`); po jobu `collect` ji volá sama
+   `finish_agent_job_run`, po ručním importu `select public.refresh_market_stats();`. Mediány ze schválených nabídek,
    bez akcí, převod na PRMS / tunu, kraj bez nabídky nemá hodnotu.
 4. Rozhodnout body **6–8, 10–12** níže (kWh konstanty, pásma, klíč prodejce, geolokace,
    hodnocení, smazání 26 fiktivních prodejců při prvním zápisu reálných dat).
@@ -95,31 +95,177 @@ Co přijde až později (veřejné profily prodejců, stránky měst, IndexNow, 
       registrací přestanou chodit potvrzovací e-maily. Postup a DNS záznamy (SPF, DKIM, DMARC)
       v `frontend/README.md`, kap. 7, „TODO – vlastní doména“.
 
-### Joby agentů – plán a ruční spuštění (pro kolegu, připraveno 18. 11. 2026)
+### Napojení agentů na web: Vercel + Supabase + Railway (pro Frantu, připraveno 18. 11. 2026)
 
-V administraci (`/admin/kontrola?sekce=agenti`) admin nastaví, jak často se joby spouští
-(denně / týdně / měsíčně / čtvrtletně, den a hodina v čase Europe/Prague; **výchozí jednou
-měsíčně**), a může job spustit ručně. Joby: `collect` (sběr cen, `CollectionFlow`) a
-`market_report` (přehled trhu, `MarketResearchFlow`). Plánování řeší databáze – worker
-nepotřebuje vlastní cron.
+**Jak to spolu mluví:** web (Lukáš, Vercel) a agenti (Franta, Railway) se **nikdy nevolají
+napřímo** – oba se připojují jen k Supabase. Web zakládá úlohy do front a čte výsledky; worker
+na Railway si úlohy z front bere a výsledky zapisuje. Žádná veřejná URL backendu, CORS ani
+API klíč mezi Vercelem a Railway.
 
-- [ ] **Nahrát migraci** `frontend/supabase/migrations/20261118230000_agent_jobs.sql` (Lukáš po
-      kontrole; otestovaná v transakci s rollbackem). Do té doby záložka Agenti jen napíše,
-      že tabulky chybí.
-- [ ] **Worker v `app`** (stejný proces jako worker CI Studia, secret klíč ze Supabase):
-  1. Každou ~minutu `select * from claim_agent_job('<id workeru>')`. Funkce sama založí
-     naplánované běhy, jejichž čas nastal (zameškaný termín jen jednou), označí jako `failed`
-     běhy bez zápisu déle než 2 h a vrátí nejstarší čekající běh přepnutý na `running`,
-     nebo nic. Od každého jobu běží nejvýš jeden běh.
-  2. Podle `job` spustit flow; `params` z řádku (u `market_report` `fuel_category`, `region`).
-  3. Průběžně `update agent_job_runs set progress, logs where id = …` (každý update zároveň
-     slouží jako „heartbeat“). Sběr zapisuje `scrape_runs` s `job_run_id` = id běhu a nové ceny
-     do `price_observations` s `observed_at` = čas stažení (trigger sám aktualizuje
-     `products.price_czk` a `price_updated_at`).
-  4. Na konci `select finish_agent_job_run(id, 'completed' | 'failed', summary, error)`.
-     `summary` (jsonb) se ukazuje v administraci, klíče: `sources`, `sources_failed`,
-     `observations`, `products_new`, `sellers_new`, `report_id` (odkaz na report v CI Studiu).
-     U úspěšného `collect` funkce sama zavolá `refresh_market_stats()` → Trh, Trendy, heat mapa.
+```
+ Vercel (Next.js)                 Supabase (Postgres)                      Railway
+ ───────────────                  ───────────────────                      ───────
+ admin → Agenti ─ request_agent_job ─▶ agent_job_runs ◀─ claim_agent_job ── worker
+ (plán, Spustit nyní)                  agent_jobs (plán)   finish_agent_job_run  (python -m
+ CI Studio (Pro) ─ insert ─────────▶ analysis_runs  ◀─ claim_analysis_run ──  podpalto_app.worker)
+ Trh, Trendy, mapa ◀─ select ─────── products, price_observations,              │ HTTP (privátní síť)
+ archiv reportů                      commodity_price_stats, analysis_reports ◀──┤
+                                                                                ▼
+                                                                         tools (+ volume /data)
+```
+
+**Co je hotové (Lukáš / Claude):**
+- DB: plán jobů `agent_jobs` (výchozí jednou měsíčně: sběr 1. v 3:00, přehled trhu 2. v 6:00),
+  fronta `agent_job_runs`, RPC `claim_agent_job` (sama zakládá naplánované běhy – **worker
+  nepotřebuje cron**), `finish_agent_job_run` (po úspěšném sběru přepočítá statistiky),
+  fronta CI Studia `analysis_runs` + `claim_analysis_run`. Migrace nahrané v Supabase.
+- Web: administrace → záložka **Agenti** (plán, ruční spuštění, historie, upozornění, když
+  worker neběží), CI Studio zakládá analýzy do fronty.
+- **Worker** `app/src/podpalto_app/worker/` – hotová smyčka: převzetí běhů z obou front,
+  průběh a logy do Supabase, heartbeat, chyby, ukončení při restartu (SIGTERM), testy
+  `app/tests/test_worker.py` (bez LLM a sítě). Klient Supabase je jen ze standardní knihovny –
+  žádná nová závislost, `uv.lock` beze změny.
+- Joby a analýzy už napojené na flows: `collect` → `CollectionFlow`, `market_report`
+  a analýza `market` → `MarketResearchFlow` → report do `analysis_reports` (archiv CI Studia).
+- Railway: `railway/tools.json` a `railway/worker.json` (Dockerfile, start, healthcheck),
+  služba `worker` v `docker-compose.yml`, proměnné v `.env.example`.
+
+**Co zbývá Frantovi (v pořadí):**
+- [ ] **1. Export sběru do Supabase** – `app/src/podpalto_app/worker/export.py`
+      (`export_collection`; postup je v docstringu). Potřebuje endpoint v `tools`, který vydá
+      záznamy sběru (např. `GET /export?since=…` ve tvaru `docs/agent-output-spec.md`), pak
+      upsert `sellers` (`external_key`), `products` (`seller_id,external_id`), insert
+      `price_observations` (vždy nové řádky) a `scrape_runs` s `job_run_id`. Do té doby job
+      `collect` sběr provede, ale skončí chybou „export do Supabase zatím není hotový“.
+- [ ] **2. Vstupy `MarketResearchFlow`:** worker převádí `fuel_category` (wood / pellets /
+      briquettes / coal) na `FuelType` a kód kraje (`STC`) na jeho název z tabulky `regions`
+      (`handlers.py`, `FUELS_BY_CATEGORY`). Zkontrolovat, že flow s tím dává dobrý report;
+      volitelně vracet i strukturovaná data (`swot`, ceny) do `analysis_reports`.
+- [ ] **3. Analýza `seller`** (`SellerProfileFlow` → `analysis_reports` kind `seller` + upsert
+      `seller_intel`) a **analýza `url`** (formulář v CI Studiu) – v `handlers.py` je místo nich
+      `not_ready(…)`: běh skončí srozumitelnou chybou místo věčného čekání ve frontě.
+- [ ] **4. Railway** (viz níže) a test end-to-end.
+
+#### Přístupy a klíče – co si vyžádat od Lukáše
+
+Do Supabase přístup nemáš a **nepotřebuješ ho**: worker mluví s databází přes REST API
+s jedním klíčem a schéma je celé v repozitáři (`frontend/supabase/migrations/`, výtah níže).
+Tajné hodnoty v repozitáři nejsou – **až tohle budeš číst, napiš Lukášovi**, ať ti pošle
+(bezpečně, ne v otevřeném e-mailu – např. Bitwarden Send / 1Password):
+
+| Proměnná | Co to je | Kdo ji dodá |
+|---|---|---|
+| `SUPABASE_SECRET_KEY` | secret klíč projektu Podpalto (obchází RLS, smí zapisovat) | Lukáš |
+| `ANTHROPIC_API_KEY` | klíč k Claude API pro crew | dohodnout se, z čího účtu se platí |
+| účet admin na webu | k testu: admin → Agenti → *Spustit nyní* | zaregistruj se na webu a pošli Lukášovi e-mail účtu, nastaví ti roli `admin` |
+
+Netajné hodnoty (můžeš rovnou): `SUPABASE_URL=https://sdhinkqouseaaesodqyy.supabase.co`,
+`MANAGER_MODEL=anthropic/claude-opus-5-5`, `AGENT_MODEL=anthropic/claude-sonnet-5-5`.
+Klíč nikdy necommituj (`.env` je v `.gitignore`) a nedávej ho do frontendu.
+
+#### Databáze bez dashboardu Supabase
+
+Prohlížení dat přes REST (stejný klíč jako worker), např. v PowerShellu / bash:
+
+```bash
+curl "https://sdhinkqouseaaesodqyy.supabase.co/rest/v1/sellers?select=id,slug,name,external_key&limit=5" \
+  -H "apikey: $SUPABASE_SECRET_KEY"
+curl "https://sdhinkqouseaaesodqyy.supabase.co/rest/v1/agent_job_runs?select=*&order=requested_at.desc&limit=5" \
+  -H "apikey: $SUPABASE_SECRET_KEY"
+```
+
+Secret klíč smí všechno včetně mazání – **nic nemaž a nepřepisuj hromadně** (jsou tam reálná
+data webu). Změny schématu (nové sloupce, funkce) neposílej přímo do databáze: napiš migraci
+do `frontend/supabase/migrations/` (název `RRRRMMDDHHMMSS_popis.sql`) a dej vědět Lukášovi,
+nahraje ji. Mapování polí je v `docs/agent-output-spec.md` (kap. 4–8, 10, 11).
+
+**Výtah schématu pro export** (povinné = NOT NULL bez výchozí hodnoty):
+
+| Tabulka | Klíč pro upsert | Povinné sloupce | Pozor |
+|---|---|---|---|
+| `sellers` | `external_key` (unique) | `slug`, `name`, `city`, `zip`, `region` | `slug` jen `a-z0-9-`, unikátní; `ico` 8 číslic; `lat`/`lng` obojí nebo nic; `location_precision` ∈ address_point/building/street/municipality; `location_source` ∈ ruian/geocoder_mapy/geocoder_nominatim/seller_map/manual |
+| `products` | `seller_id, external_id` | `seller_id`, `name`, `category`, `price_czk`, `unit` | `unit` paleta/pytel ⇒ `package_kg` nebo `package_prm`; dřevěné atributy jen u `category = wood`; `price_czk > 0` |
+| `price_observations` | – (vždy insert) | `product_id`, `price_czk` | `observed_at` = čas stažení; `original_unit` ∈ kg/q/t/bag/pallet/m3/prmr/prms; `vat_status` ∈ included/added/assumed; trigger sám aktualizuje `products.price_czk` |
+| `scrape_runs` | – | – | `status` ∈ running/success/failed/blocked; `job_run_id` = id běhu jobu; `source_key` + `snapshot_id` unikátní dvojice |
+
+Číselníky (enumy): `region_code` PHA STC JHC PLK KVK ULK LBK HKK PAK VYS JHM OLK ZLK MSK ·
+`fuel_category` wood pellets briquettes coal · `price_unit` PRMS PRM PLM t paleta pytel ·
+`wood_species` buk dub habr jasan briza smrk borovice modrin mix-tvrde mix-mekke ·
+`wood_group` hard soft birch · `wood_form` sypane rovnane metrovky paleta ·
+`moisture` dry semi fresh · `pellet_certification` „ENplus A1“ „ENplus A2“ DINplus „bez certifikace“ ·
+`briquette_type` RUF „PINI KAY“ válcové hnědouhelné · `coal_type` „hnědé ořech 1“ „hnědé ořech 2“
+„hnědé kostka“ „černé ořech“ „černé kostka“ koks · `stock_level` in_stock low out_of_stock preorder ·
+`data_source` scraper seller manual. Nový prodejce / cena s blokujícím příznakem (`flags`) jde
+sám do ruční kontroly (`review_status = needs_review`, admin → Data od agentů).
+
+#### Railway – krok za krokem (poprvé)
+
+1. **Účet:** <https://railway.com> → *Login* → **přes GitHub** (účet, pod kterým je repozitář
+   `podpalto_cz`). Pro trvalý běh je potřeba placený plán **Hobby** (cca 5 USD měsíčně včetně
+   kreditu na provoz; ověř aktuální ceník) – Settings → Plans, zadat kartu.
+2. **Projekt:** *New Project* → *Deploy from GitHub repo* → *Configure GitHub App* → povolit
+   přístup k repozitáři `podpalto_cz` → vybrat ho. Railway založí první službu a zkusí ji
+   sestavit – první build může spadnout, než se nastaví konfigurace v dalším kroku, to nevadí.
+3. **Služba `tools`** (ta první):
+   - Settings → název služby **`tools`** (přesně, worker se na ni odkazuje jménem),
+   - Settings → Source → *Branch* `dev` (později `main`), *Root Directory* nechat prázdné
+     (Dockerfily se sestavují z kořene repozitáře),
+   - Settings → *Config-as-code* → cesta **`/railway/tools.json`** (Dockerfile, start na `::8001`,
+     healthcheck `/health`),
+   - **Volume:** na plátně projektu pravým tlačítkem na službu (nebo Ctrl+K → „Volume“) →
+     *Add Volume* → připojit k `tools`, mount path **`/data`** (SQLite se snímky přežije redeploy),
+   - Variables: `TOOLS_DATA_DIR=/data`, `COLLECTOR_USER_AGENT=podpalto-bot/1.0 (+https://podpalto.cz/bot)`,
+   - Settings → Networking: **negenerovat veřejnou doménu** (služba je jen pro worker),
+   - *Deploy* → v Logs má být `Uvicorn running on http://[::]:8001` a healthcheck zelený.
+4. **Služba `worker`:** na plátně *+ Create* → *GitHub Repo* → stejný repozitář:
+   - název **`worker`**, branch `dev`, config-as-code **`/railway/worker.json`**,
+   - bez volume a bez veřejné domény, Replicas = 1,
+   - Variables → *Raw Editor* a vložit (doplnit dva tajné klíče):
+     ```
+     TOOLS_API_URL=http://${{tools.RAILWAY_PRIVATE_DOMAIN}}:8001
+     SUPABASE_URL=https://sdhinkqouseaaesodqyy.supabase.co
+     SUPABASE_SECRET_KEY=<od Lukáše>
+     ANTHROPIC_API_KEY=<dohodnutý klíč>
+     MANAGER_MODEL=anthropic/claude-opus-5-5
+     AGENT_MODEL=anthropic/claude-sonnet-5-5
+     WORKER_ID=railway-worker
+     ```
+   - *Deploy* → v Logs `worker railway-worker started, polling every 30s`.
+5. **Test:** na webu admin → **Agenti** → u „Přehled trhu“ *Spustit nyní* → do minuty
+   „Běží“ (hláška „Worker … naposledy převzal běh“), na konci „Hotovo“ a report v CI Studiu.
+   „Sběr cen“ skončí chybou, dokud nebude `worker/export.py` – to je v pořádku.
+6. **Provoz:** každý push do `dev` znovu nasadí jen dotčenou službu (watch patterns
+   v `railway/*.json`). Rozdělaný běh při redeployi skončí „Worker se ukončil … spusťte znovu“.
+   V Anthropic konzoli nastav měsíční limit útraty. Služba `app` s HTTP API (`/runs`)
+   na Railway **není potřeba**.
+
+**Když něco nejde:**
+- worker loguje `HTTP 401` / `Invalid API key` → špatný `SUPABASE_SECRET_KEY`,
+- `tools service is not reachable` → služba se nejmenuje `tools`, nebo neběží, nebo neposlouchá
+  na `::` (start command v `railway/tools.json`),
+- build spadne na `uv sync --frozen` → `uv.lock` neodpovídá `pyproject.toml`: `uv lock`, commit,
+- v administraci „Běh čeká ve frontě od …“ → worker neběží nebo nemá připojení k Supabase,
+- lokální a Railway worker si berou úlohy ze stejné fronty – při lokálním testu Railway worker
+  zastav (Settings → *Remove deployment* / Replicas 0).
+
+#### Lokální test před nasazením
+
+```bash
+copy .env.example .env      # doplnit ANTHROPIC_API_KEY a SUPABASE_SECRET_KEY
+uv sync
+uv run pytest app/tests/test_worker.py
+uv run uvicorn podpalto_tools.api:app --port 8001      # terminál 1
+uv run python -m podpalto_app.worker                   # terminál 2
+```
+
+Nebo `docker compose up --build` (tools + app + worker). Pak na webu admin → Agenti →
+*Spustit nyní* u „Přehled trhu“ a sledovat log workeru i historii běhů v administraci.
+
+#### Do budoucna – mimo tuto integraci
+
+Stripe (platby tarifů), vlastní SMTP, karta Sčítání 2021 v Trendech, média na Cloudflare R2,
+údaje provozovatele v právních stránkách a souhlasy prodejců s fotkami řeší Lukáš – viz
+„Do budoucna (Lukáš)“ níže. Pro worker z toho nic nevyplývá.
 
 **Časová osa (kontrola 18. 11.):** databáze historii drží – každá cena je řádek
 v `price_observations` s `observed_at` (a `snapshot_id`), měsíční mediány jsou
@@ -131,39 +277,6 @@ nově pro minulé měsíce bere poslední pozorování ceny před koncem měsíc
 a jde volat víckrát v jedné transakci. Přidán index `price_observations (product_id, observed_at)`.
 Pravidlo pro sběr: **neupdatovat staré řádky `price_observations`, vždy vkládat nové**, jinak
 se historie ztratí.
-
-### CI Studio – co zbývá na straně `app` (pro kolegu)
-
-Databáze i frontend jsou hotové; analýzy čekají ve frontě, dokud je nezačne zpracovávat worker
-ve službě `app`. Kontrakt je v `frontend/README.md`, kap. 5.2. Co je potřeba udělat:
-
-1. **Připojení:** worker se připojí k Supabase *secret* klíčem (service role) z proměnných
-   prostředí služby `app` (`SUPABASE_URL`, `SUPABASE_SECRET_KEY`) – nikdy ne do frontendu ani repozitáře.
-2. **Převzetí běhu:** ve smyčce (každé 2–5 s) volat RPC `select * from claim_analysis_run('<id workeru>')`.
-   Vrátí nejstarší běh ve stavu `queued` a atomicky ho přepne na `running` (`claimed_by`, `claimed_at`),
-   nebo nic. Místo pollingu lze poslouchat Supabase Realtime (INSERT do `analysis_runs`).
-3. **Podle `kind` spustit crew:**
-   - `url` – dnešní analýza konkurence z `competitor_url`,
-   - `market` – `MarketResearchFlow` s `params = {"fuel_category": "...", "region": "STC"}`,
-   - `seller` – `SellerProfileFlow` pro `subject_seller_id` (údaje prodejce z tabulky `sellers`,
-     ceny z `products`).
-4. **Průběh:** po každém kroku `update analysis_runs set progress, steps, logs where run_id = …`
-   (`steps` = `CrewStep[]`, `logs` = `CrewLogEntry[]`, typy ve `frontend/src/types/index.ts`).
-   Frontend běh každých 1,5 s načítá a zobrazuje.
-5. **Výsledek:** `insert into analysis_reports (id, kind, params, competitor_url, competitor_name,
-   competitor_domain, report, status, model, duration_s, seller_id, region, categories, swot,
-   requested_by)` – `report` v Markdownu, `swot` jako `SwotMatrix` ze `src/types`, `requested_by`
-   = `analysis_runs.user_id`. Pak `update analysis_runs set status = 'completed', report_id,
-   finished_at = now(), progress = 100`.
-6. **U `kind = seller`** navíc upsert `seller_intel (seller_id, report_id, positioning,
-   tone_of_voice, usp, swot, price_index_vs_cz, market_comparison, analyzed_at)` – zobrazuje se
-   v sekci „Analýza“ na detailu prodejce (Pro).
-7. **Chyby:** `status = 'failed'`, text do `error`, `finished_at = now()`. Běhy, které visí ve stavu
-   `running` déle než ~15 min (`claimed_at`), vrátit do `queued` nebo označit `failed`
-   (při startu workeru nebo cronem).
-8. **Test:** v aplikaci účet s tarifem Pro → CI Studio → spustit analýzu; běh se objeví
-   v `analysis_runs` jako `queued`, worker ho převezme a frontend ukáže průběh a report.
-9. Až worker poběží, na frontendu doplníme záložky „Trh“ (palivo + kraj) a „Prodejce“ (výběr z katalogu).
 
 **Reálná data místo demo dat** (zapsáno 18. 11. 2026): 26 fiktivních prodejců a demo
 statistiky jsou smazané. V databázi je **81 reálných prodejců** ze 14 krajů a **371 cen**
@@ -197,8 +310,23 @@ v `/admin/kontrola` → záložka Blog. Fotky jsou zatím v Supabase Storage (`b
 u smazaných a zamítnutých článků se mažou. **Do budoucna přesunout na Cloudflare R2** – viz
 „TODO – obrázky z Cloudflare R2“ v `frontend/README.md`. Migrace `20261118160000_blog_review.sql`.
 
-**Zbývá na frontendu:** CI Studio se záložkami „Trh“ / „Prodejce“ (až poběží worker, viz níže).
+**Zbývá na frontendu:** CI Studio se záložkami „Trh“ / „Prodejce“ (až poběží worker, viz „Napojení agentů na web“ výše).
 Akční a množstevní ceny na detailu prodejce jsou hotové (18. 11.), *Leaked password protection* je zapnutá.
+
+### Do budoucna (Lukáš)
+
+- [ ] **Platby přes Stripe:** tarify Pro a Prodejce za 490 Kč / 20 € měsíčně (tabulka `plans`:
+      `price_czk_month`, `price_eur_month`, `stripe_price_id`; stránka `/plany`). Produkt a ceny
+      ve Stripe (CZK i EUR), Checkout ze stránky plánů, webhook (route handler v Next.js nebo
+      edge funkce) zapisuje `subscriptions`, zákaznický portál pro zrušení / změnu karty,
+      faktury s DPH (Stripe Tax / Invoicing). Klíče jen na serveru (Vercel env, ne `NEXT_PUBLIC_`).
+- [ ] **Převzetí profilu až po zaplacení** tarifu Prodejce (dnes ho `approve_seller_claim`
+      přidělí rovnou) + e-mail žadateli – viz „Převzetí profilu – dotáhnout s platbami“ výše.
+- [ ] **Vlastní SMTP** (Resend, `noreply@podpalto.cz`) – viz výše.
+- [ ] **Údaje provozovatele** v právních stránkách (Vercel env) a kontrola textů právníkem.
+- [ ] **Trendy – karta Sčítání 2021** (`heating_census`).
+- [ ] **Média na Cloudflare R2** a **souhlasy prodejců s fotkami** – viz výše.
+- [ ] **CI Studio – záložky „Trh“ a „Prodejce“** na frontendu, až worker umí `market` a `seller`.
 
 ## Rozhodnutí: jediný zdroj dat je Supabase (18. 11. 2026)
 

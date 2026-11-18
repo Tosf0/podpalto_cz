@@ -123,6 +123,24 @@ Konfigurace). Klíč `llm:` u agenta v YAML má přednost před oběma.
 | `GET` | `/runs` | seznam průzkumů |
 | `GET` | `/health` | stav služby a dostupnost služby `tools` |
 
+## Worker (napojení na web přes Supabase)
+
+`uv run python -m podpalto_app.worker` – v produkci služba `worker` na Railway
+(`railway/worker.json`). Bere úlohy ze dvou front v Supabase: joby z administrace
+(`agent_job_runs`: `collect`, `market_report`; plán a ruční spuštění nastavuje admin, naplánované
+běhy zakládá `claim_agent_job`) a analýzy CI Studia (`analysis_runs`: `market`, `seller`, `url`).
+Průběh, logy a výsledek zapisuje zpět do řádku, web je čte z databáze – s touto službou nemluví.
+
+| Soubor | Co dělá |
+|---|---|
+| `worker/runner.py` | smyčka, převzetí běhu, průběh a heartbeat, chyby, SIGTERM |
+| `worker/handlers.py` | co se spustí pro který job / druh analýzy (flows se importují až při běhu) |
+| `worker/export.py` | **TODO:** zápis sběru do Supabase (sellers, products, price_observations) |
+| `worker/supabase.py` | klient PostgREST jen ze standardní knihovny (secret klíč) |
+
+Proměnné: `SUPABASE_URL`, `SUPABASE_SECRET_KEY` (jen ve workeru), `WORKER_ID`, `WORKER_POLL_S`,
+`WORKER_HEARTBEAT_S` + proměnné flows. Postup nasazení: `docs/TODO.md`, „Napojení agentů na web“.
+
 ## Konfigurace
 
 | Proměnná | Výchozí | Význam |

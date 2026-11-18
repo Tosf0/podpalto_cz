@@ -42,3 +42,22 @@ services:
     depends_on:
       tools:
         condition: service_healthy
+
+  # Queue worker: agent jobs (admin -> Agenti) and CI Studio analyses from Supabase.
+  # Needs SUPABASE_URL and SUPABASE_SECRET_KEY in .env. Same image as app, other command.
+  worker:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    command: ["python", "-m", "podpalto_app.worker"]
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      TOOLS_API_URL: http://tools:8001
+      OUTPUT_DIR: /data/outputs
+    volumes:
+      - ./outputs:/data/outputs
+    depends_on:
+      tools:
+        condition: service_healthy

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "builder": "DOCKERFILE",
+    "dockerfilePath": "tools/Dockerfile",
+    "watchPatterns": ["tools/**", "pyproject.toml", "uv.lock"]
+  },
+  "deploy": {
+    "startCommand": "uvicorn podpalto_tools.api:app --host :: --port 8001",
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 60,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
+  }
+}

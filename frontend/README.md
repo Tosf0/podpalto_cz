@@ -252,6 +252,10 @@ ke zpracování), během běhu zapisuje `agent_job_runs.progress/logs` a končí
 měsíční statistiky. Migrace `supabase/migrations/20261118230000_agent_jobs.sql`, kód
 `src/lib/api/agent-jobs.ts` a `src/components/account/admin-agents-panel.tsx`.
 
+Worker pro obě fronty (5.2 i 5.3) je v `app/src/podpalto_app/worker/` a běží na Railway
+(`railway/worker.json`); web s ním nemluví napřímo, jen přes Supabase. Nastavení Railway
+je v `docs/TODO.md`, „Napojení agentů na web“.
+
 ## 6. Offline režim (bez databáze)
 
 Bez vyplněného `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` je `IS_MOCK = true`
