@@ -258,7 +258,8 @@ export function computeMatches({ sellers, filters, location, regionStats }: Comp
 
     const distanceKm = roadDistanceKm(seller.location, location);
     // Při textovém hledání se okruh neuplatňuje – hledáte-li konkrétního prodejce, chcete ho najít.
-    if (!hasQuery && !filters.nationwide && distanceKm > filters.radiusKm) continue;
+    // Celostátní prodejce (e-shop, řetězec) rozváží všude – vzdálenost od jeho sídla nic neříká.
+    if (!hasQuery && !filters.nationwide && !seller.nationwide && distanceKm > filters.radiusKm) continue;
 
     const candidates = seller.products.filter((p) => productMatches(p, filters));
     if (candidates.length === 0) continue;
@@ -304,7 +305,8 @@ export function computeMatches({ sellers, filters, location, regionStats }: Comp
         d = a.pricePerKwh - b.pricePerKwh;
         break;
       case "distance":
-        d = a.distanceKm - b.distanceKm;
+        // celostátní prodejci až za místními (jejich „vzdálenost“ je jen k sídlu firmy)
+        d = Number(!!a.seller.nationwide) - Number(!!b.seller.nationwide) || a.distanceKm - b.distanceKm;
         break;
       case "rating":
         d = b.seller.rating - a.seller.rating || b.seller.reviewCount - a.seller.reviewCount;

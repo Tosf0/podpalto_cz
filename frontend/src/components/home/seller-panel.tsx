@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { REGIONS } from "@/lib/constants";
 import { deliveryLabel, popupProducts, type SellerMatch } from "@/lib/filters";
 import { formatCzk, formatCzkPerUnit, formatKm, formatRelative } from "@/lib/format";
+import { LocationNote } from "@/components/sellers/location-note";
 import { useI18n } from "@/lib/i18n";
 import { PRICE_TIER_META } from "@/lib/pricing";
 import { cn } from "@/lib/utils";
@@ -82,8 +83,9 @@ export function SellerPanel({ match, isBest, onClose }: { match: SellerMatch; is
               <MapPin aria-hidden className="size-3.5" />
               {seller.address.city}, {REGIONS[seller.address.region].short}
             </span>
-            <span className="num">{t("home.panel.fromYou", { distance: formatKm(match.distanceKm) })}</span>
+            <span className="num">{seller.nationwide ? t("sellers.location.nationwideShort") : t("home.panel.fromYou", { distance: formatKm(match.distanceKm) })}</span>
           </div>
+          <LocationNote seller={seller} />
           <p className="text-sm leading-relaxed text-foreground/80">{seller.description}</p>
           <SellerTags tags={seller.tags} max={5} className="pt-1" />
         </div>

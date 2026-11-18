@@ -200,8 +200,8 @@ Tajné hodnoty v repozitáři nejsou – **až tohle budeš číst, napiš Luká
 | Proměnná | Co to je | Kdo ji dodá |
 |---|---|---|
 | `SUPABASE_SECRET_KEY` | secret klíč projektu Podpalto (obchází RLS, smí zapisovat) | Lukáš |
-| `ANTHROPIC_API_KEY` | klíč k Claude API pro crew | dohodnout se, z čího účtu se platí |
-| účet admin na webu | k testu: admin → Agenti → *Spustit nyní* | zaregistruj se na webu a pošli Lukášovi e-mail účtu, nastaví ti roli `admin` |
+| `ANTHROPIC_API_KEY` | klíč k Claude API pro crew | **tvůj vlastní** (dohodnuto 18. 11.) |
+| účet admin na webu | k testu: admin → Agenti → *Spustit nyní* | **hotovo**: tvůj účet má roli `admin` a tarif Pro |
 
 Netajné hodnoty (můžeš rovnou): `SUPABASE_URL=https://sdhinkqouseaaesodqyy.supabase.co`,
 `MANAGER_MODEL=anthropic/claude-opus-5-5`, `AGENT_MODEL=anthropic/claude-sonnet-5-5`.
@@ -322,31 +322,21 @@ a jde volat víckrát v jedné transakci. Přidán index `price_observations (pr
 Pravidlo pro sběr: **neupdatovat staré řádky `price_observations`, vždy vkládat nové**, jinak
 se historie ztratí.
 
-**Reálná data místo demo dat** (zapsáno 18. 11. 2026): 26 fiktivních prodejců a demo
-statistiky jsou smazané. V databázi je **81 reálných prodejců** ze 14 krajů a **371 cen**
-z jejich veřejných webů a ceníků (sběr: jednorázově subagenti Claude, ne pipeline v `tools`).
-Každá cena má `source_url`, převody jednotek (q → t, kg → t, balení → t, pytel 1,6 PRMS → PRMS)
-jsou v `price_observations.original_unit/original_price`. Statistiky přepočítává
-`select public.refresh_market_stats();` (medián přes prodejce).
-Stav pokrytí: 50 prodejců s cenou, 31 jen s kontaktem; 29 prodejců má polohu jen na úrovni obce;
-Moravskoslezský kraj zatím bez jediné průměrné ceny, Praha, Ústecký, Vysočina, Olomoucký a Zlínský
-kraj mají 1–2 prodejce s cenou. Přesnost cen je třeba ověřit (stahování stránek vracelo
-shrnutí, ne surové HTML) – pro produkční data patří sběr do pipeline v `tools` podle
-`docs/agent-output-spec.md` (snapshot stránky, citace ceny, ARES, RÚIAN).
-
-**Fotky prodejců – JEN PRO VÝVOJ** (zapsáno 18. 11. 2026): fotky v `frontend/public/sellers/`
-jsou převzaté z webů prodejců **bez jejich svolení** – slouží jen pro vývoj a ukázku (showcase).
-Zdroj každé fotky je v `sellers.photo_source_url`. Přepínač v `/admin/kontrola` → Nastavení
-(`app_settings.seller_photos`): „Fotky z webů prodejců“ (vývoj) / „Jen obecné fotky podle paliva“
-(produkce – volné licence Unsplash/Pexels/Pixabay v `public/sellers/generic/`, autoři v CREDITS.md).
-Před ostrým provozem:
-- [ ] přepnout na „Jen obecné fotky podle paliva“,
-- [ ] **požádat prodejce o svolení** s použitím jejich fotek (e-mail s odkazem na profil; souhlas
-      evidovat – např. sloupec `sellers.photo_permission_at`), fotky bez souhlasu smazat
-      z `public/sellers/` a z `sellers.photo_url`,
-- [ ] dlouhodobě: fotky nahrává prodejce sám po převzetí profilu (bucket `seller-photos`, později R2),
-- [ ] dokud jsou soubory v `public/`, jsou dostupné na přímé URL i v produkčním režimu – před
-      spuštěním je z repozitáře odstranit nebo přesunout do úložiště s kontrolou přístupu.
+**Čistý start pro pipeline agentů** (18. 11. 2026 večer): dočasná data od subagentů Claude
+(81 prodejců, 371 produktů a cen, statistiky za listopad) a 5 ukázkových reportů CI Studia jsou
+**smazané** – databáze je prázdná a připravená na první import z pipeline (`tools` → worker,
+handoff `handoff/2026-11-18-01-export-do-supabase.md`). Mapa, katalog, Trendy a archiv CI Studia
+budou prázdné, dokud import neproběhne. Blog, účty, tarify, Sčítání 2021 a plán jobů zůstaly.
+- **Záloha** (JSON, jeden řádek na tabulku): `backup.snapshot_20261118` v Supabase (soukromé
+  schéma, není v API). Stažení: SQL Editor → `select data from backup.snapshot_20261118 where
+  name = 'sellers';` → zkopírovat / exportovat. Tabulky: sellers, products, price_observations,
+  commodity_price_stats, region_stats, analysis_reports, scrape_sources. Až nebude potřeba:
+  `drop schema backup cascade;`.
+- **Fotky prodejců z jejich webů** (bez svolení, jen pro vývoj) jsou z `frontend/public/sellers/`
+  smazané, zůstaly jen obecné fotky podle paliva (`public/sellers/generic/`, volné licence,
+  autoři v CREDITS.md). Přepínač v Nastavení administrace je na „Jen obecné fotky“. Vlastní fotku
+  nahraje prodejce po převzetí profilu (bucket `seller-photos`).
+- Párování se stávajícími prodejci (`link_sellers`, handoff bod 3.1) už není potřeba.
 
 **Blog se schvalováním** (zapsáno 18. 11. 2026): článek napíše kdokoli přihlášený a odešle ke
 schválení (`blog_posts.status = 'pending'`); publikuje, zamítá (s poznámkou), upravuje a maže admin

@@ -15,6 +15,12 @@ export const sellers = defineMessages({
       shortOwn: "Vlastní · do {km}",
       shortPickup: "Osobní odběr",
     },
+    location: {
+      nationwideShort: "celá ČR",
+      nationwide: "Rozváží po celé ČR – na mapě není, adresa je sídlo firmy, ne sklad.",
+      registeredOffice: "Poloha podle sídla firmy – sklad nebo prodejna může být jinde.",
+      approximate: "Přibližná poloha – bod na mapě nemusí přesně odpovídat skladu.",
+    },
     catalog: {
       title: "Prodejci paliv",
       description: "Ceny, doprava a hodnocení na jednom místě.",
@@ -207,6 +213,12 @@ export const sellers = defineMessages({
       shortOwn: "Eigene · bis {km}",
       shortPickup: "Selbstabholung",
     },
+    location: {
+      nationwideShort: "ganz CZ",
+      nationwide: "Liefert in ganz Tschechien – nicht auf der Karte, die Adresse ist der Firmensitz, kein Lager.",
+      registeredOffice: "Standort laut Firmensitz – Lager oder Verkaufsstelle können woanders sein.",
+      approximate: "Ungefährer Standort – der Punkt auf der Karte entspricht nicht unbedingt dem Lager.",
+    },
     catalog: {
       title: "Brennstoffhändler",
       description: "Preise, Lieferung und Bewertungen an einem Ort.",
@@ -398,6 +410,12 @@ export const sellers = defineMessages({
       shortFree: "Free up to {km}",
       shortOwn: "Own · up to {km}",
       shortPickup: "Pickup",
+    },
+    location: {
+      nationwideShort: "all of CZ",
+      nationwide: "Delivers across Czechia – not on the map, the address is the head office, not a depot.",
+      registeredOffice: "Location of the head office – the depot or shop may be elsewhere.",
+      approximate: "Approximate location – the point on the map may not match the depot exactly.",
     },
     catalog: {
       title: "Fuel sellers",

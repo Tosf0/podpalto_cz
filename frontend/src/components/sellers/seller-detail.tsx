@@ -60,7 +60,8 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { sizeLabel } from "./seller-utils";
+import { LocationNote } from "./location-note";
+import { distanceLabel, sizeLabel } from "./seller-utils";
 
 /* ------------------------------------------------------------------ */
 /* Pomocné funkce                                                      */
@@ -189,6 +190,7 @@ function Hero({ seller, onChanged }: { seller: Seller; onChanged: () => void }) 
           {a.street}
           <br />
           {a.zip} {a.city}
+          <LocationNote seller={seller} className="mt-1.5" />
         </Fact>
         <Fact label={t("sellers.detail.facts.region")}>{REGIONS[a.region].name}</Fact>
         {seller.ico && (
@@ -480,7 +482,7 @@ function DeliverySection({ seller }: { seller: Seller }) {
         <div className="h-full space-y-3 rounded-xl bg-secondary p-4">
           <p className="text-xs font-medium tracking-wider text-wood-strong uppercase">{t("sellers.detail.deliverySection.estimateFor", { location: location.label })}</p>
           <p className="text-sm">
-            {t("sellers.detail.deliverySection.distance")} <span className="num font-semibold">{formatKm(estimate.distanceKm)}</span>
+            {t("sellers.detail.deliverySection.distance")} <span className="num font-semibold">{distanceLabel(seller, estimate.distanceKm)}</span>
           </p>
           {estimate.outOfRange ? (
             <p className="flex items-start gap-2 text-sm text-muted-foreground">

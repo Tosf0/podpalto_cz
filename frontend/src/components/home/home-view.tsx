@@ -94,6 +94,8 @@ export function HomeView() {
         : [],
     [sellers, deferredFilters, location, regionStats],
   );
+  /** Na mapě jen prodejci s místem prodeje – celostátní e-shopy a řetězce jsou jen v seznamu. */
+  const mapMatches = useMemo(() => matches.filter((m) => !m.seller.nationwide), [matches]);
   const bestId = useMemo(() => findBestValueId(matches, deferredFilters.category === "all"), [matches, deferredFilters.category]);
   const selected = matches.find((m) => m.seller.id === selectedId) ?? null;
   const activeCount = countActiveFilters(filters);
@@ -170,7 +172,7 @@ export function HomeView() {
         style={{ "--map-bottom-inset": `${isDesktop ? bottomInset : 0}px` } as React.CSSProperties}
       >
         <SellerMap
-          matches={matches}
+          matches={mapMatches}
           location={location}
           showLocation={addressPicked}
           radiusKm={deferredFilters.radiusKm}
