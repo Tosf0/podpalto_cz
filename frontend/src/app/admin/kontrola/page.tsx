@@ -7,13 +7,17 @@ import { LOGIN_PATH, SUPABASE_ENABLED } from "@/lib/supabase/config";
 
 export const metadata: Metadata = { title: "Administrace", robots: { index: false, follow: false } };
 
-/** Administrace – jen role admin (data navíc chrání RLS a kontrola v RPC). `?sekce=data` otevře kontrolu dat. */
+/**
+ * Administrace – admin (vše) a editor (jen správa blogu). Data navíc chrání RLS a kontroly v RPC.
+ * `?sekce=data` / `?sekce=nastaveni` otevře záložku (jen admin).
+ */
 async function AdminGate({ searchParams }: { searchParams: Promise<{ sekce?: string | string[] }> }) {
   if (!SUPABASE_ENABLED) redirect("/");
   const [account, params] = await Promise.all([getServerAccount(), searchParams]);
   if (!account) redirect(`${LOGIN_PATH}?next=/admin/kontrola`);
-  if (account.role !== "admin") redirect("/");
-  return <AdminPage initialTab={params.sekce === "data" ? "data" : params.sekce === "nastaveni" ? "nastaveni" : "blog"} />;
+  if (account.role !== "admin" && account.role !== "editor") redirect("/");
+  const tab = account.role === "admin" && (params.sekce === "data" || params.sekce === "nastaveni") ? params.sekce : "blog";
+  return <AdminPage role={account.role} initialTab={tab} />;
 }
 
 export default function AdminKontrolaPage({ searchParams }: PageProps<"/admin/kontrola">) {

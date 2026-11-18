@@ -145,7 +145,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 function AccountRow({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useI18n();
   const router = useRouter();
-  const { enabled, loading, user, profile, plan, signOut, isAdmin } = useAuth();
+  const { enabled, loading, user, profile, plan, signOut, isEditor } = useAuth();
 
   // Demo režim bez Supabase – původní ukázkový účet
   if (!enabled) {
@@ -207,7 +207,7 @@ function AccountRow({ onNavigate }: { onNavigate?: () => void }) {
           {profile && profile.role !== "user" && ` · ${t(`account.roles.${profile.role}`)}`}
         </Link>
       </span>
-      {isAdmin && (
+      {isEditor && (
         <Link
           href="/admin/kontrola"
           onClick={onNavigate}

@@ -7,8 +7,30 @@ import { AdminBlogPanel } from "./admin-blog-panel";
 import { AdminSettingsPanel } from "./admin-settings-panel";
 import { ReviewQueuePage } from "./review-queue-page";
 
-/** Administrace (/admin/kontrola): správa blogu a kontrola dat od agentů. Interní – jen česky. */
-export function AdminPage({ initialTab = "blog" }: { initialTab?: "blog" | "data" | "nastaveni" }) {
+/**
+ * Administrace (/admin/kontrola). Admin: blog, kontrola dat od agentů, nastavení.
+ * Editor: jen správa blogu (bez mazání článků). Interní – jen česky.
+ */
+export function AdminPage({
+  role,
+  initialTab = "blog",
+}: {
+  role: "admin" | "editor";
+  initialTab?: "blog" | "data" | "nastaveni";
+}) {
+  if (role === "editor") {
+    return (
+      <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+        <PageHeader
+          icon={<ShieldCheck />}
+          eyebrow="Administrace"
+          title="Správa blogu"
+          description="Všechny články: psaní, úpravy, schvalování, publikace a skrytí."
+        />
+        <AdminBlogPanel canDelete={false} />
+      </div>
+    );
+  }
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
       <PageHeader
@@ -24,7 +46,7 @@ export function AdminPage({ initialTab = "blog" }: { initialTab?: "blog" | "data
           <TabsTrigger value="nastaveni">Nastavení</TabsTrigger>
         </TabsList>
         <TabsContent value="blog">
-          <AdminBlogPanel />
+          <AdminBlogPanel canDelete />
         </TabsContent>
         <TabsContent value="data">
           <ReviewQueuePage embedded />

@@ -55,7 +55,8 @@ type Busy = { id: string; action: string } | null;
  * stažení z webu, úprava v editoru, mazání. Fotky smazaných a zamítnutých článků se mažou
  * z bucketu `blog-images`; tlačítko „Uklidit fotky“ smaže fotky, na které nic neodkazuje.
  */
-export function AdminBlogPanel() {
+/** `canDelete` = admin (mazání článků a úklid fotek); editor články jen skrývá. */
+export function AdminBlogPanel({ canDelete }: { canDelete: boolean }) {
   const { data, loading, error, reload } = useApi(() => fetchAllPosts(), []);
   const [filter, setFilter] = useState<BlogPostStatus | "all">("pending");
   const [busy, setBusy] = useState<Busy>(null);
@@ -143,9 +144,11 @@ export function AdminBlogPanel() {
           ))}
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => void cleanOrphans()}>
-            <ImageOff /> Uklidit fotky
-          </Button>
+          {canDelete && (
+            <Button variant="outline" size="sm" onClick={() => void cleanOrphans()}>
+              <ImageOff /> Uklidit fotky
+            </Button>
+          )}
           <Button size="sm" asChild>
             <Link href="/blog/novy">
               <Pencil /> Nový článek
@@ -216,9 +219,11 @@ export function AdminBlogPanel() {
                     <Pencil /> Upravit
                   </Link>
                 </Button>
-                <Button size="sm" variant="ghost" className="text-destructive" onClick={() => remove(p)} disabled={!!busy}>
-                  {isBusy(p, "delete") ? <Loader2 className="animate-spin" /> : <Trash2 />} Smazat
-                </Button>
+                {canDelete && (
+                  <Button size="sm" variant="ghost" className="text-destructive" onClick={() => remove(p)} disabled={!!busy}>
+                    {isBusy(p, "delete") ? <Loader2 className="animate-spin" /> : <Trash2 />} Smazat
+                  </Button>
+                )}
               </div>
             </li>
           ))}

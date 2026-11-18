@@ -177,7 +177,7 @@ function Field({ label, hint, htmlFor, children }: { label: string; hint?: strin
 
 export function BlogEditor({ drafts, canPublish, initialId }: { drafts: BlogPost[]; canPublish: boolean; initialId?: string }) {
   const { t } = useI18n();
-  const { user, profile } = useAuth();
+  const { user, profile, isAdmin } = useAuth();
   const [saving, setSaving] = useState(false);
   /** Soubory vybrané v tomto sezení – nahrají se do Storage při uložení (id → File, "cover" → obálka). */
   const filesRef = useRef(new Map<string, File>());
@@ -759,7 +759,8 @@ export function BlogEditor({ drafts, canPublish, initialId }: { drafts: BlogPost
               <Button variant="ghost" size="sm" onClick={reset} className="text-muted-foreground">
                 <RotateCcw /> {t("blog.editor.actions.reset")}
               </Button>
-              {USES_DB && draft.id && (canPublish || draft.status !== "published") && (
+              {/* mazat: admin cokoli, ostatní (i editor) jen svůj nepublikovaný článek */}
+              {USES_DB && draft.id && (isAdmin || (draft.status !== "published" && (!draft.authorId || draft.authorId === user?.id))) && (
                 <Button variant="ghost" size="sm" onClick={() => void removeSaved()} disabled={saving} className="text-destructive">
                   <Trash2 /> {t("account.editor.deleteDraft")}
                 </Button>
