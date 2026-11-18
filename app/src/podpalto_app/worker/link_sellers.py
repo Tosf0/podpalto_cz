@@ -1,8 +1,9 @@
 """One-off: link sellers already in Supabase to the sellers of the export.
 
-The 81 real sellers on the web were written once by Claude subagents, without
-``external_key``. The export upserts by ``external_key``, so without this step a seller
-read by both would appear twice on the map. Matching is by web domain, then by IČO.
+The 81 real sellers on the web were written once by Claude subagents, with their slug as
+``external_key`` (a placeholder, not a source id). The export upserts by ``external_key``,
+so without this step a seller read by both would appear twice on the map. Matching is by
+web domain, then by IČO; a key equal to the slug may be replaced, any other key is kept.
 
 ``python -m podpalto_app.worker.link_sellers``           prints the proposal, writes nothing
 ``python -m podpalto_app.worker.link_sellers --apply``   sets ``external_key`` of the matches
@@ -70,7 +71,7 @@ def link(db: SupabaseClient, payload: dict[str, Any], *, apply: bool) -> list[st
         if row.get("external_key") == key:
             lines.append(f"{key:16} already linked to {row['slug']}")
             continue
-        if row.get("external_key"):
+        if row.get("external_key") and row["external_key"] != row["slug"]:
             lines.append(f"{key:16} SKIP: {row['slug']} is linked to {row['external_key']}")
             continue
         owner = (

@@ -256,7 +256,12 @@ sources:
     pillar: 2
     page_paths: [/]
     consent: none
-    notes: 14 yards in central and eastern Bohemia and Vysočina with price zones 0-III, so no single region.
+    notes: >-
+      14 yards in central and eastern Bohemia and Vysočina with price zones 0-III, so no single
+      region. Location: the branch pages (/krinec, /chrudim, ...) list only delivery areas, no
+      yard address (orders by phone, delivery only), so the seat stays, flagged. The seller
+      on the web from the subagents ("sklad Křinec") had the centre of Křinec (Náměstí),
+      not a yard. Proper fix: one seller per branch with its delivery area (spec section 4).
 
   - id: olvan
     seller: olvannachod.cz

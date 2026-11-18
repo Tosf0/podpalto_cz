@@ -232,8 +232,21 @@ def test_existing_sellers_are_matched_by_domain_then_ico() -> None:
     ]
     assert found == [("palivos", "a", "domain"), ("demosklad", "b", "ico"), ("novy", None, "new")]
 
-    db = MemoryDb({"sellers": [dict(row, external_key=None, owner_id=None) for row in existing]})
+    # The subagents wrote the slug as external_key: a placeholder that linking replaces.
+    rows = [dict(existing[0], external_key="palivos", owner_id=None),
+            dict(existing[1], external_key="demo", owner_id=None)]  # fmt: skip
+    db = MemoryDb({"sellers": rows})
     lines = link(db, {"sellers": exported}, apply=False)  # type: ignore[arg-type]
-    assert db.writes == [] and lines[0].startswith("palivos          -> palivos")
+    assert db.writes == [] and lines[0] == "palivos          already linked to palivos"
+    assert lines[1].startswith("demosklad        -> demo (Demo) by ico")
     link(db, {"sellers": exported}, apply=True)  # type: ignore[arg-type]
     assert [row["external_key"] for row in db.tables["sellers"]] == ["palivos", "demosklad"]
+
+
+def test_a_key_set_by_the_export_is_never_replaced() -> None:
+    row = {"id": "a", "slug": "palivos-teplice", "name": "Palivos", "website": "https://palivos.cz",
+           "ico": None, "external_key": "palivos_feed", "owner_id": None}  # fmt: skip
+    db = MemoryDb({"sellers": [row]})
+    exported = [{"seller_key": "palivos", "website": "https://palivos.cz", "company_ico": None}]
+    lines = link(db, {"sellers": exported}, apply=True)  # type: ignore[arg-type]
+    assert lines[0].startswith("palivos          SKIP") and db.writes == []
