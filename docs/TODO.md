@@ -4,6 +4,35 @@ Průběžný seznam otevřených úkolů a dočasných rozhodnutí. Hotové věc
 důležitá rozhodnutí přesouváme do README příslušné služby. Datum = kdy byla položka
 zapsána nebo naposledy změněna.
 
+## Přehled k 19. 11. 2026 (Franta / Claude) – co je hotové a co zbývá
+
+**Hotovo (agenti a data):**
+- Export sběru do Supabase (`tools` `GET /export` → worker `export.py`), první import
+  18. 11. (34 prodejců, 574 cen), statistiky přepočítané.
+- Railway: služby `tools` a `worker` běží, nasazují **jen z `main`** (produkce); test jobu
+  `collect` prošel end-to-end. `main` = produkce, `dev` = vývoj (sekce „Vydání“).
+- Kvalita: rozpětí cen podle paliva, `price_jump` (skok > 30 %), varianty cen (akce,
+  množstevní ceny, pásma Havelky), `delivery_included` z názvu, varianty mimo kontrolu
+  vůči trhu, stabilní klíče prodejce a položek, poloha prodejců z ARES a RÚIAN.
+- Zdroje: 41 v registru; nově Moravskoslezský (3), Karlovarský (Golem), Vysočina
+  (PREMIUM PELLETS), Pardubický (Polička, DMdřevo, Litomyšl), Olomoucký (OL-IN, Ludwig),
+  Plzeňský (Makový). Ceníky ve Wordu (.doc, .docx) čte `collect/worddoc.py`.
+- Požadavky z handoffů #02 a #04 splněné.
+
+**Zbývá – v pořadí:**
+1. **Vydat `dev` → `main`** (nové zdroje, Word, `price_jump`, úpravy z #04 jsou jen v `dev`)
+   a v administraci spustit „Sběr cen“ – teprve pak budou nové kraje na webu.
+2. **Lukáš:** Vercel *Production Branch* = `main`; schválit 2 varianty Lesů Liberec a rozhodnout
+   2 odlehlé ceny v Data od agentů; zvážit ochranu `main` na GitHubu.
+3. **Frekvence sběru:** dnes jeden měsíční job; e-shopy a feedy týdně, ceníky měsíčně.
+4. **Pokrytí:** Jihomoravský kraj a Praha (po 1 místním prodejci) – ceníky na webu se
+   nedaří najít; stage 1 zdroje níže (uhlipro, cdpaliva, Lesy ČR, VLS…).
+5. **Doprava prodejců** (bod 10) – dnes u všech `null`, kalkulačka nemá data.
+6. **CI Studio:** ověřit `MarketResearchFlow` nad reálnými daty (cena běhu), napsat
+   `SellerProfileFlow` a analýzu `url`.
+7. **Rozhodnutí:** kWh konstanty (bod 6), externí hodnocení (bod 11), dřevo v „m³“ bez
+   upřesnění, souhlas prodejců se zobrazením cen, pobočky řetězců.
+
 ## Stav k 18. 11. 2026 večer: frontend + Supabase (Lukáš / Claude)
 
 Nasazeno v projektu Podpalto (migrace `frontend/supabase/migrations/2026111812*` až `…150000`,
@@ -44,18 +73,18 @@ Frontend:
 
 **Co je teď na straně `app` / `tools` (Franta):**
 
-1. **Worker** – smyčka obou front je hotová (`app/src/podpalto_app/worker/`); zbývá doplnit
-   export a chybějící flows, viz „Napojení agentů na web: Vercel + Supabase + Railway“ níže.
-2. **Zápis do Supabase** (export podle `docs/agent-output-spec.md`, upsert přes
-   `sellers.external_key` a `products (seller_id, external_id)`; při vložení produktu
-   `price_updated_at = observed_at` první ceny).
-3. **`market_stats`** (bod 5) – v databázi je hotová funkce `public.refresh_market_stats()`
+1. [x] **Worker** – smyčka obou front, export a joby `collect` / `market_report` hotové
+   (18. 11.); chybí jen flows pro analýzy `seller` a `url` (bod 5).
+2. [x] **Zápis do Supabase** (export podle `docs/agent-output-spec.md`, upsert přes
+   `sellers.external_key` a `products (seller_id, external_id)`) – hotovo, první import 18. 11.
+3. [x] **`market_stats`** (bod 5) – v databázi je hotová funkce `public.refresh_market_stats()`
    (migrace `…170000_refresh_market_stats.sql`); po jobu `collect` ji volá sama
    `finish_agent_job_run`, po ručním importu `select public.refresh_market_stats();`. Mediány ze schválených nabídek,
    bez akcí, převod na PRMS / tunu, kraj bez nabídky nemá hodnotu.
-4. Rozhodnout body **6, 10–12** níže (kWh konstanty, geolokace, hodnocení, doprava
+4. [ ] Rozhodnout body **6, 10–12** níže (kWh konstanty, doprava, hodnocení, doprava
    celostátních e-shopů); body 7 a 8 (pásma, klíč prodejce) rozhodnuté 18. 11.
-5. `MarketResearchFlow` / `SellerProfileFlow` podle rozhodnutí o CI Studiu (DB část hotová).
+5. [ ] `MarketResearchFlow` (ověřit naostro) / `SellerProfileFlow` (napsat) podle rozhodnutí
+   o CI Studiu (DB část hotová).
 
 **Média na Cloudflare R2** (zapsáno 18. 11. 2026): obrázky blogu, fotky prodejců a avatary
 přesunout ze Supabase Storage a `frontend/public/` do R2 přes `media.podpalto.cz`, spolu
@@ -131,8 +160,7 @@ API klíč mezi Vercelem a Railway.
   služba `worker` v `docker-compose.yml`, proměnné v `.env.example`.
 
 **Co zbývá Frantovi (v pořadí):**
-- [ ] **1. Export sběru do Supabase** – kód hotový (18. 11. 2026), zbývá první import
-      s klíčem:
+- [x] **1. Export sběru do Supabase** – kód hotový a první import proběhl (18. 11. 2026):
       - `tools`: `GET /export?since=…` a `uv run podpalto-export` (JSON do `outputs/`)
         v `collect/export.py` – převod kategorií a jednotek (spec 6.6, 6.7), atributy z názvu
         (dřevo, pelety, brikety, uhlí), řádky, které web neumí ukázat, v `skipped` s důvodem.
@@ -175,7 +203,8 @@ API klíč mezi Vercelem a Railway.
         `sources.yaml` s poznámkou, odkud adresa je). Opraven kraj v registru u drevosrot
         (sklad Černčice, ULK), briketymelnik (Mělník, STC) a valdex (Ústí n. L., ULK).
         Doplněno IČO: waldera (z kontaktů), dek (Stavebniny DEK a.s., z „O nás“),
-        drevopraha (Zafido s.r.o., z kontaktů), bauhaus (BAUHAUS k.s., z ARES podle jména).
+        drevopraha (Zafido s.r.o., z kontaktů), bauhaus (BAUHAUS k.s., ověřeno na
+        `bauhaus.cz/impressum`).
       - [ ] **Zůstává sídlo s příznakem `location_is_registered_office` (12):** havelka
         (jen závozová pásma, adresy skladů na webu nejsou), olvan („Běloveská 237“ v RÚIAN
         není), znz, deblicelesy, palivapolice (web uvádí jen sídlo), alsol (střediska),
@@ -186,6 +215,11 @@ API klíč mezi Vercelem a Railway.
         může být až ~1 km vedle). Upřesnit, až bude známé číslo nebo souřadnice.
       - [ ] **baumax:** bez IČO a polohy (kontaktní stránka vrací HTTP 502) →
         `location_unknown`, na mapě nebude. kvalitniuhli: poloha z mapy na webu, IČO chybí.
+      - [x] **`price_jump`** (19. 11.): skok ceny položky o víc než 30 % proti předchozímu
+        snímku zdroje → ruční kontrola (`flag_price_jumps` v `collector.py`).
+      - [x] **Handoff #04** (19. 11.): akce a množstevní ceny bez `outlier_vs_market`
+        a `price_jump`; `delivery_included = true` z názvu („s dopravou“, „doprava zdarma“).
+        Data z prvního importu se zpětně nemění (2 varianty Lesů Liberec schválí admin).
       - [ ] **Řetězce a více skladů:** havelka (14 skladů, sídlo Praha 4), unikom (Čáslav,
         Uhlířské Janovice, Zbraslavice), korbicka (Nové Město, Bystřice), alsol (2 střediska)
         a hobby markety s celostátní cenou (unihobby, mountfield…) mají dnes jeden bod.
@@ -272,7 +306,8 @@ sám do ruční kontroly (`review_status = needs_review`, admin → Data od agen
 
 **Stav 18. 11. 2026 večer:** projekt `podpalto` je založený přes API Railway (token
 workspace `RAILWAY_API_TOKEN` v `.env`; CLI s tokenem workspace nefunguje, ptá se na uživatele).
-Služby `tools` (volume `/data`) a `worker` z `Tosf0/podpalto_cz`, větev `dev`, proměnné podle
+Služby `tools` (volume `/data`) a `worker` z `Tosf0/podpalto_cz`, větev **`main`** (do 18. 11.
+22:50 `dev`), proměnné podle
 kroků 3 a 4 níže. **Config as Code (`railway/*.json`) Railway pro nové služby odmítá**
 („deprecated, use Infrastructure as Code“), proto jsou hodnoty z `railway/tools.json`
 a `railway/worker.json` (Dockerfile, start command, healthcheck, restart, watch patterns)
@@ -316,7 +351,7 @@ import čísla do ~100 už použil.
    - *Deploy* → v Logs `worker railway-worker started, polling every 30s`.
 5. **Test:** na webu admin → **Agenti** → u „Přehled trhu“ *Spustit nyní* → do minuty
    „Běží“ (hláška „Worker … naposledy převzal běh“), na konci „Hotovo“ a report v CI Studiu.
-   „Sběr cen“ skončí chybou, dokud nebude `worker/export.py` – to je v pořádku.
+   „Sběr cen“ sesbírá a exportuje do Supabase (ceníky přes Claude API stojí kredit).
 6. **Provoz:** Railway nasazuje z větve **`main`**, ne z `dev` (od 18. 11. 2026): worker
    zapisuje do jediné, produkční Supabase, takže na Railway smí jen vydaný kód. Push do `main`
    znovu nasadí jen dotčenou službu (watch patterns v nastavení služby). Rozdělaný běh při redeployi skončí „Worker se ukončil … spusťte znovu“.
@@ -411,15 +446,16 @@ Studiu (`POST /api/analyze` + polling `GET /api/analyze/{run_id}`), dnes simulov
 
 Cíl: **agenti zapisují do Supabase, frontend čte ze Supabase, žádné veřejné REST API.**
 
-- [ ] **Agenti → Supabase:** výstup podle `docs/agent-output-spec.md` (prodejci s polohou,
-      produkty, ceny, běhy). Nejdřív export do JSON souboru, pak přímý zápis se *secret*
-      klíčem (jen na serveru) v pořadí `sellers` → `products` → `price_observations` →
+- [x] **Agenti → Supabase:** výstup podle `docs/agent-output-spec.md` (prodejci s polohou,
+      produkty, ceny, běhy). Hotovo 18. 11.: `podpalto-export` (JSON soubor) a přímý zápis
+      workerem se *secret* klíčem v pořadí `sellers` → `products` → `price_observations` →
       `scrape_runs`.
 - [x] **Frontend: smazat REST větve** (hotovo 18. 11.) v `src/lib/api/sellers.ts`, `market.ts`, `reports.ts`,
       `analysis.ts` a `client.ts`; ukázková data ponechat jen jako offline režim bez
       Supabase. V `frontend/README.md` nahradit kapitolu 5 (REST kontrakt) odkazem na schéma
       (`frontend/supabase/migrations/`) a `docs/agent-output-spec.md`.
-- [ ] **CI Studio přes frontu v databázi místo REST:** DB a frontend hotové 18. 11., zbývá worker v `app`.
+- [ ] **CI Studio přes frontu v databázi místo REST:** DB, frontend i worker hotové (18. 11.);
+      analýza `market` běží, `seller` a `url` končí srozumitelnou chybou (flows chybí).
       - frontend vloží řádek do `analysis_runs` (tabulka a RLS pro tarif Pro už existují),
       - služba `app` si nové řádky (`status = 'queued'`) vyzvedává – polling, nebo
         databázový webhook / Supabase Realtime – a spustí příslušný flow,
@@ -433,18 +469,17 @@ Cíl: **agenti zapisují do Supabase, frontend čte ze Supabase, žádné veřej
 ### Opravy API: současný stav (18. 11. 2026)
 
 Databázová část rozhodnutí 1–4 je hotová v migraci
-`frontend/supabase/migrations/20261118120000_agent_output.sql`. Syntaxe je ověřená
-parserem PostgreSQL, ale **migrace **je nasazená** (18. 11. večer, spolu s opravami)** v projektu Podpalto a neproběhla
-proti živé databázi (lokálně není Docker ani Postgres).
+`frontend/supabase/migrations/20261118120000_agent_output.sql`, **nasazená** v projektu
+Podpalto (18. 11. večer, spolu s opravami) a ověřená prvním importem 18. 11.
 
 | Rozhodnutí | Stav |
 |---|---|
-| (1) akce a pásma jako produkt | DB hotová. Zbývá: §7 ve specu, zobrazení variant na detailu prodejce. |
+| (1) akce a pásma jako produkt | Hotovo: DB, §7 specu, export (rozpozná varianty), detail prodejce („Od 1 palety“). |
 | (2) chybějící pole | Hotovo, viz poznámky k mapování níže. |
 | (3) „neuvedeno“ | Hotovo (DB i frontend, 18. 11.). |
 | (4) stav kontroly | Hotovo: DB, opravené triggery (`…130000_review_fixes.sql`) a stránka `/admin/kontrola`. |
-| (5) `market_stats` | Funkce `refresh_market_stats()` v DB (18. 11.); služba `tools` ji jen zavolá po importu. |
-| (9) fronta CI | DB (`…140000`) a frontend hotové; zbývá worker v `app`. |
+| (5) `market_stats` | Hotovo: funkce `refresh_market_stats()` v DB, volá ji `finish_agent_job_run` po jobu `collect`. |
+| (9) fronta CI | Hotovo pro analýzu `market` (DB, frontend, worker); `seller` a `url` čekají na flows. |
 
 Co migrace dělá navíc nebo jinak, než říká text rozhodnutí níže:
 
@@ -481,7 +516,7 @@ musí být hotový dřív, než do produkce zapíšeme první reálná data.
 Kontrola `docs/agent-output-spec.md` proti schématu Supabase (`frontend/supabase/migrations/`)
 a frontendu. Čísla odpovídají bodům kontroly.
 
-- [ ] **(1) Akční a množstevní ceny = samostatný produkt.** DB a §7 specu hotové, export je rozpoznává (18. 11.); zbývá ověřit zobrazení variant na detailu prodejce s reálnými daty. Trigger `apply_price_observation`
+- [x] **(1) Akční a množstevní ceny = samostatný produkt.** Hotovo: DB, §7 specu, export je rozpoznává (18. 11.), detail prodejce s reálnými daty zkontroloval Lukáš (#04). Trigger `apply_price_observation`
       přepisuje aktuální cenu produktu posledním zjištěním, takže akční cena nebo cena
       „od 10 PRMS“ poslaná ke stejnému produktu by na mapě nahradila běžnou cenu.
       - Akce a množstevní pásmo dostanou vlastní `product_key` (např.
@@ -520,8 +555,9 @@ a frontendu. Čísla odpovídají bodům kontroly.
         zůstává celá (audit),
       - fronta ruční kontroly pro roli admin (schválit = `ok`, zamítnout = `rejected`);
         další zjištění s blokujícím příznakem vrátí produkt do `needs_review`.
-- [ ] **(5) Statistiky trhu počítá nový deterministický nástroj v `tools`** (pracovně
-      `market_stats`), ne LLM a ne frontend:
+- [x] **(5) Statistiky trhu počítá deterministický kód, ne LLM a ne frontend** – hotovo
+      jako DB funkce `refresh_market_stats()` (ne nástroj v `tools`); zbývá jen dát stejná
+      čísla nástrojům pro `MarketResearchFlow` a doplnit §12 specu. Původní zadání:
       - z aktuálních cen (jen `review_status = 'ok'`, bez akcí a pásem, jedna položka na
         produkt v nejlevnější variantě jako u `price_comparison`) spočítá měsíční průměry
         komodit ČR a krajů (`commodity_price_stats`: `hardWoodPrms`, `softWoodPrms`,
@@ -570,17 +606,14 @@ a frontendu. Čísla odpovídají bodům kontroly.
 
 ### Opravy API: doporučené pořadí dalších kroků
 
-1. ~~**Migrace Supabase:** body 1–4~~ – napsaná (18. 11. 2026), **zbývá nasadit** do
-   projektu Podpalto (`npx supabase db push` nebo SQL Editor) a ověřit, že seed a frontend
-   dál fungují.
-2. **Rozhodnout body 6–8** (kWh, pásma, klíč prodejce), protože ovlivňují export.
-   Body 7 a 8 rozhodnuté 18. 11. 2026, bod 6 export neblokuje.
-3. **`tools`:** nástroj `market_stats` (bod 5) a JSON export podle `agent-output-spec.md`
-   s validací proti JSON Schema.
-4. **Frontend:** zobrazit „neuvedeno“ (bod 3), smazat REST větve, upravit dokumentaci
-   (bod 12). Posunuto před zápis, viz „Pozor na pořadí“ výše.
-5. **Zápis do Supabase** se *secret* klíčem (a rozhodnutí o fiktivních prodejcích).
-6. **Fronta CI Studia** (bod 9) spolu s úkoly z rozhodnutí o CI Studiu.
+1. ~~**Migrace Supabase:** body 1–4~~ – nasazená 18. 11. 2026.
+2. **Rozhodnout body 6–8** – 7 a 8 rozhodnuté 18. 11., bod 6 (kWh) zbývá, export neblokuje.
+3. ~~**`tools`:** `market_stats` a JSON export~~ – hotovo 18. 11. (statistiky jako DB funkce,
+   export `GET /export` / `podpalto-export`); validace proti JSON Schema zatím ne (export
+   validují pydantic modely).
+4. ~~**Frontend:** „neuvedeno“, REST větve~~ – hotovo; zbývá dokumentace (bod 12).
+5. ~~**Zápis do Supabase**~~ – hotovo, první import 18. 11.
+6. **Fronta CI Studia** – `market` hotová, `seller` a `url` zbývají (CI Studio níže).
 
 ## Rozhodnutí: co je CI Studio (18. 11. 2026)
 
@@ -613,6 +646,8 @@ obchodník, prodejce), ne z pohledu podpalto.cz. Podpalto.cz je srovnávač, ne 
 
 - [ ] `app`: `MarketResearchFlow` vstup `{fuel_category, region}` → výstup Markdown podle
       osnovy v bodě 1 + strukturovaná data (ceny, index, počet nabídek) pro grafy.
+      Vstup napojený (worker, 18. 11.); zbývá ověřit report nad reálnými daty a cenu běhu
+      a přidat strukturovaná data.
 - [ ] `app`: nový `SellerProfileFlow` vstup `{seller_key}` → Markdown + strukturovaný
       profil do `seller_intel` (bez `threat_level`, se „Srovnáním s trhem“).
 - [x] DB: `analysis_reports.kind` (`market` | `seller`), `analysis_reports.params` (hotovo 18. 11.: `kind` má navíc `url` pro dnešní formulář)
@@ -638,21 +673,28 @@ a `podpalto-verify-sellers`. Adresy jsou z PDF; před zápisem je ověřit.
 
 **Pilíř 1: e-shopy a výrobci**
 
+Prověřeno 18. 11. (robots.txt, ceny v HTML, IČO a kraj sídla); výsledky u položek.
+
 - [ ] **optimtop.cz** a drevenepelety.cz (stejný provozovatel): uhelné brikety, koks,
-      balené uhlí, pelety; množstevní slevy podle počtu palet, doprava zdarma (PDF s. 6)
-- [ ] **biomac.cz**: pelety a brikety, doprava není v ceně (1 050 Kč/paleta) (PDF s. 6–7)
+      balené uhlí, pelety; množstevní slevy podle počtu palet, doprava zdarma (PDF s. 6).
+      Ceny až na stránkách produktů; celostátní e-shop (Olomoucký kraj sídla).
+- [ ] **biomac.cz**: pelety a brikety, doprava není v ceně (1 050 Kč/paleta) (PDF s. 6–7).
+      Vlastní platforma, `Crawl-delay: 20`, ceny „dle pobočky“ – odloženo.
 - [ ] **cdp.cz**: pelety, brikety, balené uhlí, dřevo; ceny v Kč/kg, manipulační poplatek
-      u 1 palety (PDF s. 7)
+      u 1 palety (PDF s. 7). 19 cen v HTML, celostátní e-shop (Praha).
 - [ ] **okpaliva.cz**: pelety, brikety, uhlí, dřevo; ceny vč. dopravy, pozor na lokální URL
-      pro jednotlivé obce (PDF s. 9)
-- [ ] pelety-premium.cz (Golčův Jeníkov), ekopelety.cz (Stará Huť) (PDF s. 9–10)
+      pro jednotlivé obce (PDF s. 9). Opakovaně shazuje spojení našeho klienta – neobcházíme.
+- [x] pelety-premium.cz (Golčův Jeníkov) – zdroj `peletypremium` (Heureka feed, 18. 11.).
+- [ ] ekopelety.cz (Stará Huť) (PDF s. 9–10): 9 cen v HTML, IČO na webu nenalezeno.
 
 **Pilíř 2: uhelné sklady a těžba**
 
-- [ ] **uhlipro.cz** (`/Cenik`), **uhlinemcova.cz** (`/cenik`) (PDF s. 13–14)
-- [ ] palivamakovy.cz, cdpaliva.cz (`/cenik`, uhlí i dřevo), coxys.cz (`/cenik`),
-      golem-paliva.cz (`/aktualni-cenik-produktu/`), paliva-police.cz (`/cenik/`, uhlí; jiný
-      web než palivapolice.cz se dřevem) (PDF s. 14–15)
+- [ ] **uhlipro.cz** (`/Cenik`, 10 cen, MSK), **uhlinemcova.cz** (`/cenik`, 19 cen, STC)
+      (PDF s. 13–14)
+- [x] palivamakovy.cz (`palivamakovy`, 19. 11.) a golem-paliva.cz (`golem`, 18. 11.).
+- [ ] cdpaliva.cz (`/cenik`, 47 cen, JHC), coxys.cz (`/cenik` bez cen v HTML, KVK),
+      paliva-police.cz (`/cenik/`, uhlí, 15 cen; stejná firma jako `palivapolice` → stejný
+      `seller_key`) (PDF s. 14–15)
 - [x] **Moravskoslezský kraj** (18. 11. 2026): `uhli_pribor` a `uhli_opava` (Uhlí Morava,
       pobočky Příbor a Velké Hoštice, každá s vlastním ceníkem, 18 + 18 cen) a
       `ridera_ostrava` (ceník skladu Ostrava-Mariánské Hory, 17 cen, samostatný prodejce
@@ -687,10 +729,12 @@ a `podpalto-verify-sellers`. Adresy jsou z PDF; před zápisem je ověřit.
       štípaného dříví (např. `lstelc.lesycr.cz/prodej-palivoveho-drivi/`); rozcestník
       na 60+ lesních správ (PDF s. 18–19)
 - [ ] **Vojenské lesy a statky** (`vls.cz/cs/pro-verejnost/prodej-drivi-na-otop`): ceny
-      bez DPH po krajích, `price_includes_vat: false` (PDF s. 19–20)
-- [ ] Městské lesy Hradec Králové (`mestske-lesy.cz/prodej-paliva-stepky-a-mulcovaci-kury/`)
-- [ ] drevo-ludwig.cz, palivove-drevo-libeznice.cz, drevo-domu.cz, palivakozma.cz,
-      prodejpalivovehodreva.eu (PDF s. 21–23)
+      bez DPH po krajích, `price_includes_vat: false` (PDF s. 19–20); 19 cen v HTML.
+- [ ] Městské lesy Hradec Králové (`mestske-lesy.cz/prodej-paliva-stepky-a-mulcovaci-kury/`,
+      31 cen v HTML, HKK)
+- [x] drevo-ludwig.cz (`drevoludwig`, 19. 11.)
+- [ ] palivove-drevo-libeznice.cz (bez cen v HTML), drevo-domu.cz (bez cen v HTML),
+      palivakozma.cz (11 cen, STC), prodejpalivovehodreva.eu (2 ceny, STC) (PDF s. 21–23)
 
 **Pilíř 5: statistika**
 
@@ -713,10 +757,13 @@ a `podpalto-verify-sellers`. Adresy jsou z PDF; před zápisem je ověřit.
       (waldera.cz, ridepal.eu u černého uhlí; PDF uvádí např. Zaječov 26763). Teď
       čteme jen ceny „od“ / bez příplatku. Pravidla to dovolují, není to obcházení blokace.
 - [ ] **Sezónnost a akční nabídky** (PDF 3.3): odlišit běžný ceník od akcí a jarních
-      nabídek (příznak akce, případně platnost ceníku). Časové razítko už máme.
+      nabídek (příznak akce, případně platnost ceníku). Časové razítko už máme. Akce podle
+      textu řádku („akce“, „věrnostní sleva“) export pozná od 18. 11.; platnost ceníku ani
+      akce uvedená jen v nadpisu sekce (Ridera) zatím ne.
 - [ ] **Provoz podle PDF 4.4:**
   - [ ] frekvence sběru podle typu zdroje (sklady a lesy čtvrtletně nebo k 1. 4., 1. 9.,
-        1. 10., e-shopy a hobby markety týdně) a plánovač (cron); teď se sběr spouští ručně,
+        1. 10., e-shopy a hobby markety týdně). Plánovač už je (`agent_jobs` v Supabase,
+        worker na Railway, 18. 11.), ale jen jeden měsíční job pro všechny zdroje,
   - [ ] paralelní sběr nezávislých zdrojů,
   - [ ] kontrola platnosti SSL certifikátu prodejce,
   - [ ] seznam známých podvodných domén (PDF zmiňuje bio-max.cz).
@@ -805,16 +852,18 @@ rozhodnutí:** nechat přísně podle PDF, nebo např. klece brát jako sypané 
       Metrika „počet prodejců v kraji“ z druhého návrhu proto zatím nemá zdroj.
 - [ ] **Ceny podle PSČ** a **další uhelné sklady ze seznamů SD Bílina**: viz stage 2.
 - [ ] **Havelka:** sklady v několika krajích a cenová pásma 0–III; chybí převod pásma na
-      oblast/PSČ, proto nemá kraj.
+      oblast/PSČ, proto nemá kraj. Od 18. 11. `export: false` (sbírá se, na web nejde).
 - [ ] **Městské lesy Liberec:** slevové řádky („věrnostní sleva“, „při odběru 10 a více
       prm“) jsou metrové dříví, ale délka je jen v nadpisu tabulky, takže se převádí jako
-      krátká polena (dva z nich mají příznak odlehlé ceny).
+      krátká polena. Od 19. 11. jdou jako akce / množstevní ceny bez kontroly vůči trhu;
+      základní produkt k nim zůstává nevyplněný (nejednoznačný).
+- [ ] **Jihomoravský kraj a Praha:** po jednom místním prodejci; hledání (19. 11.) našlo jen
+      adresáře a „cena na dotaz“. Zkusit e-shopy s rozvozem jen po Brně / Praze.
 
 ## Kvalita dat
 
-- [ ] **Prodejci bez IČO** na stránkách povolených robots.txt: kvalitniuhli.cz,
-      drevopraha.cz, baumax.cz, dek.cz, waldera.cz, bauhaus.cz. U řetězců doplnit ručně
-      z ARES podle názvu firmy.
+- [ ] **Prodejci bez IČO:** zbývají kvalitniuhli.cz a baumax.cz (kontakty vracely HTTP 502).
+      Doplněno 18. 11.: drevopraha, dek, waldera, bauhaus (ze stránek prodejců).
 - [ ] **DPH předpokládané z registru** (`vat_assumed_from_registry`) u ceníků, které DPH
       neuvádí (např. Havelka, UNIKOM, OLVAN, hobby markety). Ověřit u prodejců.
 - [ ] **Bříza, směs dřevin** se nepřevádí na kg ani Kč/kWh (PDF dává jen tvrdé/měkké).
@@ -829,13 +878,13 @@ rozhodnutí:** nechat přísně podle PDF, nebo např. klece brát jako sypané 
 
 ## Provoz a infrastruktura
 
-- [ ] **Docker image nebyl sestaven** (Docker na vývojovém stroji není). Ověřit tools image
-      s Tesseractem a Chromiem (`playwright install --with-deps chromium`).
+- [x] **Docker image** – sestavují se na Railway (18. 11.): `tools` s Tesseractem a Chromiem,
+      `app` pro worker; obě nasazení prošla.
 - [ ] **Crew pro report** (MarketResearchFlow) zatím neproběhla naostro nad skutečnými
       daty; ověřit výstup a cenu běhu.
-- [ ] **Plánování sběru** a **PostgreSQL/TimescaleDB**: viz stage 2.
-- [ ] **Sjednotit API mezi frontendem a backendem** – rozhodnuto 18. 11. 2026, viz
-      sekce „Rozhodnutí: jediný zdroj dat je Supabase“ níže.
-- [ ] **Mapa/dashboard po krajích** z druhého návrhu (GeoJSON krajů, PSČ → kraj) zatím
-      není; data mají kraj prodejce a oblast platnosti ceny.
-- [ ] **Sledování nákladů na LLM** (extrakce a report) zatím žádné.
+- [ ] **Frekvence sběru** (plánovač je, viz stage 2) a **PostgreSQL/TimescaleDB**.
+- [x] **Sjednotit API mezi frontendem a backendem** – vše přes Supabase (18. 11.).
+- [x] **Mapa po krajích** – heat mapa krajů na webu (Lukáš, 18. 11.); data mají kraj prodejce
+      a oblast platnosti ceny (`valid_in_regions`).
+- [ ] **Sledování nákladů na LLM** (extrakce a report) zatím žádné; v Anthropic konzoli
+      nastavit měsíční limit útraty.
