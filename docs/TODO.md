@@ -253,6 +253,19 @@ sám do ruční kontroly (`review_status = needs_review`, admin → Data od agen
 
 #### Railway – krok za krokem (poprvé)
 
+**Stav 18. 11. 2026 večer:** projekt `podpalto` je založený přes API Railway (token
+workspace `RAILWAY_API_TOKEN` v `.env`; CLI s tokenem workspace nefunguje, ptá se na uživatele).
+Služby `tools` (volume `/data`) a `worker` z `Tosf0/podpalto_cz`, větev `dev`, proměnné podle
+kroků 3 a 4 níže. **Config as Code (`railway/*.json`) Railway pro nové služby odmítá**
+(„deprecated, use Infrastructure as Code“), proto jsou hodnoty z `railway/tools.json`
+a `railway/worker.json` (Dockerfile, start command, healthcheck, restart, watch patterns)
+nastavené přímo v nastavení služeb a `RAILWAY_DOCKERFILE_PATH`. Při změně těchto souborů je
+potřeba změnit i nastavení služby (nebo přejít na `.railway/railway.ts`). Návod níže platí
+pro ruční nastavení přes dashboard. Navíc oproti návodu: `tools` má `PORT=8001` (healthcheck
+jde na `PORT`), start na `0.0.0.0` a `EXPORT_SNAPSHOT_OFFSET=1000000`: databáze snímků na
+Railway čísluje od 1, Supabase pozná exportovaný snímek podle (zdroj, číslo) a lokální první
+import čísla do ~100 už použil.
+
 1. **Účet:** <https://railway.com> → *Login* → **přes GitHub** (účet, pod kterým je repozitář
    `podpalto_cz`). Pro trvalý běh je potřeba placený plán **Hobby** (cca 5 USD měsíčně včetně
    kreditu na provoz; ověř aktuální ceník) – Settings → Plans, zadat kartu.
@@ -263,13 +276,13 @@ sám do ruční kontroly (`review_status = needs_review`, admin → Data od agen
    - Settings → název služby **`tools`** (přesně, worker se na ni odkazuje jménem),
    - Settings → Source → *Branch* `dev` (později `main`), *Root Directory* nechat prázdné
      (Dockerfily se sestavují z kořene repozitáře),
-   - Settings → *Config-as-code* → cesta **`/railway/tools.json`** (Dockerfile, start na `::8001`,
+   - Settings → *Config-as-code* → cesta **`/railway/tools.json`** (Dockerfile, start na `0.0.0.0:8001`,
      healthcheck `/health`),
    - **Volume:** na plátně projektu pravým tlačítkem na službu (nebo Ctrl+K → „Volume“) →
      *Add Volume* → připojit k `tools`, mount path **`/data`** (SQLite se snímky přežije redeploy),
    - Variables: `TOOLS_DATA_DIR=/data`, `COLLECTOR_USER_AGENT=podpalto-bot/1.0 (+https://podpalto.cz/bot)`,
    - Settings → Networking: **negenerovat veřejnou doménu** (služba je jen pro worker),
-   - *Deploy* → v Logs má být `Uvicorn running on http://[::]:8001` a healthcheck zelený.
+   - *Deploy* → v Logs má být `Uvicorn running on http://0.0.0.0:8001` a healthcheck zelený (proměnná `PORT=8001`, jinak healthcheck hlásí *service unavailable*).
 4. **Služba `worker`:** na plátně *+ Create* → *GitHub Repo* → stejný repozitář:
    - název **`worker`**, branch `dev`, config-as-code **`/railway/worker.json`**,
    - bez volume a bez veřejné domény, Replicas = 1,
@@ -295,7 +308,7 @@ sám do ruční kontroly (`review_status = needs_review`, admin → Data od agen
 **Když něco nejde:**
 - worker loguje `HTTP 401` / `Invalid API key` → špatný `SUPABASE_SECRET_KEY`,
 - `tools service is not reachable` → služba se nejmenuje `tools`, nebo neběží, nebo neposlouchá
-  na `::` (start command v `railway/tools.json`),
+  na `0.0.0.0:8001` (start command v nastavení služby; `::` v Pythonu poslouchá jen IPv6 a healthcheck ho nenajde; nová prostředí Railway mají privátní síť i přes IPv4),
 - build spadne na `uv sync --frozen` → `uv.lock` neodpovídá `pyproject.toml`: `uv lock`, commit,
 - v administraci „Běh čeká ve frontě od …“ → worker neběží nebo nemá připojení k Supabase,
 - lokální a Railway worker si berou úlohy ze stejné fronty – při lokálním testu Railway worker

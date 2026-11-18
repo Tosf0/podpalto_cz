@@ -29,6 +29,10 @@ class Settings:
     """Path to the tesseract binary when it is not on PATH (image_ocr sources)."""
     tessdata_dir: str | None = None
     """Folder with the Tesseract language data (needs ces.traineddata)."""
+    export_snapshot_offset: int = 0
+    """Added to snapshot ids in the export. Supabase identifies an exported snapshot by
+    (source, snapshot id), so each installation with its own snapshot database needs its own
+    range: 0 for the local one of the first import, 1 000 000 on Railway."""
 
     @property
     def db_path(self) -> Path:
@@ -73,4 +77,5 @@ def get_settings() -> Settings:
         max_pages=int(os.getenv("COLLECT_MAX_PAGES", "150")),
         tesseract_cmd=_tesseract_cmd(),
         tessdata_dir=_tessdata_dir(data_dir),
+        export_snapshot_offset=int(os.getenv("EXPORT_SNAPSHOT_OFFSET", "0")),
     )

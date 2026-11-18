@@ -25,6 +25,7 @@ from podpalto_tools.collect.normalize import SolidFuelPriceRecord, fold
 from podpalto_tools.collect.source_registry import Source
 from podpalto_tools.collect.store import Snapshot, Store
 from podpalto_tools.schemas import FuelType, Region
+from podpalto_tools.settings import get_settings
 
 SCHEMA_VERSION = "1.0"
 
@@ -638,6 +639,7 @@ def build_export(
     locations: dict[str, LocatedSeller],
     since: str | None = None,
     now: datetime | None = None,
+    snapshot_offset: int | None = None,
 ) -> ExportPayload:
     """Sellers, products, prices and runs of the newest snapshot of every given source.
 
@@ -649,6 +651,7 @@ def build_export(
         since=since,
     )
     by_id = {source.id: source for source in sources}
+    offset = get_settings().export_snapshot_offset if snapshot_offset is None else snapshot_offset
     picked = _newest(store.snapshots(), _when(since) if since else None)
     sellers: dict[str, ExportSeller] = {}
     for source_id in sorted(picked):
@@ -660,8 +663,9 @@ def build_export(
             continue  # collected for the tools only; no seller, products or runs on the web
         seller_key = source.export_seller_key
         for snapshot in picked[source_id]:
+            exported_id = snapshot.id + offset
             run = ExportRun(
-                snapshot_id=snapshot.id, source_id=source_id, seller_key=seller_key,
+                snapshot_id=exported_id, source_id=source_id, seller_key=seller_key,
                 status=snapshot.status, fetched_at=snapshot.fetched_at,
                 http_status=snapshot.http_status, content_sha256=snapshot.content_sha256,
                 changed=snapshot.changed, item_count=snapshot.item_count,
@@ -685,7 +689,7 @@ def build_export(
             rows: list[Row] = []
             left_out: list[tuple[SolidFuelPriceRecord, str]] = []
             for record in store.records(snapshot.id):
-                result = export_record(record, source, seller_key, snapshot.id)
+                result = export_record(record, source, seller_key, exported_id)
                 if isinstance(result, str):
                     left_out.append((record, result))
                 else:

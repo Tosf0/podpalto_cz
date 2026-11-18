@@ -262,3 +262,12 @@ def test_a_source_with_export_false_is_collected_but_not_sent(store):
     payload = build_export(store, [hidden], {"demosklad": LOCATED})
     assert payload.sellers == [] and payload.products == [] and payload.runs == []
     assert [(s.source_id, s.reason) for s in payload.skipped] == [("demosklad", "export_disabled")]
+
+
+def test_each_installation_exports_its_own_snapshot_id_range(store, monkeypatch):
+    # Supabase identifies an exported snapshot by (source, id): Railway's fresh database
+    # starts at 1 again, so its ids are shifted (EXPORT_SNAPSHOT_OFFSET).
+    monkeypatch.setenv("EXPORT_SNAPSHOT_OFFSET", "1000000")
+    payload = build_export(store, [SOURCE], {"demosklad": LOCATED})
+    assert [run.snapshot_id for run in payload.runs] == [1000002]
+    assert {price.snapshot_id for price in payload.price_observations} == {1000002}
