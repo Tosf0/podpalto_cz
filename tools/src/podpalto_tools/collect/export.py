@@ -25,6 +25,7 @@ from podpalto_tools.collect.normalize import SolidFuelPriceRecord, fold
 from podpalto_tools.collect.source_registry import Source
 from podpalto_tools.collect.store import Snapshot, Store
 from podpalto_tools.schemas import FuelType, Region
+from podpalto_tools.settings import get_settings
 
 SCHEMA_VERSION = "1.0"
 
@@ -436,6 +437,20 @@ def _normalized(record: SolidFuelPriceRecord) -> dict[str, Any]:
     return {key: value for key, value in values.items() if value is not None}
 
 
+_DELIVERY_INCLUDED = re.compile(
+    r"s dopravou|vcetne dopravy|vc\.? ?dopravy|doprava (?:je )?v cene|s dovozem|vcetne dovozu"
+    r"|doprava zdarma|dopravou zdarma"
+)
+
+
+def delivery_included(record: SolidFuelPriceRecord) -> bool | None:
+    """What the collection knows, else True when the offer's name says the price includes
+    delivery ("s dopravou do 30 km", "VČETNĚ DOPRAVY", "doprava zdarma"); None = not stated."""
+    if record.delivery_included is not None:
+        return record.delivery_included
+    return True if _DELIVERY_INCLUDED.search(fold(record.product_name_raw)) else None
+
+
 def export_record(
     record: SolidFuelPriceRecord, source: Source, seller_key: str, snapshot_id: int
 ) -> tuple[ExportProduct, ExportPrice] | str:
@@ -497,7 +512,7 @@ def export_record(
         original_quantity=record.original_quantity,
         original_price_includes_vat=record.price_includes_vat,
         valid_in_regions=_valid_in(source),
-        delivery_included=record.delivery_included,
+        delivery_included=delivery_included(record),
         normalized=_normalized(record),
         snapshot_id=snapshot_id,
         flags=[flag for flag in record.flags if flag not in PRODUCT_FLAGS],
@@ -520,6 +535,9 @@ _TIER = re.compile(
 )
 _TIER_UNITS = {"q": ("t", 0.1), "t": ("t", 1.0), "kg": ("t", 0.001), "prm": ("PRM", 1.0),
                "prms": ("PRMS", 1.0)}  # fmt: skip
+
+
+VARIANT_EXEMPT_FLAGS = {"outlier_vs_market", "price_jump"}
 
 
 class Variant(BaseModel):
@@ -595,12 +613,15 @@ def apply_variants(rows: list[Row]) -> list[tuple[SolidFuelPriceRecord, str]]:
             key = (variants[index].base_name, product.unit, product.package_kg)
             regular.setdefault(key, []).append(product.product_key)
     for index in keep:
-        _, product, _ = rows[index]
+        _, product, observation = rows[index]
         variant = variants[index]
         if variant.kind not in ("tier", "promo"):
             continue
         product.is_promo = variant.kind == "promo"
         product.price_tier = variant.tier
+        # A promotion or quantity price is cheaper on purpose and stays out of the map and
+        # the statistics: comparing it with the market would only send it to manual review.
+        observation.flags = [f for f in observation.flags if f not in VARIANT_EXEMPT_FLAGS]
         bases = regular.get((variant.base_name, product.unit, product.package_kg), [])
         product.base_product_key = bases[0] if len(bases) == 1 else None
     rows[:] = [row for index, row in enumerate(rows) if index in keep]
@@ -638,6 +659,7 @@ def build_export(
     locations: dict[str, LocatedSeller],
     since: str | None = None,
     now: datetime | None = None,
+    snapshot_offset: int | None = None,
 ) -> ExportPayload:
     """Sellers, products, prices and runs of the newest snapshot of every given source.
 
@@ -649,6 +671,7 @@ def build_export(
         since=since,
     )
     by_id = {source.id: source for source in sources}
+    offset = get_settings().export_snapshot_offset if snapshot_offset is None else snapshot_offset
     picked = _newest(store.snapshots(), _when(since) if since else None)
     sellers: dict[str, ExportSeller] = {}
     for source_id in sorted(picked):
@@ -660,8 +683,9 @@ def build_export(
             continue  # collected for the tools only; no seller, products or runs on the web
         seller_key = source.export_seller_key
         for snapshot in picked[source_id]:
+            exported_id = snapshot.id + offset
             run = ExportRun(
-                snapshot_id=snapshot.id, source_id=source_id, seller_key=seller_key,
+                snapshot_id=exported_id, source_id=source_id, seller_key=seller_key,
                 status=snapshot.status, fetched_at=snapshot.fetched_at,
                 http_status=snapshot.http_status, content_sha256=snapshot.content_sha256,
                 changed=snapshot.changed, item_count=snapshot.item_count,
@@ -685,7 +709,7 @@ def build_export(
             rows: list[Row] = []
             left_out: list[tuple[SolidFuelPriceRecord, str]] = []
             for record in store.records(snapshot.id):
-                result = export_record(record, source, seller_key, snapshot.id)
+                result = export_record(record, source, seller_key, exported_id)
                 if isinstance(result, str):
                     left_out.append((record, result))
                 else:

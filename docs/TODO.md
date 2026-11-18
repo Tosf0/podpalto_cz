@@ -197,7 +197,12 @@ API klíč mezi Vercelem a Railway.
 - [ ] **3. Analýza `seller`** (`SellerProfileFlow` → `analysis_reports` kind `seller` + upsert
       `seller_intel`) a **analýza `url`** (formulář v CI Studiu) – v `handlers.py` je místo nich
       `not_ready(…)`: běh skončí srozumitelnou chybou místo věčného čekání ve frontě.
-- [ ] **4. Railway** (viz níže) a test end-to-end.
+- [x] **4. Railway** (viz níže) a test end-to-end (18. 11. 2026): projekt `podpalto`, služby
+      `tools` a `worker` běží z větve **`main`** (produkční, viz „Vydání“ níže). Test: job
+      `collect` s `source_ids: ["peletypremium"]` převzal `railway-worker`, sběr na Railway,
+      export (snímek 1000001, 4 ceny) a přepočet statistik za 12 s. Další naplánovaný sběr
+      1. 12. ve 3:00 (všechny zdroje, ceníky přes Claude API; volume `/data` na Railway
+      začíná prázdný), přehled trhu 2. 12. v 6:00.
 
 #### Přístupy a klíče – co si vyžádat od Lukáše
 
@@ -251,7 +256,32 @@ nahraje ji. Mapování polí je v `docs/agent-output-spec.md` (kap. 4–8, 10, 1
 `data_source` scraper seller manual. Nový prodejce / cena s blokujícím příznakem (`flags`) jde
 sám do ruční kontroly (`review_status = needs_review`, admin → Data od agentů).
 
+#### Vydání: `dev` → `main` (od 18. 11. 2026)
+
+- **`dev`** = vývoj, pushuje se kdykoli; nic se z něj automaticky nenasazuje na Railway.
+- **`main`** = produkce. Railway (`tools`, `worker`) nasazuje každý push do `main`.
+  `main` byl 18. 11. posunut na tehdejší `dev` (commit `627117a`), dřív obsahoval jen
+  „Initial commit“.
+- **Vydání:** na GitHubu pull request `dev` → `main` (testy prošly, lokálně ověřeno), merge.
+  Před vydáním zkontrolovat, že neběží job (redeploy rozdělaný běh ukončí).
+- [ ] **Lukáš:** na Vercelu nastavit *Production Branch* na `main` (pokud dnes produkce
+      jede z `dev`), aby web a agenti vydávali stejně; `dev` jako Preview.
+- [ ] Na GitHubu zvážit ochranu `main` (jen přes pull request) a `main` jako výchozí větev.
+
 #### Railway – krok za krokem (poprvé)
+
+**Stav 18. 11. 2026 večer:** projekt `podpalto` je založený přes API Railway (token
+workspace `RAILWAY_API_TOKEN` v `.env`; CLI s tokenem workspace nefunguje, ptá se na uživatele).
+Služby `tools` (volume `/data`) a `worker` z `Tosf0/podpalto_cz`, větev `dev`, proměnné podle
+kroků 3 a 4 níže. **Config as Code (`railway/*.json`) Railway pro nové služby odmítá**
+(„deprecated, use Infrastructure as Code“), proto jsou hodnoty z `railway/tools.json`
+a `railway/worker.json` (Dockerfile, start command, healthcheck, restart, watch patterns)
+nastavené přímo v nastavení služeb a `RAILWAY_DOCKERFILE_PATH`. Při změně těchto souborů je
+potřeba změnit i nastavení služby (nebo přejít na `.railway/railway.ts`). Návod níže platí
+pro ruční nastavení přes dashboard. Navíc oproti návodu: `tools` má `PORT=8001` (healthcheck
+jde na `PORT`), start na `0.0.0.0` a `EXPORT_SNAPSHOT_OFFSET=1000000`: databáze snímků na
+Railway čísluje od 1, Supabase pozná exportovaný snímek podle (zdroj, číslo) a lokální první
+import čísla do ~100 už použil.
 
 1. **Účet:** <https://railway.com> → *Login* → **přes GitHub** (účet, pod kterým je repozitář
    `podpalto_cz`). Pro trvalý běh je potřeba placený plán **Hobby** (cca 5 USD měsíčně včetně
@@ -263,13 +293,13 @@ sám do ruční kontroly (`review_status = needs_review`, admin → Data od agen
    - Settings → název služby **`tools`** (přesně, worker se na ni odkazuje jménem),
    - Settings → Source → *Branch* `dev` (později `main`), *Root Directory* nechat prázdné
      (Dockerfily se sestavují z kořene repozitáře),
-   - Settings → *Config-as-code* → cesta **`/railway/tools.json`** (Dockerfile, start na `::8001`,
+   - Settings → *Config-as-code* → cesta **`/railway/tools.json`** (Dockerfile, start na `0.0.0.0:8001`,
      healthcheck `/health`),
    - **Volume:** na plátně projektu pravým tlačítkem na službu (nebo Ctrl+K → „Volume“) →
      *Add Volume* → připojit k `tools`, mount path **`/data`** (SQLite se snímky přežije redeploy),
    - Variables: `TOOLS_DATA_DIR=/data`, `COLLECTOR_USER_AGENT=podpalto-bot/1.0 (+https://podpalto.cz/bot)`,
    - Settings → Networking: **negenerovat veřejnou doménu** (služba je jen pro worker),
-   - *Deploy* → v Logs má být `Uvicorn running on http://[::]:8001` a healthcheck zelený.
+   - *Deploy* → v Logs má být `Uvicorn running on http://0.0.0.0:8001` a healthcheck zelený (proměnná `PORT=8001`, jinak healthcheck hlásí *service unavailable*).
 4. **Služba `worker`:** na plátně *+ Create* → *GitHub Repo* → stejný repozitář:
    - název **`worker`**, branch `dev`, config-as-code **`/railway/worker.json`**,
    - bez volume a bez veřejné domény, Replicas = 1,
@@ -287,15 +317,16 @@ sám do ruční kontroly (`review_status = needs_review`, admin → Data od agen
 5. **Test:** na webu admin → **Agenti** → u „Přehled trhu“ *Spustit nyní* → do minuty
    „Běží“ (hláška „Worker … naposledy převzal běh“), na konci „Hotovo“ a report v CI Studiu.
    „Sběr cen“ skončí chybou, dokud nebude `worker/export.py` – to je v pořádku.
-6. **Provoz:** každý push do `dev` znovu nasadí jen dotčenou službu (watch patterns
-   v `railway/*.json`). Rozdělaný běh při redeployi skončí „Worker se ukončil … spusťte znovu“.
+6. **Provoz:** Railway nasazuje z větve **`main`**, ne z `dev` (od 18. 11. 2026): worker
+   zapisuje do jediné, produkční Supabase, takže na Railway smí jen vydaný kód. Push do `main`
+   znovu nasadí jen dotčenou službu (watch patterns v nastavení služby). Rozdělaný běh při redeployi skončí „Worker se ukončil … spusťte znovu“.
    V Anthropic konzoli nastav měsíční limit útraty. Služba `app` s HTTP API (`/runs`)
    na Railway **není potřeba**.
 
 **Když něco nejde:**
 - worker loguje `HTTP 401` / `Invalid API key` → špatný `SUPABASE_SECRET_KEY`,
 - `tools service is not reachable` → služba se nejmenuje `tools`, nebo neběží, nebo neposlouchá
-  na `::` (start command v `railway/tools.json`),
+  na `0.0.0.0:8001` (start command v nastavení služby; `::` v Pythonu poslouchá jen IPv6 a healthcheck ho nenajde; nová prostředí Railway mají privátní síť i přes IPv4),
 - build spadne na `uv sync --frozen` → `uv.lock` neodpovídá `pyproject.toml`: `uv lock`, commit,
 - v administraci „Běh čeká ve frontě od …“ → worker neběží nebo nemá připojení k Supabase,
 - lokální a Railway worker si berou úlohy ze stejné fronty – při lokálním testu Railway worker
