@@ -13,7 +13,7 @@ async function AdminGate({ searchParams }: { searchParams: Promise<{ sekce?: str
   const [account, params] = await Promise.all([getServerAccount(), searchParams]);
   if (!account) redirect(`${LOGIN_PATH}?next=/admin/kontrola`);
   if (account.role !== "admin") redirect("/");
-  return <AdminPage initialTab={params.sekce === "data" ? "data" : "blog"} />;
+  return <AdminPage initialTab={params.sekce === "data" ? "data" : params.sekce === "nastaveni" ? "nastaveni" : "blog"} />;
 }
 
 export default function AdminKontrolaPage({ searchParams }: PageProps<"/admin/kontrola">) {

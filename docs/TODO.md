@@ -84,6 +84,20 @@ kraj mají 1–2 prodejce s cenou. Přesnost cen je třeba ověřit (stahování
 shrnutí, ne surové HTML) – pro produkční data patří sběr do pipeline v `tools` podle
 `docs/agent-output-spec.md` (snapshot stránky, citace ceny, ARES, RÚIAN).
 
+**Fotky prodejců – JEN PRO VÝVOJ** (zapsáno 18. 11. 2026): fotky v `frontend/public/sellers/`
+jsou převzaté z webů prodejců **bez jejich svolení** – slouží jen pro vývoj a ukázku (showcase).
+Zdroj každé fotky je v `sellers.photo_source_url`. Přepínač v `/admin/kontrola` → Nastavení
+(`app_settings.seller_photos`): „Fotky z webů prodejců“ (vývoj) / „Jen obecné fotky podle paliva“
+(produkce – volné licence Unsplash/Pexels/Pixabay v `public/sellers/generic/`, autoři v CREDITS.md).
+Před ostrým provozem:
+- [ ] přepnout na „Jen obecné fotky podle paliva“,
+- [ ] **požádat prodejce o svolení** s použitím jejich fotek (e-mail s odkazem na profil; souhlas
+      evidovat – např. sloupec `sellers.photo_permission_at`), fotky bez souhlasu smazat
+      z `public/sellers/` a z `sellers.photo_url`,
+- [ ] dlouhodobě: fotky nahrává prodejce sám po převzetí profilu (bucket `seller-photos`, později R2),
+- [ ] dokud jsou soubory v `public/`, jsou dostupné na přímé URL i v produkčním režimu – před
+      spuštěním je z repozitáře odstranit nebo přesunout do úložiště s kontrolou přístupu.
+
 **Blog se schvalováním** (zapsáno 18. 11. 2026): článek napíše kdokoli přihlášený a odešle ke
 schválení (`blog_posts.status = 'pending'`); publikuje, zamítá (s poznámkou), upravuje a maže admin
 v `/admin/kontrola` → záložka Blog. Fotky jsou zatím v Supabase Storage (`blog-images/<uid>/…`),

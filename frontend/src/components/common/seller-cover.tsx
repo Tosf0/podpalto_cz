@@ -2,6 +2,8 @@
 
 import type { FuelCategory, Seller } from "@/types";
 import { useI18n } from "@/lib/i18n";
+import { USES_DB } from "@/lib/api/db";
+import { genericSellerPhoto } from "@/lib/generic-photos";
 import { cn } from "@/lib/utils";
 
 function hash(s: string): number {
@@ -85,8 +87,9 @@ function Spruce({ x, y, s, color }: { x: number; y: number; s: number; color: st
 const MAIN_FUEL_ORDER: FuelCategory[] = ["wood", "pellets", "briquettes", "coal"];
 
 /**
- * Ilustrovaná „fotka“ prodejce (krajina + sortiment), dokud backend nedodá skutečné fotografie
- * (`seller.photoUrl`). Deterministická podle ID – každý prodejce má trochu jinou scénu.
+ * Fotka prodejce. Pořadí: vlastní fotka (`seller.photoUrl` – API ji posílá jen v režimu „fotky z webů
+ * prodejců“, viz administrace → Nastavení) → obecná fotka podle hlavního paliva (volná licence) →
+ * v offline režimu kreslená ilustrace (krajina + sortiment). Výběr je deterministický podle ID.
  */
 export function SellerCover({ seller, fuel, className }: { seller: Seller; fuel?: FuelCategory; className?: string }) {
   const { t } = useI18n();
@@ -98,6 +101,13 @@ export function SellerCover({ seller, fuel, className }: { seller: Seller; fuel?
   }
   const h = hash(seller.id);
   const main = fuel ?? MAIN_FUEL_ORDER.find((c) => seller.categories.includes(c)) ?? "wood";
+  const generic = USES_DB ? genericSellerPhoto(main, h) : undefined;
+  if (generic) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- statický soubor z /public
+      <img src={generic} alt={t("map.ui.illustration", { name: seller.name })} loading="lazy" className={cn("h-full w-full object-cover", className)} />
+    );
+  }
   const shift = (h % 60) - 30;
   const trees = Array.from({ length: 7 }, (_, i) => ({
     x: 30 + i * 95 + ((h >> (i * 3)) % 30),
