@@ -1,5 +1,18 @@
 # Source registry: every site the collector may visit. Nothing outside this file is fetched.
 #
+# id        NEVER rename it once the source has been exported: it is the seller's stable key
+#           in Supabase (sellers.external_key). IČO, address or location of the seller may
+#           change; they are attributes and get updated, the key stays.
+# seller_key  only when two sources read the same seller (e.g. its feed and its price
+#           list): the id of the first one, so both export to one seller. Omitted = own id.
+# location  the yard or shop where customers buy, when it is not the company seat in ARES:
+#           {ruian: <kód adresního místa>} (find it with `podpalto-locate-sellers --find
+#           <PSČ> <č. p.> <obec>` or at https://vdp.cuzk.cz), or for a yard without an address
+#           point {lat, lng, street, city, zip, precision: building | street}. Add `note`
+#           with the page the address comes from. Omitted = the seat from ARES, flagged
+#           location_is_registered_office. Then run `podpalto-locate-sellers` and commit
+#           seller_locations.json.
+#
 # kind      heureka_feed = Heureka-format XML product feed (two requests per run)
 #           shoptet_html = sitemap + public product pages of a Shoptet shop, read from their
 #                          schema.org microdata (one request per page, paused, page limit)
@@ -27,16 +40,22 @@
 sources:
   - id: drevosrot
     seller: eshop.drevosrot.cz
+    location:
+      ruian: 19883960
+      note: "eshop.drevosrot.cz/kontakty: Sklad paliv Louny, Husova 434, Černčice. Druhý sklad Hůrecká 379/36, Lišov (RÚIAN 25152823)."
     ico: "27602231"
     base_url: https://eshop.drevosrot.cz
     kind: heureka_feed
-    region: Hlavní město Praha
+    region: Ústecký kraj
     feed_path: /heureka/export/products.xml
     enabled: true
     consent: none
 
   - id: peletynovybor
     seller: peletynovybor.cz
+    location:
+      ruian: 13126504
+      note: "/kontakty: prodejna Sluneční 892, Nový Bor."
     ico: "09371788"
     base_url: https://www.peletynovybor.cz
     kind: heureka_feed
@@ -47,16 +66,22 @@ sources:
 
   - id: briketymelnik
     seller: briketymelnik.cz
+    location:
+      ruian: 27484432
+      note: "/kontakty: prodejní sklad Nádražní 3401 (areál Bostaz), Mělník."
     ico: "08693676"
     base_url: https://www.briketymelnik.cz
     kind: heureka_feed
-    region: Hlavní město Praha
+    region: Středočeský kraj
     feed_path: /heureka/export/products.xml
     enabled: true
     consent: none
 
   - id: palivazdemar
     seller: palivazdemar.cz
+    location:
+      ruian: 9300473
+      note: "/kontakty a /o-nas: areál Smetanova 683, Chabařovice = sídlo."
     ico: "25025589"
     base_url: https://www.palivazdemar.cz
     kind: heureka_feed
@@ -68,6 +93,9 @@ sources:
 
   - id: palivos
     seller: palivos.cz
+    location:
+      ruian: 20256477
+      note: "/kontakty: SÍDLO A PRODEJNA, areál PALIVOS, Teplice."
     ico: "04423046"
     base_url: https://www.palivos.cz
     kind: heureka_feed
@@ -78,6 +106,9 @@ sources:
 
   - id: a1pelety
     seller: a1pelety.cz
+    location:
+      ruian: 21671567
+      note: "/kontakt: prodejna Ústí 39 = sídlo; větší sklad bez adresy."
     ico: "25839586"
     base_url: https://www.a1pelety.cz
     kind: shoptet_html
@@ -87,6 +118,9 @@ sources:
 
   - id: bkpaliva
     seller: bkpaliva.cz
+    location:
+      ruian: 8788561
+      note: "/kontakt: kamenná prodejna Pelec 10, Častrov."
     ico: "72124016"
     base_url: https://www.bkpaliva.cz
     kind: shoptet_html
@@ -97,16 +131,22 @@ sources:
 
   - id: valdex
     seller: valdex.cz
+    location:
+      ruian: 17821894
+      note: "/kontakt: sklad Pražská 223/128, Ústí nad Labem-Vaňov."
     ico: "17842794"
     base_url: https://www.valdex.cz
     kind: shoptet_html
-    region: Hlavní město Praha
+    region: Ústecký kraj
     enabled: true
     consent: none
     notes: Also sells timber; non-fuel pages are fetched and dropped by the classifier.
 
   - id: woodhell
     seller: woodhell.cz
+    location:
+      ruian: 20236301
+      note: "/kontakt: Nákladní 1032, Teplice."
     ico: "07645121"
     base_url: https://www.woodhell.cz
     kind: shoptet_html
@@ -117,6 +157,9 @@ sources:
 
   - id: latop
     seller: latop.cz
+    location:
+      ruian: 19822740
+      note: "/o-nas: prodejna a sídlo U Čápova dvora 2762, Tábor."
     ico: "45022747"
     base_url: https://www.latop.cz
     kind: shoptet_html
@@ -133,6 +176,14 @@ sources:
 
   - id: stefl
     seller: uhelnesklady-stefl.cz
+    location:
+      lat: 49.409267
+      lng: 15.216513
+      street: Libkovodská
+      city: Pelhřimov
+      zip: "393 01"
+      precision: street
+      note: "Úvodní stránka: provozovna Libkovodská ulice, Pelhřimov – za areálem Spokar, bez čísla; bod = areál SPOKAR (Libkovodská 1428)."
     ico: "19240538"
     base_url: https://www.uhelnesklady-stefl.cz
     kind: static_html
@@ -145,6 +196,9 @@ sources:
 
   - id: unikom
     seller: prodejuhli.unikom.cz
+    location:
+      ruian: 11633875
+      note: "/kontakt: středisko Čáslav, Chotusická 1353. Další střediska: Uhlířské Janovice, 28. října 788 (RÚIAN 11550678); Zbraslavice, Prostřední Ves 42, Bohdaneč; Přelouč, Hradecká 324 (RÚIAN 7751524, Pardubický kraj)."
     ico: "46355821"
     base_url: https://prodejuhli.unikom.cz
     kind: static_html
@@ -157,6 +211,14 @@ sources:
 
   - id: korbicka
     seller: uhlikorbicka.cz
+    location:
+      lat: 49.568072
+      lng: 16.081232
+      street: Nádražní
+      city: Nové Město na Moravě
+      zip: "592 31"
+      precision: street
+      note: "/kontakt/: sklad Nádražní ulice (areál pily), bez čísla. Druhý sklad Bystřice nad Pernštejnem – Nový Dvůr (nádraží ČD)."
     ico: "18533973"
     base_url: https://www.uhlikorbicka.cz
     kind: static_html
@@ -169,6 +231,9 @@ sources:
 
   - id: kb_uhli
     seller: kb-uhli.cz
+    location:
+      ruian: 75508656
+      note: "/kontakt: provozovna Blanné 14 = sídlo."
     ico: "41609638"
     base_url: https://kb-uhli.cz
     kind: static_html
@@ -199,10 +264,16 @@ sources:
     region: Královéhradecký kraj
     price_region: Královéhradecký kraj
     consent: none
-    notes: Náchod. Prices tiered by quantity (up to 15 q, over 15 q, over 30 q).
+    notes: >-
+      Náchod. Prices tiered by quantity (up to 15 q, over 15 q, over 30 q). Location: /kontakt
+      names the coal yard "Běloveská 237", which RÚIAN does not know (no such number on the
+      street); the seat Běloveská 2181 is on the same street, so the seat stays, flagged.
 
   - id: alvepal
     seller: alvepal.cz
+    location:
+      ruian: 81485191
+      note: "/kontakt: provozovna U Sloupů 35, Vimperk (sídlo Praha 3)."
     ico: "26057778"
     base_url: https://alvepal.cz
     kind: static_html
@@ -215,6 +286,14 @@ sources:
 
   - id: kvalitniuhli
     seller: kvalitniuhli.cz
+    location:
+      lat: 49.878281
+      lng: 14.500937
+      city: Jílové u Prahy
+      zip: "254 01"
+      precision: building
+      from_seller_map: true
+      note: "/kontakty.html: vložená mapa Google „Prodej paliv, vlakové nádraží Jílové u Prahy“."
     base_url: https://kvalitniuhli.cz
     kind: static_html
     pillar: 2
@@ -241,6 +320,9 @@ sources:
 
   - id: ridepal
     seller: ridepal.eu
+    location:
+      ruian: 25252810
+      note: "/kontakt: Uhelný sklad Ridera, Švermova 171/120, Ostrava-Mariánské Hory. Druhý sklad Malé Březno 74 u Mostu (RÚIAN 25376152)."
     ico: "26847833"
     base_url: https://ridepal.eu
     kind: static_html
@@ -259,6 +341,11 @@ sources:
 
   - id: waldera
     seller: waldera.cz
+    ico: "03796876"
+    region: Zlínský kraj
+    location:
+      ruian: 3862445
+      note: "/kontakty: výroba a paletový prodej Vlárská 321 (areál pily Kloboucká Lesní) = sídlo."
     base_url: https://www.waldera.cz
     kind: static_html
     pillar: 1
@@ -309,6 +396,7 @@ sources:
 
   - id: dek
     seller: dek.cz
+    ico: "03748600"
     base_url: https://www.dek.cz
     kind: static_html
     pillar: 3
@@ -319,6 +407,7 @@ sources:
 
   - id: bauhaus
     seller: bauhaus.cz
+    ico: "49435388"
     base_url: https://www.bauhaus.cz
     kind: rendered_html
     pillar: 3
@@ -327,7 +416,8 @@ sources:
     consent: none
     notes: >-
       Prices are rendered by JavaScript, so the page is read in a headless browser. They
-      show as "184,-" without "Kč", plus a unit price "(1 Kilogram = 12,27)".
+      show as "184,-" without "Kč", plus a unit price "(1 Kilogram = 12,27)". IČO found in
+      ARES by name (BAUHAUS k.s., Brno-Štýřice); the site names only "CZ-639 00 Brno" (/o-nas).
 
   # --- pillar 4: forests and firewood sellers -----------------------------------------------
 
@@ -360,6 +450,14 @@ sources:
 
   - id: lesy_liberec
     seller: mestske-lesy-liberec.cz
+    location:
+      lat: 50.778481
+      lng: 15.03266
+      street: Londýnská
+      city: Liberec
+      zip: "460 01"
+      precision: street
+      note: "Úvodní stránka: výroba Londýnská ulice, Liberec – Růžodol I (vedle ČOV), bez čísla; bod = střed ulice."
     ico: "72053984"
     base_url: https://www.mestske-lesy-liberec.cz
     kind: static_html
@@ -372,6 +470,7 @@ sources:
 
   - id: drevopraha
     seller: drevopraha.cz
+    ico: "01548204"
     base_url: https://www.drevopraha.cz
     kind: static_html
     pillar: 4

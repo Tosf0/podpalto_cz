@@ -43,6 +43,7 @@ from podpalto_tools.collect.pricelist import (
     drop_duplicates,
     find_document_link,
     find_document_links,
+    unique_item_ids,
     verify_rows,
 )
 from podpalto_tools.collect.shoptet import parse_product_page, parse_sitemap, product_candidates
@@ -642,6 +643,7 @@ def ingest_extraction(
             verdicts.append(verdict)
     # Not in the dry run: a duplicate is not something the crew has to fix.
     duplicates = 0 if dry_run else drop_duplicates(verdicts)
+    unique_item_ids(verdicts)
 
     accepted = [v for v in verdicts if v.accepted]
     result = ExtractionResult(

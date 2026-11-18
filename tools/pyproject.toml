@@ -21,6 +21,7 @@ podpalto-collect = "podpalto_tools.collect.cli:main"
 podpalto-verify-sellers = "podpalto_tools.collect.cli:verify_sellers"
 podpalto-load-opendata = "podpalto_tools.collect.cli:load_opendata"
 podpalto-renormalize = "podpalto_tools.collect.cli:renormalize"
+podpalto-locate-sellers = "podpalto_tools.collect.cli:locate_sellers"
 
 [build-system]
 requires = ["hatchling"]

@@ -251,11 +251,28 @@ def stated_calorific_mj(params: dict[str, str]) -> float | None:
 
 # --- 4. the record -----------------------------------------------------------------------
 
-# Sanity bands for unit prices incl. VAT. Outside them the size or unit was most likely
-# misread, so the unit price is dropped instead of being published.
-# Coal dust (hruboprach) really sells at about 2 500-3 000 CZK/t, hence the low floor.
-_PLAUSIBLE_CZK_PER_TONNE = (2_000, 40_000)
-_PLAUSIBLE_CZK_PER_PRMS = (300, 6_000)
+# Sanity bands for unit prices incl. VAT (flag ``unit_price_implausible``). Outside them the
+# size or unit was most likely misread (q for t = 10x, kg for t = 1000x, bag for pallet), so
+# the unit price is dropped instead of being published. This is not the market check: a
+# real but unusual price is flagged ``outlier_vs_market`` against the median of the other
+# sellers (collector.flag_market_outliers) and goes to manual review.
+#
+# Set from the collected prices of 2026-11-18 (373 records): about half the lowest and
+# twice the highest price seen, still catching a 10x error around the median.
+#   seen (CZK/t): pellets 11 667-16 620, wood briquettes 8 300-14 300, brown coal
+#   2 990-11 560, coal briquettes 6 990-13 200, black coal 9 490-19 200, coke 9 000-13 990;
+#   firewood 1 044-3 400 CZK/prms.
+# Coal dust (hruboprach) really sells at about 3 000 CZK/t, hence the low brown-coal floor;
+# smithing coal in 25 kg bags at about 19 000 CZK/t, hence the high black-coal ceiling.
+PLAUSIBLE_CZK_PER_TONNE: dict[FuelType, tuple[int, int]] = {
+    FuelType.WOOD_PELLETS: (5_000, 30_000),
+    FuelType.WOOD_BRIQUETTES: (4_000, 30_000),
+    FuelType.BROWN_COAL: (2_000, 20_000),
+    FuelType.COAL_BRIQUETTES: (4_000, 25_000),
+    FuelType.BLACK_COAL: (5_000, 30_000),
+    FuelType.COKE: (5_000, 30_000),
+}
+PLAUSIBLE_CZK_PER_PRMS = (300, 6_000)
 
 
 class SolidFuelPriceRecord(BaseModel):
@@ -373,7 +390,7 @@ def price_metrics(raw: RawPrice) -> dict:
                 flags.append("package_size_unknown")
             return metrics | {"flags": flags}
         per_prms = price_vat / prms
-        if not _PLAUSIBLE_CZK_PER_PRMS[0] <= per_prms <= _PLAUSIBLE_CZK_PER_PRMS[1]:
+        if not PLAUSIBLE_CZK_PER_PRMS[0] <= per_prms <= PLAUSIBLE_CZK_PER_PRMS[1]:
             return metrics | {"flags": ["unit_price_implausible"]}
         metrics["normalized_price_per_prms_vat"] = round(per_prms)
         species = wood_class(raw.name)
@@ -395,7 +412,8 @@ def price_metrics(raw: RawPrice) -> dict:
 
     per_kg = price_vat / mass
     if raw.fuel in WEIGHT_FUELS:
-        if not _PLAUSIBLE_CZK_PER_TONNE[0] <= per_kg * 1000 <= _PLAUSIBLE_CZK_PER_TONNE[1]:
+        low, high = PLAUSIBLE_CZK_PER_TONNE[raw.fuel]
+        if not low <= per_kg * 1000 <= high:
             return metrics | {"flags": ["unit_price_implausible"]}
         metrics["normalized_price_per_ton_vat"] = round(per_kg * 1000)
     metrics["normalized_price_per_kg_vat"] = round(per_kg, 2)

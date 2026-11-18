@@ -5,6 +5,7 @@ from pathlib import Path
 import pytest
 from podpalto_tools.collect.heureka import FeedError, FeedItem, parse_feed
 from podpalto_tools.collect.normalize import (
+    PLAUSIBLE_CZK_PER_TONNE,
     RawPrice,
     classify,
     firewood_volume,
@@ -15,7 +16,7 @@ from podpalto_tools.collect.normalize import (
     stated_calorific_mj,
 )
 from podpalto_tools.collect.source_registry import Source
-from podpalto_tools.schemas import FuelType
+from podpalto_tools.schemas import WEIGHT_FUELS, FuelType
 
 FEED = (Path(__file__).parent / "fixtures" / "heureka_feed.xml").read_bytes()
 SHOP = Source(id="shop", seller="Shop", base_url="https://x.example", kind="heureka_feed",
@@ -178,6 +179,30 @@ def test_normalize_drops_implausible_unit_price():
     offer = record(item("Dřevěné brikety RUF 10 kg", 9990))
     assert offer.normalized_price_per_ton_vat is None and offer.energy_price_per_kwh_vat is None
     assert offer.flags == ["unit_price_implausible"]
+
+
+def test_every_fuel_sold_by_weight_has_a_sanity_band():
+    assert set(PLAUSIBLE_CZK_PER_TONNE) == WEIGHT_FUELS
+
+
+@pytest.mark.parametrize(
+    ("name", "price", "plausible"),
+    [
+        # Real prices at the edges of what was collected on 2026-11-18.
+        ("Hnědé uhlí hruboprach paleta 1000 kg", 2990, True),
+        ("Kovářské uhlí 13-55 mm pytel 25 kg", 480, True),
+        ("Pelety ENplus A1 pytel 15 kg", 249.3, True),
+        # Price per q read as per t, and per t read as per q.
+        ("Hnědé uhlí ořech 2 paleta 1000 kg", 690, False),
+        ("Pelety ENplus A1 paleta 1000 kg", 130_000, False),
+        # Bands are per fuel: 3 000 CZK/t is fine for coal dust, not for pellets.
+        ("Pelety ENplus A1 paleta 1000 kg", 3000, False),
+    ],
+)
+def test_unit_price_sanity_band_depends_on_the_fuel(name, price, plausible):
+    offer = record(item(name, price))
+    assert (offer.normalized_price_per_ton_vat is not None) is plausible
+    assert ("unit_price_implausible" not in offer.flags) is plausible
 
 
 def test_shipping_weight_is_a_flagged_fallback_for_the_package_size():

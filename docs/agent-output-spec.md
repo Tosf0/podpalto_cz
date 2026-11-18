@@ -82,9 +82,16 @@ týdně, nebo když se změní stránka „kontakt“ či „doprava“ (otisk o
 | Entita | Klíč | Pravidlo |
 |---|---|---|
 | Firma | `company_ico` | 8 číslic, platný kontrolní součet (mod 11), ověřené v ARES |
-| Provozovna (= bod na mapě) | `seller_key` | `<ico>-<ruian_adresni_misto>`; bez IČO `<source_id>-<ruian_adresni_misto>`; bez kódu RÚIAN `<source_id>-<slug obce a ulice>` + příznak |
+| Provozovna (= bod na mapě) | `seller_key` | umělý klíč = `id` zdroje ze `sources.yaml` (např. `palivo_ricany`); řetězec s více provozovnami `<id zdroje>-<slug pobočky>`; čte-li prodejce víc zdrojů, mají v registru společný `seller_key` (= `id` prvního z nich) |
 | Produkt | `product_key` | `<seller_key>:<item_id>`; `item_id` jako dnes (ITEM_ID z feedu, SKU, u ceníku stabilní slug řádku, **ne pořadí řádku**) |
 | Cena | `(product_key, observed_at)` | každé zjištění ceny = nový záznam; potvrzení beze změny se posílá taky (s novým časem) |
+
+**Klíč prodejce se nikdy nemění** (rozhodnuto 18. 11. 2026). Neskládá se z údajů o prodejci,
+protože ty se dozvídáme postupně nebo se mění (IČO se dohledá v ARES, kód RÚIAN až
+geolokací, prodejce opraví adresu nebo se přestěhuje). Kdyby byly součástí klíče, upsert by
+po každé takové změně založil nového prodejce a historie cen by se rozpadla. IČO, adresa,
+RÚIAN a poloha jsou jen údaje prodejce a při exportu se u stejného klíče přepíšou. Proto se
+`id` zdroje po prvním exportu **nepřejmenovává**.
 
 Pozor u ceníků: dnešní `<url>#<pořadí řádku>` se rozbije, když prodejce přidá řádek. Lepší je
 slug ze jména + varianty, např. `bukove-stipane-33cm-sypane`.
@@ -160,6 +167,30 @@ OpenStreetMap, takže polohu dodává samostatný agent a vrací hotové souřad
    provozovnu na mapě nezobrazíme a dáme ji do fronty k ruční kontrole. **Střed obce ani kraje
    jako náhradu neposílat** – vzdálenost a doprava by byly špatně.
 
+**Jak to dělá kód (18. 11. 2026):** místo agenta je to deterministický kód
+`tools/src/podpalto_tools/collect/locate.py`, který spouští člověk příkazem
+`uv run podpalto-locate-sellers`. Výsledek se zapíše do
+`tools/src/podpalto_tools/collect/seller_locations.json` a commituje se, takže každá změna
+polohy je vidět v diffu a export nepotřebuje síť.
+
+1. `location.ruian` v `sources.yaml`: kód adresního místa skladu nebo prodejny. Vyhledá se
+   na <https://vdp.cuzk.cz> nebo příkazem `podpalto-locate-sellers --find <PSČ> <č. p.> <obec>`.
+2. `location` se souřadnicemi v `sources.yaml` (`lat`, `lng`, `city`, `zip`, přesnost
+   `building` nebo `street`): sklad bez adresního místa. Střed obce se nepřijímá. Sklad
+   uvedený jen ulicí („Nádražní ulice, areál pily“): střed ulice z RÚIAN příkazem
+   `podpalto-locate-sellers --street <ulice> <obec>`, přesnost `street`. Souřadnice z mapy
+   vložené na webu prodejce: `from_seller_map: true` → zdroj `seller_map` a příznak
+   `location_from_seller_map`.
+3. Sídlo firmy z ARES (`kodAdresnihoMista`) s příznakem `location_is_registered_office`.
+   Sídlo často je sklad, ale ne vždy (sídlo v Praze, sklad ve Vimperku). Když sklad je
+   v sídle, potvrdí se to zkopírováním kódu do `location.ruian` a příznak zmizí.
+4. Nic z toho: `location_unknown`.
+
+Souřadnice a textová adresa se berou z vrstvy AdresniMisto prohlížecí služby RÚIAN (ČÚZK,
+ArcGIS REST, rovnou ve WGS84) a kraj z vrstvy krajů podle bodu. **Textový geokodér ČÚZK se
+nepoužívá:** na „Ústrašín 65“ vrátil se skóre 100 adresu ve Stráži nad Ohří. Geokodéry
+Mapy.com a Nominatim (bod 2 výše) zatím nejsou napojené.
+
 **Kontroly výsledku:**
 
 - bod leží v ČR (hrubě 48,55–51,06 s. š. a 12,09–18,86 v. d., přesně: uvnitř hranice ČR),
@@ -169,7 +200,7 @@ OpenStreetMap, takže polohu dodává samostatný agent a vrací hotové souřad
 
 | Pole | Typ | Popis |
 |---|---|---|
-| **`address.street`** | text | ulice a číslo („Pražská 412“); u obcí bez ulic „č. p. 12“ |
+| **`address.street`** | text | ulice a číslo („Pražská 412“); u obcí bez ulic obec nebo její část a číslo („Ústrašín 65“) |
 | **`address.city`** | text | obec nebo část obce, jak ji uvádí pošta |
 | **`address.zip`** | text | `"251 01"` (5 číslic s mezerou) |
 | `address.district` | text | okres |
@@ -404,9 +435,30 @@ Dnešní příznaky ponechat a doplnit nové. Každý příznak je řetězec v p
 | *nové:* `location_unknown`, `location_is_registered_office`, `location_region_mismatch`, `location_sources_disagree`, `location_from_seller_map` | poloha | `location_unknown` se na mapě nezobrazí |
 | *nové:* `moisture_class_from_text`, `certification_unverified`, `delivery_terms_unclear`, `ico_not_found` | odvozené údaje | nižší důvěra, do ruční kontroly |
 
-QA navíc: cena mimo rozsah pro danou kategorii (např. dřevo 300–4000 Kč/PRMS, pelety
-4000–20000 Kč/t, uhlí 2500–20000 Kč/t) → `outlier_vs_market`; meziběhová změna ceny o víc
-než 30 % → příznak `price_jump` a do ruční kontroly.
+QA má dvě úrovně (rozhodnuto 18. 11. 2026):
+
+1. **Pevné rozpětí podle paliva → `unit_price_implausible`.** Zachytí špatně přečtenou
+   jednotku nebo balení (q místo t = 10×, kg místo t = 1000×, pytel místo palety). Cena za
+   jednotku se nespočítá ani nepublikuje. Rozpětí jsou jen v kódu,
+   `PLAUSIBLE_CZK_PER_TONNE` a `PLAUSIBLE_CZK_PER_PRMS` v
+   `tools/src/podpalto_tools/collect/normalize.py`. Zhruba polovina nejnižší a dvojnásobek
+   nejvyšší ceny ze sběru 18. 11. 2026 (373 cen, s DPH):
+
+   | Palivo | Rozpětí | Zjištěno 18. 11. |
+   |---|---|---|
+   | dřevo | 300–6 000 Kč/PRMS | 1 044–3 400 |
+   | pelety | 5 000–30 000 Kč/t | 11 667–16 620 |
+   | dřevěné brikety | 4 000–30 000 Kč/t | 8 300–14 300 |
+   | hnědé uhlí | 2 000–20 000 Kč/t | 2 990 (hruboprach)–11 560 |
+   | uhelné brikety | 4 000–25 000 Kč/t | 6 990–13 200 |
+   | černé uhlí | 5 000–30 000 Kč/t | 9 490–19 200 (kovářské) |
+   | koks | 5 000–30 000 Kč/t | 9 000–13 990 |
+
+2. **Odchylka od trhu → `outlier_vs_market`.** Cena pod polovinou nebo nad dvojnásobkem
+   mediánu ostatních prodejců téhož paliva (`flag_market_outliers` v `collector.py`). Cena se
+   publikuje, ale jde do ruční kontroly. Pásmo jde s trhem, proto tu nejsou pevná čísla.
+
+Navíc meziběhová změna ceny o víc než 30 % → příznak `price_jump` a do ruční kontroly.
 
 ---
 
@@ -419,11 +471,11 @@ než 30 % → příznak `price_jump` a do ruční kontroly.
 {
   "schema_version": "1.0",
   "generated_at": "2026-11-18T06:00:00Z",
-  "runs": [ { "snapshot_id": 101, "source_id": "palivo-ricany", "agent": "collection", "status": "ok", "fetched_at": "2026-11-18T05:12:03Z", "content_sha256": "…", "changed": 1, "item_count": 6, "offer_count": 6 } ],
+  "runs": [ { "snapshot_id": 101, "source_id": "palivo_ricany", "agent": "collection", "status": "ok", "fetched_at": "2026-11-18T05:12:03Z", "content_sha256": "…", "changed": 1, "item_count": 6, "offer_count": 6 } ],
   "sellers": [
     {
-      "seller_key": "27891045-21844832",
-      "source_id": "palivo-ricany",
+      "seller_key": "palivo_ricany",
+      "source_id": "palivo_ricany",
       "name": "Palivo Říčany",
       "company_ico": "27891045",
       "legal_name": "Palivo Říčany s.r.o.",
@@ -451,8 +503,8 @@ než 30 % → příznak `price_jump` a do ruční kontroly.
   ],
   "products": [
     {
-      "product_key": "27891045-21844832:bukove-stipane-33cm-sypane",
-      "seller_key": "27891045-21844832",
+      "product_key": "palivo_ricany:bukove-stipane-33cm-sypane",
+      "seller_key": "palivo_ricany",
       "item_id": "bukove-stipane-33cm-sypane",
       "name": "Bukové štípané dřevo 33 cm, suché (sypané)",
       "name_raw": "Buk štípaný 33 cm – suchý, sypaný",
@@ -466,7 +518,7 @@ než 30 % → příznak `price_jump` a do ruční kontroly.
   ],
   "price_observations": [
     {
-      "product_key": "27891045-21844832:bukove-stipane-33cm-sypane",
+      "product_key": "palivo_ricany:bukove-stipane-33cm-sypane",
       "price_czk": 2290, "observed_at": "2026-11-18T05:12:03Z", "vat_status": "included",
       "source_url": "https://www.palivo-ricany.cz/cenik",
       "original_price": 2290, "original_unit": "prms", "original_quantity": 1, "original_price_includes_vat": true,

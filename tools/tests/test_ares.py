@@ -35,6 +35,8 @@ def test_find_icos_skips_phone_numbers_and_vat_ids():
         "IČ 12345678 (neplatné)\nIČ: 49901982"
     )
     assert find_icos(text) == ["49901982", "25596641"]
+    # Label and number in two table cells (waldera.cz/kontakty).
+    assert find_icos("IČ: | 49901982\nDIČ: | CZ49901982") == ["49901982"]
 
 
 class Site:

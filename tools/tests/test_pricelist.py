@@ -224,6 +224,24 @@ def test_duplicates_are_dropped_and_variants_named(api):
     assert names == ["Koks 20–40 mm", "Hnědé uhlí Bílina Ořech 2 – Cena za 1 q"]
 
 
+def test_row_ids_come_from_the_name_not_the_position(api):
+    page_id = api.post("/sources/demosklad/pages").json()["pages"][0]["page_id"]
+    rows = [
+        row("Koks 20–40 mm", "1 000 Kč/q", "q", "coke", price_includes_vat=True),
+        row("Hnědé uhlí Bílina Ořech 2", "690 Kč/q", "q", "brown_coal", price_includes_vat=True),
+        # Same name and unit, another price (e.g. a second yard): numbered, not merged.
+        row("Koks 20–40 mm", "850 Kč/q", "q", "coke", price_includes_vat=True),
+    ]
+    ids = [v["record"]["item_id"] for v in submit(api, page_id, rows).json()["verdicts"]]
+    assert ids == ["/cenik/#koks-20-40-mm-q", "/cenik/#hnede-uhli-bilina-orech-2-q",
+                   "/cenik/#koks-20-40-mm-q-2"]  # fmt: skip
+    # A row added at the top does not move the ids of the others.
+    added = [row('Brikety Rekord 4"', "850 Kč/q", "q", "coal_briquettes",
+                 price_includes_vat=True), *rows]  # fmt: skip
+    again = [v["record"]["item_id"] for v in submit(api, page_id, added).json()["verdicts"]]
+    assert again[1:] == ids
+
+
 def test_stored_pages_can_be_extracted_again_without_a_download(api, yard):
     page_id = api.post("/sources/demosklad/pages").json()["pages"][0]["page_id"]
     assert submit(api, page_id, ROWS).json()["status"] == "ok"

@@ -23,7 +23,7 @@ import re
 from html import unescape
 from html.parser import HTMLParser
 from typing import Literal
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit
 
 from pydantic import BaseModel, Field
 from pypdf import PdfReader
@@ -246,6 +246,32 @@ def _quotes(row: ExtractedPriceRow) -> dict[str, str]:
     return fields
 
 
+def row_item_id(page_url: str, name: str, unit: str | None) -> str:
+    """Stable id of a price-list row: page path + slug of the name, variant and unit.
+
+    'https://x.cz/cenik/', 'Buk – prms', 'prms' -> '/cenik/#buk-prms-prms'. Not the row's
+    position: a row added by the seller would shift every later price to another product
+    (spec section 4). The page path, not the full URL, survives a move to https or www.
+    """
+    slug = re.sub(r"[^a-z0-9]+", "-", fold(f"{name} {unit or ''}")).strip("-")
+    return f"{urlsplit(page_url).path or '/'}#{slug}"
+
+
+def unique_item_ids(verdicts: list[RowVerdict]) -> None:
+    """Rows with the same name and unit on one page get -2, -3 ... in page order.
+
+    Call it after ``drop_duplicates``, so a dropped repeat does not shift the numbers.
+    """
+    seen: dict[str, int] = {}
+    for verdict in verdicts:
+        if not verdict.accepted or verdict.record is None:
+            continue
+        item_id = verdict.record.item_id
+        seen[item_id] = seen.get(item_id, 0) + 1
+        if seen[item_id] > 1:
+            verdict.record.item_id = f"{item_id}-{seen[item_id]}"
+
+
 def verify_row(
     index: int,
     row: ExtractedPriceRow,
@@ -306,7 +332,7 @@ def verify_row(
     verdict.record = normalize_extracted(
         raw,
         source,
-        item_id=f"{page_url}#{index}",
+        item_id=row_item_id(page_url, name, row.original_unit),
         # Variants of one product (lengths, quantity tiers, price zones) share the group,
         # so the comparison counts the product once, at its cheapest variant.
         group_id=f"{page_url}#{fold(' '.join(row.product_name.split()))}",

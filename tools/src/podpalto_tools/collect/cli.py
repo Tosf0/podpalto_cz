@@ -70,6 +70,52 @@ def verify_sellers() -> None:
           "regions into sources.yaml after a review.")  # fmt: skip
 
 
+def locate_sellers() -> None:
+    """``uv run podpalto-locate-sellers [source_id ...]``: address and location of each seller
+    from ARES and RÚIAN into the committed ``seller_locations.json`` (no seller pages)."""
+    from podpalto_tools.collect.collector import http_fetch, resolve_sources
+    from podpalto_tools.collect.locate import locate_sellers as locate
+    from podpalto_tools.collect.locate import save_locations
+    from podpalto_tools.collect.ruian import find_address_points, street_point
+    from podpalto_tools.settings import get_settings
+
+    parser = argparse.ArgumentParser(description="Locate each seller via ARES and RÚIAN")
+    parser.add_argument("source_ids", nargs="*", help="sources to locate (default: all enabled)")
+    parser.add_argument(
+        "--find", nargs=3, metavar=("PSC", "CISLO_POPISNE", "OBEC"),
+        help="only print the RÚIAN codes of an address, e.g. --find 38501 123 Vimperk",
+    )  # fmt: skip
+    parser.add_argument(
+        "--street", nargs=2, metavar=("ULICE", "OBEC"),
+        help="only print the middle of a street (lat, lng) for a yard without a house number",
+    )  # fmt: skip
+    args = parser.parse_args()
+    settings = get_settings()
+    fetch = http_fetch(settings)
+    if args.street:
+        print(street_point(*args.street, fetch) or "street not found")
+        return
+    if args.find:
+        zip_code, number, city = args.find
+        for code, address in find_address_points(zip_code, int(number), city, fetch):
+            print(f"{code}  {address}")
+        return
+    try:
+        sources = resolve_sources(args.source_ids or None, settings)
+    except KeyError as exc:
+        sys.exit(str(exc.args[0]))
+    found = locate(sources, fetch)
+    for seller in found:
+        place = (
+            f"{seller.address.region} {seller.address.street}, {seller.address.city}"
+            if seller.address else "-"
+        )  # fmt: skip
+        print(f"{seller.seller_key:14} {seller.registry.status:11} {place:55} "
+              f"{','.join(seller.flags)} {seller.detail}".rstrip(), flush=True)  # fmt: skip
+    path = save_locations(found)
+    print(f"Saved to {path}. Review the diff before committing.")
+
+
 def renormalize() -> None:
     """``uv run podpalto-renormalize [source_id ...]``: re-check and recompute the stored
     rows of price lists with the current rules. No download, no LLM."""

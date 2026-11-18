@@ -33,8 +33,9 @@ from podpalto_tools.settings import Settings
 
 ARES_URL = "https://ares.gov.cz/ekonomicke-subjekty-v-be/rest/ekonomicke-subjekty/{ico}"
 
-# "IČ: 12345678", "IČO 123 45 678", "IČ:12345678"; DIČ ("CZ12345678") is skipped.
-_ICO = re.compile(r"(?<![A-Za-zĚŠČŘŽÝÁÍÉ])I[ČC]\s*O?\s*[:.]?\s*((?:\d\s?){7}\d)\b")
+# "IČ: 12345678", "IČO 123 45 678", "IČ:12345678", "IČ: | 12345678" (label and number in
+# two table cells); DIČ ("CZ12345678") is skipped.
+_ICO = re.compile(r"(?<![A-Za-zĚŠČŘŽÝÁÍÉ])I[ČC]\s*O?\s*[:.]?\s*\|?\s*((?:\d\s?){7}\d)\b")
 
 
 def valid_ico(ico: str) -> bool:
@@ -63,6 +64,9 @@ class Company:
     address: str
     region: str | None
     active: bool
+    seat_ruian_code: int | None = None
+    """RÚIAN address point of the registered seat (``kodAdresnihoMista``); None when ARES
+    holds a non-standardised address."""
 
 
 def parse_ares(content: bytes) -> Company:
@@ -75,7 +79,21 @@ def parse_ares(content: bytes) -> Company:
         address=seat.get("textovaAdresa", ""),
         region=seat.get("nazevKraje"),
         active=not data.get("datumZaniku"),
+        seat_ruian_code=seat.get("kodAdresnihoMista"),
     )
+
+
+def lookup_company(ico: str, fetch: Fetch) -> Company | None:
+    """The company in ARES, or None when ARES does not know the IČO.
+
+    Raises ``FetchError`` when ARES cannot be reached or answers with an error.
+    """
+    response = fetch(ARES_URL.format(ico=ico))
+    if response.status == 404:
+        return None
+    if response.status != 200:
+        raise FetchError(f"ARES returned HTTP {response.status}")
+    return parse_ares(response.content)
 
 
 # Pages that usually name the operator: the home page footer, then the legal pages.

@@ -53,8 +53,8 @@ Frontend:
    (migrace `…170000_refresh_market_stats.sql`); po jobu `collect` ji volá sama
    `finish_agent_job_run`, po ručním importu `select public.refresh_market_stats();`. Mediány ze schválených nabídek,
    bez akcí, převod na PRMS / tunu, kraj bez nabídky nemá hodnotu.
-4. Rozhodnout body **6–8, 10–12** níže (kWh konstanty, pásma, klíč prodejce, geolokace,
-   hodnocení, smazání 26 fiktivních prodejců při prvním zápisu reálných dat).
+4. Rozhodnout body **6, 10–12** níže (kWh konstanty, geolokace, hodnocení, doprava
+   celostátních e-shopů); body 7 a 8 (pásma, klíč prodejce) rozhodnuté 18. 11.
 5. `MarketResearchFlow` / `SellerProfileFlow` podle rozhodnutí o CI Studiu (DB část hotová).
 
 **Média na Cloudflare R2** (zapsáno 18. 11. 2026): obrázky blogu, fotky prodejců a avatary
@@ -137,6 +137,30 @@ API klíč mezi Vercelem a Railway.
       upsert `sellers` (`external_key`), `products` (`seller_id,external_id`), insert
       `price_observations` (vždy nové řádky) a `scrape_runs` s `job_run_id`. Do té doby job
       `collect` sběr provede, ale skončí chybou „export do Supabase zatím není hotový“.
+      - [x] Příprava dat (18. 11. 2026): klíč prodejce = `id` zdroje, rozpětí cen podle
+        paliva, kód kraje (`Region.code`), klíč položky ceníku ze slugu názvu a jednotky
+        (`/cenik/#koks-20-40-mm-q` místo `#<pořadí>`), adresa a poloha prodejců z ARES
+        a RÚIAN v `tools/.../collect/seller_locations.json` (`podpalto-locate-sellers`).
+      - [x] **Sklady místo sídel** (18. 11. 2026, z kontaktních stránek prodejců povolených
+        robots.txt): 18 z 31 prodejců má polohu skladu nebo prodejny (`location` v
+        `sources.yaml` s poznámkou, odkud adresa je). Opraven kraj v registru u drevosrot
+        (sklad Černčice, ULK), briketymelnik (Mělník, STC) a valdex (Ústí n. L., ULK).
+        Doplněno IČO: waldera (z kontaktů), dek (Stavebniny DEK a.s., z „O nás“),
+        drevopraha (Zafido s.r.o., z kontaktů), bauhaus (BAUHAUS k.s., z ARES podle jména).
+      - [ ] **Zůstává sídlo s příznakem `location_is_registered_office` (12):** havelka
+        (jen závozová pásma, adresy skladů na webu nejsou), olvan („Běloveská 237“ v RÚIAN
+        není), znz, deblicelesy, palivapolice (web uvádí jen sídlo), alsol (střediska),
+        e-shopy a řetězce unihobby, mountfield, dek, bauhaus, drevopraha. Příznak neblokuje,
+        jen upozorňuje (rozhodnuto 18. 11.).
+      - [ ] **Přesnost na ulici** (sklad bez čísla): stefl (bod areálu SPOKAR, „za areálem“),
+        korbicka (Nádražní, areál pily), lesy_liberec (Londýnská u ČOV, dlouhá ulice – bod
+        může být až ~1 km vedle). Upřesnit, až bude známé číslo nebo souřadnice.
+      - [ ] **baumax:** bez IČO a polohy (kontaktní stránka vrací HTTP 502) →
+        `location_unknown`, na mapě nebude. kvalitniuhli: poloha z mapy na webu, IČO chybí.
+      - [ ] **Řetězce a více skladů:** havelka (14 skladů, sídlo Praha 4), unikom (Čáslav,
+        Uhlířské Janovice, Zbraslavice), korbicka (Nové Město, Bystřice), alsol (2 střediska)
+        a hobby markety s celostátní cenou (unihobby, mountfield…) mají dnes jeden bod.
+        Pobočky = `<id>-<slug pobočky>`, viz spec §4; souvisí s bodem 12 (celostátní doprava).
 - [ ] **2. Vstupy `MarketResearchFlow`:** worker převádí `fuel_category` (wood / pellets /
       briquettes / coal) na `FuelType` a kód kraje (`STC`) na jeho název z tabulky `regions`
       (`handlers.py`, `FUELS_BY_CATEGORY`). Zkontrolovat, že flow s tím dává dobrý report;
@@ -470,13 +494,18 @@ a frontendu. Čísla odpovídají bodům kontroly.
       1 260 kWh/prms; `normalize.py` (PDF) koks 8,8, černé uhlí 7,4, tvrdé dřevo 1 320.
       Doporučení: jedna tabulka z PDF; `tools` posílá energii na jednotku produktu,
       frontend jen dělí cenou a násobí účinností kotle.
-- [ ] **(7) Pásma věrohodnosti cen.** Spec (§9): dřevo 300–4 000 Kč/PRMS, pelety
-      4 000–20 000 Kč/t, uhlí 2 500–20 000 Kč/t. Kód (`normalize.py`): 300–6 000 Kč/prms
-      a 2 000–40 000 Kč/t pro všechna paliva na váhu. Vybrat jedny a držet je v kódu.
-- [ ] **(8) Stabilní `seller_key`.** Spec skládá klíč z IČO a kódu RÚIAN; když se adresa
-      dohledá později nebo opraví, klíč se změní a historie cen se rozpadne. Doporučení:
-      `<source_id>-<slug pobočky>` jako klíč, RÚIAN jen jako údaj.
-- [ ] **(10) Geolokace a doprava kódem.** RÚIAN, ARES a geokodéry jsou deterministická API,
+- [x] **(7) Pásma věrohodnosti cen** (rozhodnuto 18. 11. 2026): rozpětí podle paliva jen
+      v `normalize.py` (`PLAUSIBLE_CZK_PER_TONNE`, `PLAUSIBLE_CZK_PER_PRMS`), nastavená
+      podle sběru 18. 11. (373 cen, žádná mimo rozpětí). Zachytí jen špatně přečtenou
+      jednotku; odchylku od trhu řeší `outlier_vs_market` vůči mediánu. Spec §9 upravený.
+- [x] **(8) Stabilní `seller_key`** (rozhodnuto 18. 11. 2026): umělý klíč = `id` zdroje
+      v `sources.yaml` (u řetězců `<id>-<slug pobočky>`), nikdy se nemění; IČO, adresa,
+      RÚIAN a poloha jsou jen údaje a při exportu se přepíšou. Dva zdroje jednoho prodejce
+      sdílí klíč přes pole `seller_key` v registru. `id` zdroje se po prvním exportu
+      nepřejmenovává. Spec §4 upravený.
+- [ ] **(10) Geolokace a doprava kódem.** Poloha z ARES a RÚIAN podle kódu adresního místa
+      je hotová (`locate.py`, 18. 11. 2026, viz spec §5.3); zbývá doprava a případně geokodér
+      pro sklady bez adresního místa. RÚIAN, ARES a geokodéry jsou deterministická API,
       „dedikovaný agent“ má být kód. Čísla dopravy z textu (paušál, Kč/km) musí projít
       stejnou kontrolou citací jako ceny. Nominatim vyžaduje identifikující User-Agent
       s kontaktem (dnes posíláme obecný): rozhodnout, jaký kontakt uvést, nebo ho nepoužít.
@@ -495,6 +524,7 @@ a frontendu. Čísla odpovídají bodům kontroly.
    projektu Podpalto (`npx supabase db push` nebo SQL Editor) a ověřit, že seed a frontend
    dál fungují.
 2. **Rozhodnout body 6–8** (kWh, pásma, klíč prodejce), protože ovlivňují export.
+   Body 7 a 8 rozhodnuté 18. 11. 2026, bod 6 export neblokuje.
 3. **`tools`:** nástroj `market_stats` (bod 5) a JSON export podle `agent-output-spec.md`
    s validací proti JSON Schema.
 4. **Frontend:** zobrazit „neuvedeno“ (bod 3), smazat REST větve, upravit dokumentaci

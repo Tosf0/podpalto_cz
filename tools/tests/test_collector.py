@@ -140,3 +140,26 @@ def test_registry_rejects_a_feed_source_without_a_feed_path(data_dir):
     )
     with pytest.raises(ValueError, match="needs feed_path"):
         load_sources()
+
+
+_TWO_SOURCES = (
+    "sources:\n"
+    "  - id: shop_feed\n    seller: Shop\n    base_url: https://x.example\n"
+    "    kind: heureka_feed\n    feed_path: /f.xml\n"
+    "  - id: shop_pricelist\n    seller: Shop\n    base_url: https://x.example\n"
+    "    kind: static_html\n    page_paths: [/cenik/]\n    seller_key: {key}\n"
+)
+
+
+def test_two_sources_of_one_seller_share_its_key(data_dir):
+    registry = data_dir.parent / "sources.yaml"
+    registry.write_text(_TWO_SOURCES.format(key="shop_feed"), encoding="utf-8")
+    keys = {source.id: source.export_seller_key for source in load_sources()}
+    assert keys == {"shop_feed": "shop_feed", "shop_pricelist": "shop_feed"}
+
+
+def test_registry_rejects_a_seller_key_that_is_no_source(data_dir):
+    registry = data_dir.parent / "sources.yaml"
+    registry.write_text(_TWO_SOURCES.format(key="shop"), encoding="utf-8")
+    with pytest.raises(ValueError, match="is not a source id"):
+        load_sources()

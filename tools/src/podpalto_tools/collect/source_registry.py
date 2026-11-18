@@ -6,6 +6,7 @@ import re
 from enum import Enum, IntEnum
 from importlib import resources
 from pathlib import Path
+from typing import Literal
 
 import yaml
 from pydantic import BaseModel, Field, HttpUrl, model_validator
@@ -49,9 +50,52 @@ class Consent(str, Enum):
     GRANTED = "granted"
 
 
+class SellerLocation(BaseModel):
+    """Where customers buy (the yard or shop), when it is not the company seat in ARES.
+
+    Either the RÚIAN address point code (preferred, look it up at https://vdp.cuzk.cz or
+    with ``podpalto-locate-sellers --find``), or coordinates with the town for a yard that
+    has no address point.
+    """
+
+    ruian: int | None = Field(None, gt=0, description="kód adresního místa")
+    lat: float | None = Field(None, ge=48.5, le=51.1)
+    lng: float | None = Field(None, ge=12.0, le=18.9)
+    street: str = ""
+    city: str | None = None
+    zip: str | None = Field(None, pattern=r"^\d{3} ?\d{2}$")
+    # Not "municipality": the centre of a town would put delivery distances wrong (spec 5.3).
+    precision: Literal["building", "street"] = "building"
+    from_seller_map: bool = Field(
+        False, description="Coordinates taken from the map embedded on the seller's page"
+    )
+    note: str = Field("", description="Where the address comes from, e.g. the contact page")
+
+    @model_validator(mode="after")
+    def _one_way(self) -> SellerLocation:
+        manual = (self.lat, self.lng, self.city, self.zip)
+        if self.ruian is None and None in manual:
+            raise ValueError("location needs ruian, or lat, lng, city and zip")
+        if self.ruian is not None and any(value is not None for value in manual):
+            raise ValueError("location takes ruian or coordinates, not both")
+        if self.from_seller_map and self.ruian is not None:
+            raise ValueError("from_seller_map is for coordinates, not for a RÚIAN code")
+        return self
+
+
 class Source(BaseModel):
-    id: str = Field(..., pattern=r"^[a-z0-9_]+$")
+    id: str = Field(
+        ...,
+        pattern=r"^[a-z0-9_]+$",
+        description="Never renamed once exported: it is the seller's key in Supabase",
+    )
     seller: str
+    seller_key: str | None = Field(
+        None,
+        pattern=r"^[a-z0-9_]+$",
+        description="id of another source read from the same seller, so both export to one "
+        "seller; omitted = this source's own id",
+    )
     base_url: HttpUrl
     kind: SourceKind
     pillar: Pillar = Pillar.ESHOPS
@@ -59,6 +103,9 @@ class Source(BaseModel):
     region: Region | None = Field(None, description="Region (kraj) where the seller is based")
     price_region: Region | None = Field(
         None, description="Where its prices apply: a region, or CZ for nationwide delivery"
+    )
+    location: SellerLocation | None = Field(
+        None, description="The yard or shop; omitted = the company seat from ARES"
     )
     price_includes_vat: bool = Field(
         True,
@@ -90,6 +137,16 @@ class Source(BaseModel):
     enabled: bool = True
     consent: Consent = Consent.NONE
     notes: str = ""
+
+    @property
+    def export_seller_key(self) -> str:
+        """The seller's stable key (``sellers.external_key``, spec section 4).
+
+        An artificial id that never changes: IČO, address or RÚIAN code are only attributes
+        of the seller and are updated in place. Chains with several branches add
+        ``-<branch slug>`` per branch when exporting.
+        """
+        return self.seller_key or self.id
 
     @property
     def origin(self) -> str:
@@ -139,6 +196,18 @@ def load_sources(path: Path | None = None) -> list[Source]:
     ids = [source.id for source in sources]
     if len(ids) != len(set(ids)):
         raise ValueError(f"duplicate source ids in the registry: {ids}")
+    by_id = {source.id: source for source in sources}
+    for source in sources:
+        if source.seller_key is None:
+            continue
+        target = by_id.get(source.seller_key)
+        if target is None:
+            raise ValueError(f"{source.id}: seller_key {source.seller_key!r} is not a source id")
+        if target.seller_key is not None:
+            raise ValueError(
+                f"{source.id}: seller_key must name the first source of the seller, "
+                f"{target.id} itself points to {target.seller_key}"
+            )
     return sources
 
 

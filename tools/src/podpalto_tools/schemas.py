@@ -45,6 +45,30 @@ class Region(str, Enum):
     ZLINSKY = "Zlínský kraj"
     MORAVSKOSLEZSKY = "Moravskoslezský kraj"
 
+    @property
+    def code(self) -> str | None:
+        """Region code of the web app (Supabase enum ``region_code``); None for CZ."""
+        return REGION_CODES.get(self)
+
+
+#: Supabase ``region_code`` of each region (docs/agent-output-spec.md, section 11).
+REGION_CODES: dict[Region, str] = {
+    Region.PRAHA: "PHA",
+    Region.STREDOCESKY: "STC",
+    Region.JIHOCESKY: "JHC",
+    Region.PLZENSKY: "PLK",
+    Region.KARLOVARSKY: "KVK",
+    Region.USTECKY: "ULK",
+    Region.LIBERECKY: "LBK",
+    Region.KRALOVEHRADECKY: "HKK",
+    Region.PARDUBICKY: "PAK",
+    Region.VYSOCINA: "VYS",
+    Region.JIHOMORAVSKY: "JHM",
+    Region.OLOMOUCKY: "OLK",
+    Region.ZLINSKY: "ZLK",
+    Region.MORAVSKOSLEZSKY: "MSK",
+}
+
 
 class ToolResult(BaseModel):
     """Base class of every tool response, so agents always see the data provenance."""

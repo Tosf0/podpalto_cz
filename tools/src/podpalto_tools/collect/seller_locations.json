@@ -1,0 +1,856 @@
+[
+ {
+  "seller_key": "a1pelety",
+  "source_id": "a1pelety",
+  "address": {
+   "street": "Ústí 39",
+   "city": "Ústí",
+   "zip": "755 01",
+   "region": "ZLK",
+   "ruian_address_code": 21671567
+  },
+  "location": {
+   "lat": 49.31022,
+   "lng": 18.004186,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "25839586",
+   "name": "Petr Krabica s.r.o.",
+   "seat": "č.p. 39, 75501 Ústí"
+  },
+  "checked_at": "2026-11-18T19:29:55+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "/kontakt: prodejna Ústí 39 = sídlo; větší sklad bez adresy."
+ },
+ {
+  "seller_key": "alsol",
+  "source_id": "alsol",
+  "address": {
+   "street": "Dvorského 5/17",
+   "city": "Olomouc",
+   "zip": "779 00",
+   "region": "OLK",
+   "ruian_address_code": 25123831
+  },
+  "location": {
+   "lat": 49.626976,
+   "lng": 17.339634,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "01559109",
+   "name": "Arcibiskupské lesy a statky Olomouc s.r.o.",
+   "seat": "Dvorského 5/17, Svatý Kopeček, 77900 Olomouc"
+  },
+  "checked_at": "2026-11-18T19:30:38+00:00",
+  "flags": [
+   "location_is_registered_office"
+  ],
+  "detail": "",
+  "note": ""
+ },
+ {
+  "seller_key": "alvepal",
+  "source_id": "alvepal",
+  "address": {
+   "street": "U Sloupů 35",
+   "city": "Vimperk",
+   "zip": "385 01",
+   "region": "JHC",
+   "ruian_address_code": 81485191
+  },
+  "location": {
+   "lat": 49.060058,
+   "lng": 13.73924,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "26057778",
+   "name": "ALVEPAL, s.r.o.",
+   "seat": "Olgy Havlové 2903/27, Žižkov, 13000 Praha 3"
+  },
+  "checked_at": "2026-11-18T19:30:17+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "/kontakt: provozovna U Sloupů 35, Vimperk (sídlo Praha 3)."
+ },
+ {
+  "seller_key": "bauhaus",
+  "source_id": "bauhaus",
+  "address": {
+   "street": "Strážní 852/7",
+   "city": "Brno",
+   "zip": "639 00",
+   "region": "JHM",
+   "ruian_address_code": 31089038
+  },
+  "location": {
+   "lat": 49.177132,
+   "lng": 16.600856,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "49435388",
+   "name": "BAUHAUS  k.s.",
+   "seat": "Strážní 852/7, Štýřice, 63900 Brno"
+  },
+  "checked_at": "2026-11-18T19:30:33+00:00",
+  "flags": [
+   "location_is_registered_office"
+  ],
+  "detail": "",
+  "note": ""
+ },
+ {
+  "seller_key": "baumax",
+  "source_id": "baumax",
+  "address": null,
+  "location": null,
+  "registry": {
+   "status": "no_ico",
+   "ico": null,
+   "name": null,
+   "seat": null
+  },
+  "checked_at": "2026-11-18T19:30:26+00:00",
+  "flags": [
+   "ico_not_found",
+   "location_unknown"
+  ],
+  "detail": "no address point: add location to the registry",
+  "note": ""
+ },
+ {
+  "seller_key": "bkpaliva",
+  "source_id": "bkpaliva",
+  "address": {
+   "street": "Pelec 10",
+   "city": "Častrov",
+   "zip": "394 70",
+   "region": "VYS",
+   "ruian_address_code": 8788561
+  },
+  "location": {
+   "lat": 49.322048,
+   "lng": 15.13857,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "72124016",
+   "name": "Marek Bortlík",
+   "seat": "Pelec 42, 39470 Častrov"
+  },
+  "checked_at": "2026-11-18T19:29:57+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "/kontakt: kamenná prodejna Pelec 10, Častrov."
+ },
+ {
+  "seller_key": "briketymelnik",
+  "source_id": "briketymelnik",
+  "address": {
+   "street": "Nádražní 3401",
+   "city": "Mělník",
+   "zip": "276 01",
+   "region": "STC",
+   "ruian_address_code": 27484432
+  },
+  "location": {
+   "lat": 50.354721,
+   "lng": 14.488584,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "08693676",
+   "name": "TRADEMIX s.r.o.",
+   "seat": "Cukrovarská 883/3, Čakovice, 19600 Praha 9"
+  },
+  "checked_at": "2026-11-18T19:29:49+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "/kontakty: prodejní sklad Nádražní 3401 (areál Bostaz), Mělník."
+ },
+ {
+  "seller_key": "deblicelesy",
+  "source_id": "deblicelesy",
+  "address": {
+   "street": "Deblice 174",
+   "city": "Dymokury",
+   "zip": "289 01",
+   "region": "STC",
+   "ruian_address_code": 18218105
+  },
+  "location": {
+   "lat": 50.262133,
+   "lng": 15.201652,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "27103803",
+   "name": "DEBLICE - lesy s.r.o.",
+   "seat": "Deblice 174, 28901 Dymokury"
+  },
+  "checked_at": "2026-11-18T19:30:35+00:00",
+  "flags": [
+   "location_is_registered_office"
+  ],
+  "detail": "",
+  "note": ""
+ },
+ {
+  "seller_key": "dek",
+  "source_id": "dek",
+  "address": {
+   "street": "Tiskařská 257/10",
+   "city": "Praha 10",
+   "zip": "108 00",
+   "region": "PHA",
+   "ruian_address_code": 22588141
+  },
+  "location": {
+   "lat": 50.082363,
+   "lng": 14.533375,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "03748600",
+   "name": "Stavebniny DEK a.s.",
+   "seat": "Tiskařská 257/10, Malešice, 10800 Praha 10"
+  },
+  "checked_at": "2026-11-18T19:30:31+00:00",
+  "flags": [
+   "location_is_registered_office"
+  ],
+  "detail": "",
+  "note": ""
+ },
+ {
+  "seller_key": "drevopraha",
+  "source_id": "drevopraha",
+  "address": {
+   "street": "U plynárny 1455/70",
+   "city": "Praha 10",
+   "zip": "101 00",
+   "region": "PHA",
+   "ruian_address_code": 25713914
+  },
+  "location": {
+   "lat": 50.057213,
+   "lng": 14.475566,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "01548204",
+   "name": "ZAFIDO s.r.o.",
+   "seat": "U plynárny 1455/70, Michle, 10100 Praha 10"
+  },
+  "checked_at": "2026-11-18T19:30:41+00:00",
+  "flags": [
+   "location_is_registered_office"
+  ],
+  "detail": "",
+  "note": ""
+ },
+ {
+  "seller_key": "drevosrot",
+  "source_id": "drevosrot",
+  "address": {
+   "street": "Husova 434",
+   "city": "Černčice",
+   "zip": "439 01",
+   "region": "ULK",
+   "ruian_address_code": 19883960
+  },
+  "location": {
+   "lat": 50.360078,
+   "lng": 13.827464,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "27602231",
+   "name": "Dřevošrot, a.s.",
+   "seat": "Žitavského 496, Zbraslav, 15600 Praha 5"
+  },
+  "checked_at": "2026-11-18T19:29:44+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "eshop.drevosrot.cz/kontakty: Sklad paliv Louny, Husova 434, Černčice. Druhý sklad Hůrecká 379/36, Lišov (RÚIAN 25152823)."
+ },
+ {
+  "seller_key": "havelka",
+  "source_id": "havelka",
+  "address": {
+   "street": "Kloboučnická 1735/26",
+   "city": "Praha 4",
+   "zip": "140 00",
+   "region": "PHA",
+   "ruian_address_code": 73007871
+  },
+  "location": {
+   "lat": 50.062345,
+   "lng": 14.44952,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "07772815",
+   "name": "Havelka UHELNÉ SKLADY s.r.o.",
+   "seat": "Kloboučnická 1735/26, Nusle, 14000 Praha 4"
+  },
+  "checked_at": "2026-11-18T19:30:13+00:00",
+  "flags": [
+   "location_is_registered_office"
+  ],
+  "detail": "",
+  "note": ""
+ },
+ {
+  "seller_key": "kb_uhli",
+  "source_id": "kb_uhli",
+  "address": {
+   "street": "Blanné 14",
+   "city": "Blanné",
+   "zip": "671 54",
+   "region": "JHM",
+   "ruian_address_code": 75508656
+  },
+  "location": {
+   "lat": 48.99145,
+   "lng": 15.879598,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "41609638",
+   "name": "K & B spol. s r.o.",
+   "seat": "č.p. 14, 67154 Blanné"
+  },
+  "checked_at": "2026-11-18T19:30:11+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "/kontakt: provozovna Blanné 14 = sídlo."
+ },
+ {
+  "seller_key": "korbicka",
+  "source_id": "korbicka",
+  "address": {
+   "street": "Nádražní",
+   "city": "Nové Město na Moravě",
+   "zip": "592 31",
+   "region": "VYS",
+   "ruian_address_code": null
+  },
+  "location": {
+   "lat": 49.568072,
+   "lng": 16.081232,
+   "source": "manual",
+   "precision": "street"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "18533973",
+   "name": "Jiří Korbička",
+   "seat": "Olešná 11, 59231 Nové Město na Moravě"
+  },
+  "checked_at": "2026-11-18T19:30:09+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "/kontakt/: sklad Nádražní ulice (areál pily), bez čísla. Druhý sklad Bystřice nad Pernštejnem – Nový Dvůr (nádraží ČD)."
+ },
+ {
+  "seller_key": "kvalitniuhli",
+  "source_id": "kvalitniuhli",
+  "address": {
+   "street": "",
+   "city": "Jílové u Prahy",
+   "zip": "254 01",
+   "region": "STC",
+   "ruian_address_code": null
+  },
+  "location": {
+   "lat": 49.878281,
+   "lng": 14.500937,
+   "source": "seller_map",
+   "precision": "building"
+  },
+  "registry": {
+   "status": "no_ico",
+   "ico": null,
+   "name": null,
+   "seat": null
+  },
+  "checked_at": "2026-11-18T19:30:19+00:00",
+  "flags": [
+   "ico_not_found",
+   "location_from_seller_map"
+  ],
+  "detail": "",
+  "note": "/kontakty.html: vložená mapa Google „Prodej paliv, vlakové nádraží Jílové u Prahy“."
+ },
+ {
+  "seller_key": "latop",
+  "source_id": "latop",
+  "address": {
+   "street": "U Čápova dvora 2762",
+   "city": "Tábor",
+   "zip": "390 05",
+   "region": "JHC",
+   "ruian_address_code": 19822740
+  },
+  "location": {
+   "lat": 49.393738,
+   "lng": 14.690357,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "45022747",
+   "name": "LATOP spol. s r.o.",
+   "seat": "U Čápova dvora 2762, 39005 Tábor"
+  },
+  "checked_at": "2026-11-18T19:30:03+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "/o-nas: prodejna a sídlo U Čápova dvora 2762, Tábor."
+ },
+ {
+  "seller_key": "lesy_liberec",
+  "source_id": "lesy_liberec",
+  "address": {
+   "street": "Londýnská",
+   "city": "Liberec",
+   "zip": "460 01",
+   "region": "LBK",
+   "ruian_address_code": null
+  },
+  "location": {
+   "lat": 50.778481,
+   "lng": 15.03266,
+   "source": "manual",
+   "precision": "street"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "72053984",
+   "name": "Městské lesy Liberec, p. o.",
+   "seat": "Lidové sady 425/1, Liberec I-Staré Město, 46001 Liberec"
+  },
+  "checked_at": "2026-11-18T19:30:40+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "Úvodní stránka: výroba Londýnská ulice, Liberec – Růžodol I (vedle ČOV), bez čísla; bod = střed ulice."
+ },
+ {
+  "seller_key": "mountfield",
+  "source_id": "mountfield",
+  "address": {
+   "street": "Všechromy 56",
+   "city": "Strančice",
+   "zip": "251 63",
+   "region": "STC",
+   "ruian_address_code": 27480682
+  },
+  "location": {
+   "lat": 49.943895,
+   "lng": 14.653481,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "25620991",
+   "name": "Mountfield a.s.",
+   "seat": "Všechromy 56, 25163 Strančice"
+  },
+  "checked_at": "2026-11-18T19:30:29+00:00",
+  "flags": [
+   "location_is_registered_office"
+  ],
+  "detail": "",
+  "note": ""
+ },
+ {
+  "seller_key": "olvan",
+  "source_id": "olvan",
+  "address": {
+   "street": "Běloveská 2181",
+   "city": "Náchod",
+   "zip": "547 01",
+   "region": "HKK",
+   "ruian_address_code": 86753789
+  },
+  "location": {
+   "lat": 50.417501,
+   "lng": 16.175379,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "27464547",
+   "name": "OLVAN Náchod s.r.o.",
+   "seat": "Běloveská 2181, 54701 Náchod"
+  },
+  "checked_at": "2026-11-18T19:30:15+00:00",
+  "flags": [
+   "location_is_registered_office"
+  ],
+  "detail": "",
+  "note": ""
+ },
+ {
+  "seller_key": "palivapolice",
+  "source_id": "palivapolice",
+  "address": {
+   "street": "Bezděkov nad Metují 142",
+   "city": "Bezděkov nad Metují",
+   "zip": "549 54",
+   "region": "HKK",
+   "ruian_address_code": 7215321
+  },
+  "location": {
+   "lat": 50.51319,
+   "lng": 16.212639,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "15047881",
+   "name": "Paliva Police n/Metují spol. s r.o.",
+   "seat": "č.p. 142, 54954 Bezděkov nad Metují"
+  },
+  "checked_at": "2026-11-18T19:30:43+00:00",
+  "flags": [
+   "location_is_registered_office"
+  ],
+  "detail": "",
+  "note": ""
+ },
+ {
+  "seller_key": "palivazdemar",
+  "source_id": "palivazdemar",
+  "address": {
+   "street": "Smetanova 683",
+   "city": "Chabařovice",
+   "zip": "403 17",
+   "region": "ULK",
+   "ruian_address_code": 9300473
+  },
+  "location": {
+   "lat": 50.68712,
+   "lng": 13.947296,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "25025589",
+   "name": "ZDEMAR Ústí nad Labem s.r.o.",
+   "seat": "Smetanova 683, 40317 Chabařovice"
+  },
+  "checked_at": "2026-11-18T19:29:51+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "/kontakty a /o-nas: areál Smetanova 683, Chabařovice = sídlo."
+ },
+ {
+  "seller_key": "palivos",
+  "source_id": "palivos",
+  "address": {
+   "street": "Závodní 837/6",
+   "city": "Teplice",
+   "zip": "415 01",
+   "region": "ULK",
+   "ruian_address_code": 20256477
+  },
+  "location": {
+   "lat": 50.648032,
+   "lng": 13.831016,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "04423046",
+   "name": "PALIVOS s.r.o.",
+   "seat": "Závodní 837/6, 41501 Teplice"
+  },
+  "checked_at": "2026-11-18T19:29:53+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "/kontakty: SÍDLO A PRODEJNA, areál PALIVOS, Teplice."
+ },
+ {
+  "seller_key": "peletynovybor",
+  "source_id": "peletynovybor",
+  "address": {
+   "street": "Sluneční 892",
+   "city": "Nový Bor",
+   "zip": "473 01",
+   "region": "LBK",
+   "ruian_address_code": 13126504
+  },
+  "location": {
+   "lat": 50.74977,
+   "lng": 14.55457,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "09371788",
+   "name": "DORA Bohemia s.r.o.",
+   "seat": "Wolkerova 829, 47301 Nový Bor"
+  },
+  "checked_at": "2026-11-18T19:29:46+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "/kontakty: prodejna Sluneční 892, Nový Bor."
+ },
+ {
+  "seller_key": "ridepal",
+  "source_id": "ridepal",
+  "address": {
+   "street": "Švermova 171/120",
+   "city": "Ostrava",
+   "zip": "709 00",
+   "region": "MSK",
+   "ruian_address_code": 25252810
+  },
+  "location": {
+   "lat": 49.842721,
+   "lng": 18.243781,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "26847833",
+   "name": "Ridera Bohemia a.s.",
+   "seat": "28. října 2092/216, Mariánské Hory, 70900 Ostrava"
+  },
+  "checked_at": "2026-11-18T19:30:22+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "/kontakt: Uhelný sklad Ridera, Švermova 171/120, Ostrava-Mariánské Hory. Druhý sklad Malé Březno 74 u Mostu (RÚIAN 25376152)."
+ },
+ {
+  "seller_key": "stefl",
+  "source_id": "stefl",
+  "address": {
+   "street": "Libkovodská",
+   "city": "Pelhřimov",
+   "zip": "393 01",
+   "region": "VYS",
+   "ruian_address_code": null
+  },
+  "location": {
+   "lat": 49.409267,
+   "lng": 15.216513,
+   "source": "manual",
+   "precision": "street"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "19240538",
+   "name": "MADOS PE s.r.o.",
+   "seat": "č.p. 65, 39301 Ústrašín"
+  },
+  "checked_at": "2026-11-18T19:30:06+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "Úvodní stránka: provozovna Libkovodská ulice, Pelhřimov – za areálem Spokar, bez čísla; bod = areál SPOKAR (Libkovodská 1428)."
+ },
+ {
+  "seller_key": "unihobby",
+  "source_id": "unihobby",
+  "address": {
+   "street": "Tomíčkova 2287/9",
+   "city": "Praha 4",
+   "zip": "148 00",
+   "region": "PHA",
+   "ruian_address_code": 25593374
+  },
+  "location": {
+   "lat": 50.039293,
+   "lng": 14.478997,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "24711594",
+   "name": "UNI HOBBY, a.s.",
+   "seat": "Tomíčkova 2287/9, Chodov, 14800 Praha 4"
+  },
+  "checked_at": "2026-11-18T19:30:27+00:00",
+  "flags": [
+   "location_is_registered_office"
+  ],
+  "detail": "",
+  "note": ""
+ },
+ {
+  "seller_key": "unikom",
+  "source_id": "unikom",
+  "address": {
+   "street": "Chotusická 1353",
+   "city": "Čáslav",
+   "zip": "286 01",
+   "region": "STC",
+   "ruian_address_code": 11633875
+  },
+  "location": {
+   "lat": 49.923685,
+   "lng": 15.388269,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "46355821",
+   "name": "U N I K O M, a.s.",
+   "seat": "Hrnčířská 193, Karlov, 28401 Kutná Hora"
+  },
+  "checked_at": "2026-11-18T19:30:07+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "/kontakt: středisko Čáslav, Chotusická 1353. Další střediska: Uhlířské Janovice, 28. října 788 (RÚIAN 11550678); Zbraslavice, Prostřední Ves 42, Bohdaneč; Přelouč, Hradecká 324 (RÚIAN 7751524, Pardubický kraj)."
+ },
+ {
+  "seller_key": "valdex",
+  "source_id": "valdex",
+  "address": {
+   "street": "Pražská 223/128",
+   "city": "Ústí nad Labem",
+   "zip": "400 01",
+   "region": "ULK",
+   "ruian_address_code": 17821894
+  },
+  "location": {
+   "lat": 50.624749,
+   "lng": 14.057721,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "17842794",
+   "name": "VALDEX s.r.o.",
+   "seat": "Vojtěšská 211/6, Nové Město, 11000 Praha 1"
+  },
+  "checked_at": "2026-11-18T19:29:59+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "/kontakt: sklad Pražská 223/128, Ústí nad Labem-Vaňov."
+ },
+ {
+  "seller_key": "waldera",
+  "source_id": "waldera",
+  "address": {
+   "street": "Vlárská 321",
+   "city": "Brumov-Bylnice",
+   "zip": "763 31",
+   "region": "ZLK",
+   "ruian_address_code": 3862445
+  },
+  "location": {
+   "lat": 49.069106,
+   "lng": 18.006784,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "03796876",
+   "name": "Waldera s.r.o.",
+   "seat": "Vlárská 321, Bylnice, 76331 Brumov-Bylnice"
+  },
+  "checked_at": "2026-11-18T19:30:24+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "/kontakty: výroba a paletový prodej Vlárská 321 (areál pily Kloboucká Lesní) = sídlo."
+ },
+ {
+  "seller_key": "woodhell",
+  "source_id": "woodhell",
+  "address": {
+   "street": "Nákladní 1032",
+   "city": "Teplice",
+   "zip": "415 01",
+   "region": "ULK",
+   "ruian_address_code": 20236301
+  },
+  "location": {
+   "lat": 50.650208,
+   "lng": 13.829447,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "07645121",
+   "name": "Kristýna Stabinská",
+   "seat": "Emilie Dvořákové 281/2, Trnovany, 41501 Teplice"
+  },
+  "checked_at": "2026-11-18T19:30:01+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "/kontakt: Nákladní 1032, Teplice."
+ },
+ {
+  "seller_key": "znz",
+  "source_id": "znz",
+  "address": {
+   "street": "Husova 438",
+   "city": "Přeštice",
+   "zip": "334 01",
+   "region": "PLK",
+   "ruian_address_code": 7067615
+  },
+  "location": {
+   "lat": 49.573466,
+   "lng": 13.322342,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "49790757",
+   "name": "ZNZ Přeštice, a.s.",
+   "seat": "Husova 438, 33401 Přeštice"
+  },
+  "checked_at": "2026-11-18T19:30:20+00:00",
+  "flags": [
+   "location_is_registered_office"
+  ],
+  "detail": "",
+  "note": ""
+ }
+]
