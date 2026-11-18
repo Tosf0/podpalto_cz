@@ -9,6 +9,7 @@ import {
   Clock,
   Forklift,
   LayoutGrid,
+  Lock,
   Search,
   SlidersHorizontal,
   Store,
@@ -22,7 +23,7 @@ import { formatCzk, formatNumber, formatRelative, moneyUnit } from "@/lib/format
 import { t } from "@/lib/i18n/translate";
 import { getSellers } from "@/lib/api/sellers";
 import { getSellerSample } from "@/lib/api/public";
-import { RegisterButtons, RegisterCta, TeaserBadge, useTeaser } from "@/components/account/register-gate";
+import { RegisterCta, TeaserBadge, UnlockActions, useTeaser } from "@/components/account/register-gate";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApi } from "@/hooks/use-api";
 import { cn } from "@/lib/utils";
@@ -442,10 +443,15 @@ function SellersTeaser() {
               </div>
             ))}
           </div>
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-b from-background/10 to-background/85 p-4 text-center">
-            <p className="font-heading text-2xl font-semibold">{t("account.teaser.sellersHidden", { count: hidden })}</p>
-            <p className="max-w-md text-sm text-muted-foreground">{t("account.teaser.sellersUnlock", { total })}</p>
-            <RegisterButtons className="justify-center" size="lg" />
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-background/10 to-background/85 p-4">
+            <div className="flex max-w-xs flex-col items-center gap-2 rounded-xl border border-border bg-card px-4 py-3.5 text-center shadow-float">
+              <span className="flex items-center gap-2 text-sm font-semibold">
+                <Lock aria-hidden className="size-4 text-primary" />
+                {t("account.teaser.sellersHidden", { count: hidden })}
+              </span>
+              <p className="text-xs text-muted-foreground">{t("account.teaser.sellersText", { total })}</p>
+              <UnlockActions className="mt-1" />
+            </div>
           </div>
         </section>
       )}

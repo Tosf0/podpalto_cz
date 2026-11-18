@@ -15,7 +15,8 @@ import { useAuth } from "./auth-provider";
  * - location: výchozí poloha uživatele (pro vzdálenosti a dopravu)
  * - compareIds: prodejci vybraní k porovnání
  * - lang / currency: jazyk UI a měna zobrazení
- * - mapShowRegions / mapStripOpen: stav mapy (vrstva krajů, pás průměrných cen)
+ * - mapShowRegions / mapStripOpen: stav mapy (vrstva krajů, pás průměrných cen); vrstva krajů je
+ *   po otevření vždy zapnutá – uložená hodnota se neobnovuje
  * - motiv (light/dark) drží next-themes, ukládá se sem spolu s ostatním
  *
  * Přihlášenému uživateli se vše ukládá do tabulky `user_preferences` (platí na všech zařízeních),
@@ -83,7 +84,9 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
   const [compareIds, setCompareIds] = useState<string[]>([]);
   const [lang, setLang] = useState<Lang>(DEFAULT_LANG);
   const [currency, setCurrency] = useState<Currency>("CZK");
-  const [mapShowRegions, setMapShowRegions] = useState(false);
+  // teplotní mapa krajů je po každém otevření aplikace zapnutá; vypnutí platí jen do zavření stránky
+  // (proto se neobnovuje z localStorage ani z databáze)
+  const [mapShowRegions, setMapShowRegions] = useState(true);
   const [mapStripOpen, setMapStripOpen] = useState(true);
   const [hydrated, setHydrated] = useState(false);
   /** Uživatel, jehož preference už jsou načtené z databáze (teprve pak se ukládají zpět). */
@@ -101,7 +104,6 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
         if (Array.isArray(saved.compareIds)) setCompareIds(saved.compareIds.slice(0, MAX_COMPARE));
         if (isLang(saved.lang)) setLang(saved.lang);
         if (saved.currency === "CZK" || saved.currency === "EUR") setCurrency(saved.currency);
-        if (typeof saved.mapShowRegions === "boolean") setMapShowRegions(saved.mapShowRegions);
         if (typeof saved.mapStripOpen === "boolean") setMapStripOpen(saved.mapStripOpen);
         /* eslint-enable react-hooks/set-state-in-effect */
       }
@@ -150,7 +152,6 @@ export function PreferencesProvider({ children }: { children: React.ReactNode })
             });
           }
           setCompareIds((row.compare_seller_ids ?? []).slice(0, MAX_COMPARE));
-          setMapShowRegions(row.map_show_regions);
           setMapStripOpen(row.map_strip_open);
           if (row.theme === "light" || row.theme === "dark") setTheme(row.theme);
         }

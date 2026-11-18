@@ -153,7 +153,7 @@ export function TrendsView() {
 
       {trends.data && trends.data.length > 0 ? <PriceTrendChart trends={trends.data} /> : !failed && <SectionSkeleton />}
       {teaser ? (
-        <LockedPreview title={t("account.teaser.trendsLocked")}>
+        <LockedPreview title={t("account.teaser.trendsLocked")} text={t("account.teaser.trendsText")}>
           <div className="space-y-10">
             {regions.data && regions.data.length > 0 && <RegionComparison regions={regions.data} />}
             {energy.data && energy.data.length > 0 && <EnergyCostChart items={energy.data} />}

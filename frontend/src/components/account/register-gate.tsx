@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Lock, Sparkles } from "lucide-react";
+import { Eye, Lock } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
@@ -36,7 +36,7 @@ export function TeaserBadge({ className }: { className?: string }) {
         className,
       )}
     >
-      <Sparkles aria-hidden className="size-3" />
+      <Eye aria-hidden className="size-3" />
       {t("account.teaser.badge")}
     </span>
   );
@@ -72,7 +72,32 @@ export function RegisterButtons({
   );
 }
 
-/** Výrazná výzva k registraci (pruh nad obsahem nebo karta v panelu). */
+/** Kompaktní akce: „Odemknout zdarma“ (registrace) + textový odkaz „Mám účet“. */
+export function UnlockActions({ className, inverted = false }: { className?: string; inverted?: boolean }) {
+  const { t } = useI18n();
+  const links = useAuthLinks();
+  return (
+    <div className={cn("flex shrink-0 items-center gap-3", className)}>
+      <Button asChild size="sm" variant={inverted ? "secondary" : "default"}>
+        <Link href={links.signup}>{t("account.teaser.unlockButton")}</Link>
+      </Button>
+      <Link
+        href={links.signin}
+        className={cn(
+          "text-xs font-medium underline-offset-2 hover:underline",
+          inverted ? "text-sidebar-foreground/80 hover:text-sidebar-foreground" : "text-muted-foreground hover:text-foreground",
+        )}
+      >
+        {t("account.teaser.signin")}
+      </Link>
+    </div>
+  );
+}
+
+/**
+ * Decentní výzva k registraci: zámek, krátký nadpis, jeden řádek s tím, co uživatel získá,
+ * a malé tlačítko. V úzkém panelu se akce zalomí pod text.
+ */
 export function RegisterCta({
   title,
   text,
@@ -80,6 +105,7 @@ export function RegisterCta({
   tone = "accent",
 }: {
   title?: string;
+  /** Krátký výčet výhod („Všichni prodejci · ceny s dopravou · …“). */
   text?: string;
   className?: string;
   tone?: "accent" | "dark";
@@ -89,37 +115,45 @@ export function RegisterCta({
   return (
     <section
       className={cn(
-        "flex flex-col gap-4 rounded-2xl p-5 sm:flex-row sm:items-center sm:justify-between",
-        dark ? "bg-sidebar text-sidebar-foreground" : "border border-primary/25 bg-accent text-accent-foreground",
+        "flex flex-wrap items-center gap-x-3 gap-y-2.5 rounded-xl px-3.5 py-3",
+        dark ? "bg-sidebar text-sidebar-foreground" : "border border-primary/20 bg-accent/60 text-accent-foreground",
         className,
       )}
     >
-      <div className="flex items-start gap-3">
-        <span
-          className={cn(
-            "flex size-10 shrink-0 items-center justify-center rounded-xl",
-            dark ? "bg-sidebar-primary text-sidebar-primary-foreground" : "bg-card text-primary",
-          )}
-        >
-          <Lock aria-hidden className="size-5" />
-        </span>
-        <div className="space-y-0.5">
-          <p className="font-heading text-lg leading-snug font-semibold">{title ?? t("account.teaser.unlockTitle")}</p>
-          <p className={cn("text-sm", dark ? "text-sidebar-foreground/75" : "text-accent-foreground/80")}>
-            {text ?? t("account.teaser.unlockText")}
-          </p>
-        </div>
+      <span
+        className={cn(
+          "flex size-8 shrink-0 items-center justify-center rounded-lg",
+          dark ? "bg-sidebar-primary text-sidebar-primary-foreground" : "bg-card text-primary",
+        )}
+      >
+        <Lock aria-hidden className="size-4" />
+      </span>
+      <div className="min-w-0 flex-1 basis-48">
+        <p className="text-sm leading-tight font-semibold">{title ?? t("account.teaser.unlockTitle")}</p>
+        <p className={cn("mt-0.5 text-xs leading-snug", dark ? "text-sidebar-foreground/70" : "text-muted-foreground")}>
+          {text ?? t("account.teaser.unlockText")}
+        </p>
       </div>
-      <RegisterButtons className="shrink-0" inverted={dark} />
+      <UnlockActions inverted={dark} />
     </section>
   );
 }
 
 /**
- * Zamčený náhled: obsah se vykreslí rozmazaně a neklikatelně, nad ním výzva k registraci.
+ * Zamčený náhled: obsah se vykreslí rozmazaně a neklikatelně, nad ním malá karta s výzvou.
  * Obsah je pro čtečky skrytý (`aria-hidden`), přístupný je jen text výzvy.
  */
-export function LockedPreview({ children, title, className }: { children: React.ReactNode; title?: string; className?: string }) {
+export function LockedPreview({
+  children,
+  title,
+  text,
+  className,
+}: {
+  children: React.ReactNode;
+  title?: string;
+  text?: string;
+  className?: string;
+}) {
   const { t } = useI18n();
   return (
     <div className={cn("relative overflow-hidden rounded-2xl", className)}>
@@ -127,13 +161,13 @@ export function LockedPreview({ children, title, className }: { children: React.
         {children}
       </div>
       <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-background/10 via-background/40 to-background/80 p-4">
-        <div className="max-w-sm space-y-3 rounded-2xl border border-border bg-card p-5 text-center shadow-float">
-          <span className="mx-auto flex size-11 items-center justify-center rounded-full bg-accent text-primary">
-            <Lock aria-hidden className="size-5" />
+        <div className="flex max-w-xs flex-col items-center gap-2 rounded-xl border border-border bg-card px-4 py-3.5 text-center shadow-float">
+          <span className="flex items-center gap-2 text-sm font-semibold">
+            <Lock aria-hidden className="size-4 text-primary" />
+            {title ?? t("account.teaser.locked")}
           </span>
-          <p className="font-heading text-lg font-semibold">{title ?? t("account.teaser.locked")}</p>
-          <p className="text-sm text-muted-foreground">{t("account.teaser.unlockText")}</p>
-          <RegisterButtons className="justify-center" />
+          <p className="text-xs text-muted-foreground">{text ?? t("account.teaser.unlockText")}</p>
+          <UnlockActions className="mt-1" />
         </div>
       </div>
     </div>

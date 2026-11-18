@@ -342,3 +342,41 @@
   bottom: var(--map-bottom-inset, 0px);
   transition: bottom 300ms ease-out;
 }
+
+/*
+ * Posuvník levého panelu: jen „pilulka“ v barvě akcentu panelu (béžová na tmavě zelené),
+ * bez šipek, bez světlého žlabu a okrajů. Chromium/Safari přes ::-webkit-scrollbar,
+ * Firefox přes scrollbar-color (jen tam, kde webkit pseudo-elementy nejsou – jinak by
+ * Chromium 121+ dal přednost standardní vlastnosti a vrátil šipky).
+ */
+.scrollbar-sidebar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.scrollbar-sidebar::-webkit-scrollbar-track,
+.scrollbar-sidebar::-webkit-scrollbar-corner {
+  background: transparent;
+}
+.scrollbar-sidebar::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+.scrollbar-sidebar::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 9999px;
+  background-clip: padding-box;
+  background-color: color-mix(in oklab, var(--sidebar-primary) 45%, transparent);
+}
+.scrollbar-sidebar:hover::-webkit-scrollbar-thumb {
+  background-color: color-mix(in oklab, var(--sidebar-primary) 70%, transparent);
+}
+.scrollbar-sidebar::-webkit-scrollbar-thumb:active {
+  background-color: var(--sidebar-primary);
+}
+@supports not selector(::-webkit-scrollbar) {
+  .scrollbar-sidebar {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklab, var(--sidebar-primary) 55%, transparent) transparent;
+  }
+}

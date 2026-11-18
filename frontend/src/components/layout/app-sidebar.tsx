@@ -63,7 +63,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </div>
 
       {/* Navigace – posouvá se, patička zůstává dole */}
-      <nav aria-label={t("layout.nav.aria")} className="min-h-0 flex-1 overflow-y-auto p-4">
+      <nav aria-label={t("layout.nav.aria")} className="scrollbar-sidebar min-h-0 flex-1 overflow-y-auto p-4">
         <p className="mb-2 px-3 text-[11px] font-semibold tracking-[0.12em] text-sidebar-foreground/50 uppercase">{t("layout.nav.menu")}</p>
         <ul className="space-y-1">
           {NAV_LINKS.map(({ href, key, icon: Icon, badge }) => {

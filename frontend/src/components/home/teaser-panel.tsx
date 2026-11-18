@@ -120,10 +120,9 @@ export function TeaserMapPanel({
         </section>
       </div>
 
-      <div className="shrink-0 border-t border-border p-4">
+      <div className="shrink-0 border-t border-border p-3">
         <RegisterCta
           tone="dark"
-          className="flex-col items-stretch p-4 sm:flex-col sm:items-stretch [&_.font-heading]:text-base"
           title={t("account.teaser.mapCtaTitle")}
           text={t("account.teaser.mapCtaText", { count: overview?.totalSellers ?? 0 })}
         />
