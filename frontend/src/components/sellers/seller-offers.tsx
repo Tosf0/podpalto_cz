@@ -2,12 +2,25 @@
 
 import { BadgePercent } from "lucide-react";
 import type { Seller, SellerOffer } from "@/types";
-import { formatCzkPerUnit, formatDate, formatNumber, unitLabel } from "@/lib/format";
-import { t } from "@/lib/i18n/translate";
+import { formatCzkPerUnit, formatDate, formatNumber, plural, unitLabel } from "@/lib/format";
+import { getCurrentLang, t } from "@/lib/i18n/translate";
+
+/** Jednotka po „Od …“: v češtině 2. pád („od 1 palety“, „od 10 pytlů“), jinak běžný název. */
+function tierUnitLabel(unit: string, qty: number): string {
+  if (getCurrentLang() === "cs" && Number.isInteger(qty)) {
+    if (unit === "paleta") return plural(qty, "palety", "palet", "palet");
+    if (unit === "pytel") return plural(qty, "pytle", "pytlů", "pytlů");
+  }
+  return unitLabel(unit);
+}
 
 function offerLabel(o: SellerOffer): string {
   if (!o.isPromo && o.tierMinQuantity) {
-    return t("sellers.detail.offers.tier", { qty: formatNumber(o.tierMinQuantity, o.tierMinQuantity % 1 ? 1 : 0), unit: unitLabel(o.tierUnit ?? o.unit) });
+    const unit = o.tierUnit ?? o.unit;
+    return t("sellers.detail.offers.tier", {
+      qty: formatNumber(o.tierMinQuantity, o.tierMinQuantity % 1 ? 1 : 0),
+      unit: tierUnitLabel(unit, o.tierMinQuantity),
+    });
   }
   return o.promoValidUntil ? t("sellers.detail.offers.promoUntil", { date: formatDate(o.promoValidUntil) }) : t("sellers.detail.offers.promo");
 }
