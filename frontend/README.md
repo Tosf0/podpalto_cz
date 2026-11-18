@@ -625,6 +625,7 @@ where id = (select id from auth.users where email = 'vas@email.cz');
 | `…200200_blog.sql` | `blog_posts` + bucket `blog-images`. |
 | `…200300_storage.sql` | Buckety `seller-photos` a `avatars`. |
 | `…200400_harden_helper_grants.sql` | RLS pomocníky smí volat jen přihlášení. |
+| `20261118120000_agent_output.sql` | Pole z `docs/agent-output-spec.md` (externí klíče, poloha z RÚIAN, registr, strukturovaná doprava, původ ceny a DPH, příznaky, běhy agentů); „neuvedeno“ = NULL u skladu, dopravy, velikosti a polohy; stav kontroly `review_status` u prodejců a produktů (triggery podle blokujících příznaků, admin RPC `review_product` / `review_seller`); akce a množstevní pásma jako samostatné produkty. `api_sellers` vrací jen schválené prodejce s polohou a běžné produkty. |
 
 Ukázková data: `supabase/seed.sql` (generuje `node scripts/generate-seed.mjs` ze `src/data/`). V produkčním projektu už jsou nahraná.
 
