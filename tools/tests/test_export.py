@@ -6,6 +6,7 @@ from podpalto_tools.api import create_app
 from podpalto_tools.collect.export import (
     build_export,
     coal_attributes,
+    delivery_included,
     display_name,
     pellet_attributes,
     variant_of,
@@ -271,3 +272,37 @@ def test_each_installation_exports_its_own_snapshot_id_range(store, monkeypatch)
     payload = build_export(store, [SOURCE], {"demosklad": LOCATED})
     assert [run.snapshot_id for run in payload.runs] == [1000002]
     assert {price.snapshot_id for price in payload.price_observations} == {1000002}
+
+
+def test_promotions_and_tiers_are_not_compared_with_the_market(data_dir):
+    store = Store(data_dir / "prices.sqlite")
+    rows = [
+        record("jehličnaté – 1 m", 1270, "prmr", FuelType.FIREWOOD, "/#j-1m"),
+        record("jehličnaté – PŘI ODBĚRU 10 A VÍCE PRM", 1210, "prmr", FuelType.FIREWOOD,
+               "/#j-10", flags=["outlier_vs_market"]),
+        record("jehličnaté – VĚRNOSTNÍ SLEVA", 1076, "prmr", FuelType.FIREWOOD, "/#j-sleva",
+               flags=["outlier_vs_market", "price_jump"]),
+        record("Mix dřevin – 1 m", 532, "prmr", FuelType.FIREWOOD, "/#mix",
+               flags=["outlier_vs_market"]),
+    ]  # fmt: skip
+    store.add_snapshot(source_id="demosklad", fetched_at=T2, status="ok", records=rows)
+    payload = build_export(store, [SOURCE], {"demosklad": LOCATED})
+    flags = {p.product_key.split("#")[1]: p.flags for p in payload.price_observations}
+    assert flags["j-10"] == [] and flags["j-sleva"] == []
+    assert flags["mix"] == ["outlier_vs_market"]  # a regular product keeps it
+
+
+@pytest.mark.parametrize(
+    ("name", "stated", "expected"),
+    [
+        ("Pelety ENplus A1 975 kg s dopravou do 30 km", None, True),
+        ("podestýlkové pelety 10 l VČETNĚ DOPRAVY", None, True),
+        ("Černé uhlí kostka - paleta 800 kg + doprava zdarma", None, True),
+        ("Pelety ENplus A1 975 kg", None, None),
+        ("Pelety s dopravou", False, False),  # what the collection knows wins
+    ],
+)
+def test_delivery_included_from_the_offer_name(name, stated, expected):
+    row = record(name, 1000, "bag", FuelType.WOOD_PELLETS, "/#x", package_weight_kg=15,
+                 delivery_included=stated)  # fmt: skip
+    assert delivery_included(row) is expected
