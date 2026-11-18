@@ -1,4 +1,4 @@
-# Handoff 2026-11-18 #02: akční, množstevní a zónové ceny v exportu
+# Handoff 2026-11-18 #03: akční, množstevní a zónové ceny v exportu
 
 **Od:** Franta (s Claude) · **Pro:** Lukáš · **Navazuje na:** `2026-11-18-01-export-do-supabase.md`
 
