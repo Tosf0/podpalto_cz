@@ -3,13 +3,15 @@
 import { ShieldCheck } from "lucide-react";
 import { PageHeader } from "@/components/common";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AdminAgentsPanel } from "./admin-agents-panel";
 import { AdminBlogPanel } from "./admin-blog-panel";
 import { AdminClaimsPanel } from "./admin-claims-panel";
 import { AdminSettingsPanel } from "./admin-settings-panel";
 import { ReviewQueuePage } from "./review-queue-page";
 
 /**
- * Administrace (/admin/kontrola). Admin: blog, kontrola dat od agentů, nastavení.
+ * Administrace (/admin/kontrola). Admin: blog, kontrola dat od agentů, převzetí profilů,
+ * plán jobů agentů (CrewAI) a nastavení.
  * Editor: jen správa blogu (bez mazání článků). Interní – jen česky.
  */
 export function AdminPage({
@@ -17,7 +19,7 @@ export function AdminPage({
   initialTab = "blog",
 }: {
   role: "admin" | "editor";
-  initialTab?: "blog" | "data" | "prevzeti" | "nastaveni";
+  initialTab?: "blog" | "data" | "prevzeti" | "agenti" | "nastaveni";
 }) {
   if (role === "editor") {
     return (
@@ -38,13 +40,14 @@ export function AdminPage({
         icon={<ShieldCheck />}
         eyebrow="Administrace"
         title="Správa a kontrola"
-        description="Schvalování článků na blogu, ruční kontrola cen a prodejců od agentů a nastavení aplikace."
+        description="Schvalování článků na blogu, ruční kontrola cen a prodejců od agentů, spouštění agentů a nastavení aplikace."
       />
       <Tabs defaultValue={initialTab} className="gap-6">
         <TabsList>
           <TabsTrigger value="blog">Blog</TabsTrigger>
           <TabsTrigger value="data">Data od agentů</TabsTrigger>
           <TabsTrigger value="prevzeti">Převzetí profilů</TabsTrigger>
+          <TabsTrigger value="agenti">Agenti</TabsTrigger>
           <TabsTrigger value="nastaveni">Nastavení</TabsTrigger>
         </TabsList>
         <TabsContent value="blog">
@@ -55,6 +58,9 @@ export function AdminPage({
         </TabsContent>
         <TabsContent value="prevzeti">
           <AdminClaimsPanel />
+        </TabsContent>
+        <TabsContent value="agenti">
+          <AdminAgentsPanel />
         </TabsContent>
         <TabsContent value="nastaveni">
           <AdminSettingsPanel />

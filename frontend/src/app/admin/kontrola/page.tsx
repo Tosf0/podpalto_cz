@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Administrace", robots: { index: fals
 
 /**
  * Administrace – admin (vše) a editor (jen správa blogu). Data navíc chrání RLS a kontroly v RPC.
- * `?sekce=data` / `?sekce=nastaveni` otevře záložku (jen admin).
+ * `?sekce=data` / `prevzeti` / `agenti` / `nastaveni` otevře záložku (jen admin).
  */
 async function AdminGate({ searchParams }: { searchParams: Promise<{ sekce?: string | string[] }> }) {
   if (!SUPABASE_ENABLED) redirect("/");
@@ -17,7 +17,7 @@ async function AdminGate({ searchParams }: { searchParams: Promise<{ sekce?: str
   if (!account) redirect(`${LOGIN_PATH}?next=/admin/kontrola`);
   if (account.role !== "admin" && account.role !== "editor") redirect("/");
   const tab =
-    account.role === "admin" && (params.sekce === "data" || params.sekce === "prevzeti" || params.sekce === "nastaveni")
+    account.role === "admin" && (params.sekce === "data" || params.sekce === "prevzeti" || params.sekce === "agenti" || params.sekce === "nastaveni")
       ? params.sekce
       : "blog";
   return <AdminPage role={account.role} initialTab={tab} />;

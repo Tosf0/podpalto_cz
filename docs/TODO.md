@@ -95,6 +95,43 @@ Co přijde až později (veřejné profily prodejců, stránky měst, IndexNow, 
       registrací přestanou chodit potvrzovací e-maily. Postup a DNS záznamy (SPF, DKIM, DMARC)
       v `frontend/README.md`, kap. 7, „TODO – vlastní doména“.
 
+### Joby agentů – plán a ruční spuštění (pro kolegu, připraveno 18. 11. 2026)
+
+V administraci (`/admin/kontrola?sekce=agenti`) admin nastaví, jak často se joby spouští
+(denně / týdně / měsíčně / čtvrtletně, den a hodina v čase Europe/Prague; **výchozí jednou
+měsíčně**), a může job spustit ručně. Joby: `collect` (sběr cen, `CollectionFlow`) a
+`market_report` (přehled trhu, `MarketResearchFlow`). Plánování řeší databáze – worker
+nepotřebuje vlastní cron.
+
+- [ ] **Nahrát migraci** `frontend/supabase/migrations/20261118230000_agent_jobs.sql` (Lukáš po
+      kontrole; otestovaná v transakci s rollbackem). Do té doby záložka Agenti jen napíše,
+      že tabulky chybí.
+- [ ] **Worker v `app`** (stejný proces jako worker CI Studia, secret klíč ze Supabase):
+  1. Každou ~minutu `select * from claim_agent_job('<id workeru>')`. Funkce sama založí
+     naplánované běhy, jejichž čas nastal (zameškaný termín jen jednou), označí jako `failed`
+     běhy bez zápisu déle než 2 h a vrátí nejstarší čekající běh přepnutý na `running`,
+     nebo nic. Od každého jobu běží nejvýš jeden běh.
+  2. Podle `job` spustit flow; `params` z řádku (u `market_report` `fuel_category`, `region`).
+  3. Průběžně `update agent_job_runs set progress, logs where id = …` (každý update zároveň
+     slouží jako „heartbeat“). Sběr zapisuje `scrape_runs` s `job_run_id` = id běhu a nové ceny
+     do `price_observations` s `observed_at` = čas stažení (trigger sám aktualizuje
+     `products.price_czk` a `price_updated_at`).
+  4. Na konci `select finish_agent_job_run(id, 'completed' | 'failed', summary, error)`.
+     `summary` (jsonb) se ukazuje v administraci, klíče: `sources`, `sources_failed`,
+     `observations`, `products_new`, `sellers_new`, `report_id` (odkaz na report v CI Studiu).
+     U úspěšného `collect` funkce sama zavolá `refresh_market_stats()` → Trh, Trendy, heat mapa.
+
+**Časová osa (kontrola 18. 11.):** databáze historii drží – každá cena je řádek
+v `price_observations` s `observed_at` (a `snapshot_id`), měsíční mediány jsou
+v `commodity_price_stats` a `region_stats` (sloupec `month`) a `api_price_trends` z nich
+skládá graf za posledních 12 měsíců. Zatím je tam jediný den (18. 11.), takže graf bude mít
+smysl až po dalších sběrech. Opraveno v téže migraci: `refresh_market_stats(měsíc)` dřív vždy
+počítal z *dnešních* cen, takže přepočet minulého měsíce by do něj zapsal dnešní ceny;
+nově pro minulé měsíce bere poslední pozorování ceny před koncem měsíce (backfill funguje)
+a jde volat víckrát v jedné transakci. Přidán index `price_observations (product_id, observed_at)`.
+Pravidlo pro sběr: **neupdatovat staré řádky `price_observations`, vždy vkládat nové**, jinak
+se historie ztratí.
+
 ### CI Studio – co zbývá na straně `app` (pro kolegu)
 
 Databáze i frontend jsou hotové; analýzy čekají ve frontě, dokud je nezačne zpracovávat worker

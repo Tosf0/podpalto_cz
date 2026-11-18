@@ -241,6 +241,17 @@ popisuje `docs/agent-output-spec.md`; schéma je v `supabase/migrations/`.
 5. Frontend běh polluje (1,5 s) a po dokončení otevře report. Dokud worker neběží, zůstane běh
    ve stavu „Ve frontě – čeká, až ji převezme backend analýz“.
 
+### 5.3 Joby agentů – plán a ruční spuštění (pro službu `app`)
+
+Admin v `/admin/kontrola?sekce=agenti` mění plán v `agent_jobs` (`enabled`, `frequency`,
+`day_of_month`, `weekday`, `hour`; trigger přepočítá `next_run_at`) a ručně spouští přes
+`rpc request_agent_job(job)`, čekající běh ruší `rpc cancel_agent_job_run(id)`. Worker služby
+`app` (service role) volá `claim_agent_job(worker)` (založí naplánované běhy a vrátí jeden
+ke zpracování), během běhu zapisuje `agent_job_runs.progress/logs` a končí
+`finish_agent_job_run(id, status, summary, error)`; po úspěšném sběru (`collect`) se přepočítají
+měsíční statistiky. Migrace `supabase/migrations/20261118230000_agent_jobs.sql`, kód
+`src/lib/api/agent-jobs.ts` a `src/components/account/admin-agents-panel.tsx`.
+
 ## 6. Offline režim (bez databáze)
 
 Bez vyplněného `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` je `IS_MOCK = true`
