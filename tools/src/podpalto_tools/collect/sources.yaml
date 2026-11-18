@@ -106,6 +106,7 @@ sources:
 
   - id: a1pelety
     seller: a1pelety.cz
+    name: Ekopaliva Krabica
     location:
       ruian: 21671567
       note: "/kontakt: prodejna Ústí 39 = sídlo; větší sklad bez adresy."
@@ -176,6 +177,7 @@ sources:
 
   - id: stefl
     seller: uhelnesklady-stefl.cz
+    name: Uhelné sklady Štefl
     location:
       lat: 49.409267
       lng: 15.216513
@@ -196,6 +198,7 @@ sources:
 
   - id: unikom
     seller: prodejuhli.unikom.cz
+    name: Uhelné sklady UNIKOM
     location:
       ruian: 11633875
       note: "/kontakt: středisko Čáslav, Chotusická 1353. Další střediska: Uhlířské Janovice, 28. října 788 (RÚIAN 11550678); Zbraslavice, Prostřední Ves 42, Bohdaneč; Přelouč, Hradecká 324 (RÚIAN 7751524, Pardubický kraj)."
@@ -231,6 +234,7 @@ sources:
 
   - id: kb_uhli
     seller: kb-uhli.cz
+    name: Uhelné sklady K&B
     location:
       ruian: 75508656
       note: "/kontakt: provozovna Blanné 14 = sídlo."
@@ -470,6 +474,7 @@ sources:
 
   - id: drevopraha
     seller: drevopraha.cz
+    name: DřevoPraha
     ico: "01548204"
     base_url: https://www.drevopraha.cz
     kind: static_html

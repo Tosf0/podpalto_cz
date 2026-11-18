@@ -90,6 +90,11 @@ class Source(BaseModel):
         description="Never renamed once exported: it is the seller's key in Supabase",
     )
     seller: str
+    name: str | None = Field(
+        None,
+        description="Trade name customers know ('Uhelné sklady Štefl'); omitted = the ARES "
+        "name without the legal form, else the domain. Used only when the seller is created.",
+    )
     seller_key: str | None = Field(
         None,
         pattern=r"^[a-z0-9_]+$",

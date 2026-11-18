@@ -68,6 +68,12 @@ class ToolsClient:
             timeout=settings.collect_timeout_s,
         )
 
+    def export(self, since: str | None = None) -> dict[str, Any]:
+        """Sellers, products, prices and runs for Supabase (``GET /export``); ``since`` keeps
+        only snapshots fetched since then (ISO time), e.g. those of this collection."""
+        params = {"since": since} if since else {}
+        return self._request("GET", "/export", params=params, timeout=settings.collect_timeout_s)
+
     def report_failure(self, source_id: str, detail: str) -> dict[str, Any]:
         return self._request(
             "POST", f"/sources/{source_id}/failure", json={"detail": detail[:2000]}

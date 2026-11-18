@@ -5,6 +5,7 @@ GET  /tools                          catalog: name, description and JSON schema 
 POST /tools/{name}                   run one tool; the body is the tool's input model
 GET  /sources                        source registry with the last collection of every source
 POST /collect                        collect the enabled structured sources (in the background)
+GET  /export?since=…                 sellers, products and prices for the web app (spec, sec. 10)
 
 Used step by step by the app's CollectionFlow (PDF, section 4.1):
 
@@ -22,6 +23,7 @@ from __future__ import annotations
 import threading
 import time
 from collections.abc import Callable, Sequence
+from datetime import datetime
 from typing import Any
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException
@@ -48,6 +50,8 @@ from podpalto_tools.collect.collector import (
     record_failure,
     resolve_sources,
 )
+from podpalto_tools.collect.export import ExportPayload, build_export
+from podpalto_tools.collect.locate import load_locations
 from podpalto_tools.collect.ocr import Ocr, tesseract_ocr
 from podpalto_tools.registry import ToolError, ToolSpec
 from podpalto_tools.settings import get_settings
@@ -151,6 +155,19 @@ def create_app(
             )
             for source in load_sources()
         ]
+
+    @app.get("/export", tags=["collection"])
+    def export(since: str | None = None) -> ExportPayload:
+        """Sellers, products, prices and runs for the web app (docs/agent-output-spec.md,
+        section 10), from the newest snapshot of every enabled source. ``since`` (ISO time,
+        e.g. the start of the collection job) keeps only snapshots fetched since then."""
+        if since is not None:
+            try:
+                datetime.fromisoformat(since.replace("Z", "+00:00"))
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail=f"since: {exc}") from exc
+        sources = [source for source in load_sources() if source.enabled]
+        return build_export(Store(get_settings().db_path), sources, load_locations(), since)
 
     running = threading.Lock()
 

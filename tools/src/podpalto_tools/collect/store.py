@@ -148,6 +148,26 @@ class Store:
             row = conn.execute(query + " ORDER BY id DESC LIMIT 1", (source_id,)).fetchone()
         return self._snapshot(row) if row else None
 
+    def snapshots(self) -> list[Snapshot]:
+        """Every snapshot, oldest first (the export picks the newest per source)."""
+        with self._connect() as conn:
+            rows = conn.execute("SELECT * FROM snapshots ORDER BY id").fetchall()
+        return [self._snapshot(row) for row in rows]
+
+    def records(self, snapshot_id: int) -> list[SolidFuelPriceRecord]:
+        """The records of one snapshot, in the order they were stored."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT * FROM records WHERE snapshot_id = ? ORDER BY id", (snapshot_id,)
+            ).fetchall()
+        return [self._record(row) for row in rows]
+
+    @staticmethod
+    def _record(row: sqlite3.Row) -> SolidFuelPriceRecord:
+        data = {key: row[key] for key in _RECORD_COLUMNS}
+        data["flags"] = json.loads(data["flags"])
+        return SolidFuelPriceRecord(**data)
+
     def latest_records(
         self, source_ids: Iterable[str], fuel_category: FuelType | None = None
     ) -> list[SolidFuelPriceRecord]:
@@ -166,12 +186,7 @@ class Store:
             args.append(fuel_category.value)
         with self._connect() as conn:
             rows = conn.execute(query + " ORDER BY r.seller_name, r.id", args).fetchall()
-        records = []
-        for row in rows:
-            data = {key: row[key] for key in _RECORD_COLUMNS}
-            data["flags"] = json.loads(data["flags"])
-            records.append(SolidFuelPriceRecord(**data))
-        return records
+        return [self._record(row) for row in rows]
 
     def has_snapshot(self, source_ids: Iterable[str]) -> bool:
         source_ids = list(source_ids)

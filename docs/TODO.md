@@ -131,12 +131,29 @@ API klíč mezi Vercelem a Railway.
   služba `worker` v `docker-compose.yml`, proměnné v `.env.example`.
 
 **Co zbývá Frantovi (v pořadí):**
-- [ ] **1. Export sběru do Supabase** – `app/src/podpalto_app/worker/export.py`
-      (`export_collection`; postup je v docstringu). Potřebuje endpoint v `tools`, který vydá
-      záznamy sběru (např. `GET /export?since=…` ve tvaru `docs/agent-output-spec.md`), pak
-      upsert `sellers` (`external_key`), `products` (`seller_id,external_id`), insert
-      `price_observations` (vždy nové řádky) a `scrape_runs` s `job_run_id`. Do té doby job
-      `collect` sběr provede, ale skončí chybou „export do Supabase zatím není hotový“.
+- [ ] **1. Export sběru do Supabase** – kód hotový (18. 11. 2026), zbývá první import
+      s klíčem:
+      - `tools`: `GET /export?since=…` a `uv run podpalto-export` (JSON do `outputs/`)
+        v `collect/export.py` – převod kategorií a jednotek (spec 6.6, 6.7), atributy z názvu
+        (dřevo, pelety, brikety, uhlí), řádky, které web neumí ukázat, v `skipped` s důvodem.
+      - `app`: `worker/export.py` zapisuje `sellers` → `products` → `price_observations` →
+        `scrape_runs`. Existujícímu prodejci mění jen sloupce sběru (adresa, poloha, IČO,
+        registr, příznaky), název a popis z webu zůstávají; převzaté profily (`owner_id`)
+        nechává být; aktuální cenu produktu nemění (rozhoduje trigger); produkty, které
+        zdroj už neuvádí, dostanou `active = false`; snímek exportovaný podruhé přeskočí
+        (`scrape_runs` `source_key + snapshot_id`). Job `collect` exportuje jen snímky
+        svého běhu, s `params.export_all = true` nejnovější snímek každého zdroje.
+      - [ ] **První import (s `SUPABASE_SECRET_KEY`, domluvit s Lukášem):**
+        1. `uv run uvicorn podpalto_tools.api:app --port 8001` (lokální data v `data/`),
+        2. `uv run python -m podpalto_app.worker.link_sellers` – návrh spárování
+           s 81 prodejci od subagentů (podle domény, pak IČO); po schválení `--apply`.
+           Jejich staré produkty pak export deaktivuje (nic nemaže),
+        3. `uv run python -m podpalto_app.worker.export --dry-run`, kontrola počtů, pak bez
+           `--dry-run`, nakonec `select public.refresh_market_stats();`.
+      - Známá omezení: akční a množstevní ceny (bod 1 rozhodnutí) se zatím nerozpoznávají,
+        jdou jako běžné produkty (např. OLVAN „do 15 q / nad 15 q“); dřevo na paletě bez
+        objemu (`package_prm`) a „m³“ bez upřesnění se neposílají; doprava prodejce je
+        `null` (neuvedeno).
       - [x] Příprava dat (18. 11. 2026): klíč prodejce = `id` zdroje, rozpětí cen podle
         paliva, kód kraje (`Region.code`), klíč položky ceníku ze slugu názvu a jednotky
         (`/cenik/#koks-20-40-mm-q` místo `#<pořadí>`), adresa a poloha prodejců z ARES

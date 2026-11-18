@@ -7,7 +7,7 @@ Handlers marked TODO are the parts that still need the flows (see docs/TODO.md).
 from __future__ import annotations
 
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from podpalto_app.worker.export import export_collection
@@ -40,6 +40,9 @@ def run_collect(run: dict[str, Any], ctx: RunContext, db: SupabaseClient) -> Job
     from podpalto_app.flows import run_collection
 
     params = run.get("params") or {}
+    # Only the snapshots of this collection go to Supabase; params.export_all sends the newest
+    # snapshot of every source (e.g. the first run, with data collected before).
+    since = None if params.get("export_all") else datetime.now(timezone.utc).isoformat()
     ctx.progress(5, "Spouštím CollectionFlow (všechny povolené zdroje)")
     state = run_collection(params.get("source_ids") or None)
 
@@ -53,7 +56,7 @@ def run_collect(run: dict[str, Any], ctx: RunContext, db: SupabaseClient) -> Job
     }
     ctx.progress(70, f"Sběr hotový: {summary['sources']} zdrojů, {summary['records']} záznamů")
 
-    summary |= export_collection(state, db, job_run_id=run["id"], ctx=ctx)
+    summary |= export_collection(state, db, job_run_id=run["id"], ctx=ctx, since=since)
     return JobResult(summary=summary)
 
 

@@ -116,6 +116,37 @@ def locate_sellers() -> None:
     print(f"Saved to {path}. Review the diff before committing.")
 
 
+def export() -> None:
+    """``uv run podpalto-export [--since ISO] [--out FILE]``: the payload the worker writes to
+    Supabase, as a JSON file for review (docs/agent-output-spec.md, section 10)."""
+    from collections import Counter
+    from datetime import datetime, timezone
+    from pathlib import Path
+
+    from podpalto_tools.collect.export import build_export
+    from podpalto_tools.collect.locate import load_locations
+    from podpalto_tools.collect.source_registry import enabled_sources
+    from podpalto_tools.collect.store import Store
+    from podpalto_tools.settings import get_settings
+
+    parser = argparse.ArgumentParser(description="Export collected prices for the web app")
+    parser.add_argument("--since", help="only snapshots fetched since this ISO time")
+    parser.add_argument("--out", type=Path, help="default: outputs/podpalto-export-<time>.json")
+    args = parser.parse_args()
+    payload = build_export(
+        Store(get_settings().db_path), enabled_sources(), load_locations(), args.since
+    )
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    out = args.out or Path("outputs") / f"podpalto-export-{stamp}.json"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(payload.model_dump_json(indent=1), encoding="utf-8")
+    skipped = Counter(item.reason for item in payload.skipped)
+    print(f"{len(payload.sellers)} sellers, {len(payload.products)} products, "
+          f"{len(payload.price_observations)} prices, {len(payload.runs)} runs; "
+          f"skipped: {dict(skipped) or 'none'}")  # fmt: skip
+    print(f"Saved to {out}")
+
+
 def renormalize() -> None:
     """``uv run podpalto-renormalize [source_id ...]``: re-check and recompute the stored
     rows of price lists with the current rules. No download, no LLM."""

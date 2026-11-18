@@ -72,6 +72,14 @@ class SupabaseClient:
         query = "&".join(f"{k}=eq.{urllib.parse.quote(str(v))}" for k, v in match.items())
         self._request("PATCH", f"/{table}?{query}", values, prefer="return=minimal")
 
+    def update_where(self, table: str, query: str, values: dict[str, Any]) -> list[dict[str, Any]]:
+        """``update table set values`` for the rows a raw PostgREST filter selects; returns
+        the updated rows (e.g. ``"seller_id=eq.…&active=is.true"``)."""
+        return (
+            self._request("PATCH", f"/{table}?{query}", values, prefer="return=representation")
+            or []
+        )
+
     def select(self, table: str, query: str) -> list[dict[str, Any]]:
         """Raw PostgREST query string, e.g. ``select("regions", "select=name&code=eq.STC")``."""
         return self._request("GET", f"/{table}?{query}") or []
