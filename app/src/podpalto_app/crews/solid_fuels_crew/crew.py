@@ -13,6 +13,7 @@ from crewai.project import CrewBase, agent, crew, task
 
 from podpalto_app.crews.llm import agent_llm, manager_llm
 from podpalto_app.remote_tools import load_remote_tools
+from podpalto_app.settings import settings
 
 
 @CrewBase
@@ -30,7 +31,7 @@ class SolidFuelsCrew:
             config=config,
             tools=load_remote_tools(tool_names),
             allow_delegation=False,
-            verbose=True,
+            verbose=settings.crew_verbose,
             **agent_llm(config),
         )
 
@@ -63,7 +64,7 @@ class SolidFuelsCrew:
         return Agent(
             config=config,
             allow_delegation=True,
-            verbose=True,
+            verbose=settings.crew_verbose,
             **manager_llm(config),
         )
 
@@ -96,5 +97,5 @@ class SolidFuelsCrew:
             tasks=self.tasks,
             process=Process.hierarchical,
             manager_agent=self.research_manager(),
-            verbose=True,
+            verbose=settings.crew_verbose,
         )
