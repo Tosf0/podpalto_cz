@@ -27,6 +27,7 @@ import {
   Trash2,
   Clock,
   X,
+  FilePlus2,
   type LucideIcon,
 } from "lucide-react";
 import type { BlogCategory, BlogPost, BlogPostStatus } from "@/types";
@@ -38,7 +39,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { estimateReadingMinutes, plainText, slugify } from "@/lib/blog/utils";
-import { deleteBlogPost, saveBlogPost, uploadBlogImage } from "@/lib/blog/supabase";
+import { deleteBlogPost, fetchEditorPosts, saveBlogPost, uploadBlogImage } from "@/lib/blog/supabase";
 import { USES_DB } from "@/lib/api/db";
 import { useAuth } from "@/components/providers/auth-provider";
 import { revalidateBlog } from "@/app/blog/actions";
@@ -86,6 +87,15 @@ interface Draft {
 }
 
 const today = () => new Date().toISOString().slice(0, 10);
+
+/** Adresa editoru: uložený článek má `?id=…`, nový článek čistou `/blog/novy` (bez přenačtení stránky). */
+function setEditorUrl(id?: string) {
+  try {
+    window.history.replaceState(window.history.state, "", id ? `/blog/novy?id=${id}` : "/blog/novy");
+  } catch {
+    /* ignorovat */
+  }
+}
 
 const EMPTY: Draft = {
   title: "",
@@ -257,7 +267,17 @@ function TagInput({ value, onChange, suggestions }: { value: string; onChange: (
   );
 }
 
-export function BlogEditor({ drafts, canPublish, initialId }: { drafts: BlogPost[]; canPublish: boolean; initialId?: string }) {
+export function BlogEditor({
+  drafts: initialDrafts,
+  canPublish,
+  initialId,
+}: {
+  drafts: BlogPost[];
+  canPublish: boolean;
+  initialId?: string;
+}) {
+  /** Články v postranním panelu – po uložení se načtou znovu. */
+  const [drafts, setDrafts] = useState<BlogPost[]>(initialDrafts);
   const { t } = useI18n();
   const { user, profile, isAdmin } = useAuth();
   const [saving, setSaving] = useState(false);
@@ -270,19 +290,35 @@ export function BlogEditor({ drafts, canPublish, initialId }: { drafts: BlogPost
   const imageInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
-  // obnovení rozepsaného konceptu
+  // Při otevření: `?id=…` otevře uložený článek; bez něj se obnoví jen NEULOŽENÝ rozepsaný koncept
+  // z prohlížeče (bez id). Uložený článek se do „Nového článku“ nikdy nenačte – jinak by se přepsal.
+  const initialized = useRef(false);
   useEffect(() => {
+    if (initialized.current) return;
+    initialized.current = true;
     try {
+      const fromLink = initialId ? initialDrafts.find((p) => p.id === initialId) : undefined;
       const raw = localStorage.getItem(STORAGE_KEY);
-      const fromLink = initialId ? drafts.find((p) => p.id === initialId) : undefined;
+      const local = raw ? (JSON.parse(raw) as Partial<Draft>) : null;
       // eslint-disable-next-line react-hooks/set-state-in-effect -- načtení až po hydrataci
       if (fromLink) setDraft(fromPost(fromLink));
-      else if (raw) setDraft({ ...EMPTY, ...(JSON.parse(raw) as Partial<Draft>) });
+      else if (local && !local.id) setDraft({ ...EMPTY, ...local });
+      else if (initialId) setEditorUrl();
     } catch {
       /* localStorage nedostupné */
     }
     setLoaded(true);
-  }, [initialId, drafts]);
+  }, [initialId, initialDrafts]);
+
+  /** Znovu načíst seznam článků v panelu (po uložení / smazání). */
+  const refreshDrafts = useCallback(async () => {
+    if (!USES_DB || !user) return;
+    try {
+      setDrafts(await fetchEditorPosts(canPublish ? undefined : user.id));
+    } catch {
+      /* seznam zůstane, jak byl */
+    }
+  }, [canPublish, user]);
 
   const update = useCallback(<K extends keyof Draft>(key: K, value: Draft[K]) => {
     setDraft((d) => {
@@ -356,6 +392,15 @@ export function BlogEditor({ drafts, canPublish, initialId }: { drafts: BlogPost
   /* ------------------------------ akce ------------------------------ */
 
   const saveLocal = (d: Draft, quiet = false) => {
+    // uložený článek (s id) žije v databázi – v prohlížeči držíme jen neuložený rozepsaný koncept
+    if (d.id && USES_DB) {
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch {
+        /* ignorovat */
+      }
+      return;
+    }
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(d));
     } catch {
@@ -441,6 +486,8 @@ export function BlogEditor({ drafts, canPublish, initialId }: { drafts: BlogPost
       const saved = { ...ready, id, authorId: ready.authorId ?? user.id };
       setDraft(saved);
       saveLocal(saved, true);
+      setEditorUrl(id);
+      void refreshDrafts();
       await revalidateBlog();
       if (status === "pending") toast.success(t("account.editor.submitted"), { description: t("account.editor.submittedDesc") });
       else toast.success(status === "published" ? t("account.editor.published") : t("account.editor.saved"));
@@ -470,6 +517,8 @@ export function BlogEditor({ drafts, canPublish, initialId }: { drafts: BlogPost
       await revalidateBlog();
       toast.success(t("account.editor.deleted"));
       setDraft({ ...EMPTY, publishDate: today() });
+      setEditorUrl();
+      void refreshDrafts();
       try {
         localStorage.removeItem(STORAGE_KEY);
       } catch {
@@ -482,15 +531,34 @@ export function BlogEditor({ drafts, canPublish, initialId }: { drafts: BlogPost
     }
   };
 
+  /** Zahodit neuložené změny: uložený článek se vrátí do uložené podoby, nový se vyčistí. */
   const reset = () => {
-    setDraft({ ...EMPTY, publishDate: today() });
+    const stored = draft.id ? drafts.find((p) => p.id === draft.id) : undefined;
     filesRef.current.clear();
+    if (stored) {
+      setDraft(fromPost(stored));
+    } else {
+      setDraft({ ...EMPTY, publishDate: today() });
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch {
+        /* ignorovat */
+      }
+    }
+    toast(t("blog.editor.actions.resetDone"));
+  };
+
+  /** Začít nový článek – uložené články zůstávají v databázi beze změny. */
+  const newPost = () => {
+    filesRef.current.clear();
+    setDraft({ ...EMPTY, publishDate: today() });
+    setEditorUrl();
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch {
       /* ignorovat */
     }
-    toast(t("blog.editor.actions.resetDone"));
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   /* ------------------------------ odvozené ------------------------------ */
@@ -590,6 +658,11 @@ export function BlogEditor({ drafts, canPublish, initialId }: { drafts: BlogPost
         description={t("blog.editor.description")}
         actions={
           <>
+            {USES_DB && draft.id && (
+              <Button variant="ghost" onClick={newPost} disabled={saving}>
+                <FilePlus2 /> {t("account.editor.newPost")}
+              </Button>
+            )}
             <Button variant="outline" onClick={() => void save()} disabled={!loaded || saving}>
               <Save /> {t("blog.editor.actions.saveDraft")}
             </Button>
@@ -599,6 +672,16 @@ export function BlogEditor({ drafts, canPublish, initialId }: { drafts: BlogPost
           </>
         }
       />
+
+      {USES_DB && draft.id && (
+        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-border bg-card px-4 py-2.5 text-sm">
+          <FilePen className="size-4 shrink-0 text-primary" aria-hidden />
+          <span>{t("account.editor.editingSaved")}</span>
+          <button type="button" onClick={newPost} className="font-medium text-primary underline-offset-2 hover:underline">
+            {t("account.editor.newPost")}
+          </button>
+        </p>
+      )}
 
       {!USES_DB ? (
         <p className="flex items-center gap-2 rounded-xl bg-wood-soft px-4 py-2.5 text-sm text-wood-strong dark:bg-wood/10">
@@ -939,8 +1022,16 @@ export function BlogEditor({ drafts, canPublish, initialId }: { drafts: BlogPost
                   <li key={p.id}>
                     <button
                       type="button"
-                      onClick={() => setDraft(fromPost(p))}
-                      className="w-full rounded-xl border border-border p-3 text-left transition-colors hover:bg-muted"
+                      onClick={() => {
+                        filesRef.current.clear();
+                        setDraft(fromPost(p));
+                        setEditorUrl(p.id);
+                      }}
+                      aria-current={draft.id === p.id ? "true" : undefined}
+                      className={cn(
+                        "w-full rounded-xl border p-3 text-left transition-colors hover:bg-muted",
+                        draft.id === p.id ? "border-primary bg-accent" : "border-border",
+                      )}
                     >
                       <p className="line-clamp-2 text-sm font-medium">{p.title}</p>
                       <p className="mt-1 text-xs text-muted-foreground">

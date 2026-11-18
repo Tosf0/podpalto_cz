@@ -205,6 +205,17 @@ export async function fetchAllPosts(): Promise<BlogPost[]> {
   return ((data as BlogRow[]) ?? []).map(rowToPost);
 }
 
+/** Články pro postranní panel editoru: redaktor všechny, ostatní jen své (`authorId`). */
+export async function fetchEditorPosts(authorId?: string): Promise<BlogPost[]> {
+  const supabase = getSupabaseBrowser();
+  if (!supabase) return [];
+  let q = supabase.from("blog_posts").select("*").order("updated_at", { ascending: false }).limit(100);
+  if (authorId) q = q.eq("author_id", authorId);
+  const { data, error } = await q;
+  if (error) throw new Error(error.message);
+  return ((data as BlogRow[]) ?? []).map(rowToPost);
+}
+
 /** Admin: fotky v bucketu, na které žádný článek neodkazuje (starší než den). */
 export async function fetchOrphanImages(): Promise<{ name: string; size: number }[]> {
   const supabase = getSupabaseBrowser();
