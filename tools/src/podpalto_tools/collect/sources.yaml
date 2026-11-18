@@ -255,8 +255,11 @@ sources:
     kind: static_html
     pillar: 2
     page_paths: [/]
+    export: false
     consent: none
     notes: >-
+      Not exported to the web (decided with Lukáš on 2026-11-18): its prices depend on
+      delivery zones the map cannot show yet; later one seller per branch with its area.
       14 yards in central and eastern Bohemia and Vysočina with price zones 0-III, so no single
       region. Location: the branch pages (/krinec, /chrudim, ...) list only delivery areas, no
       yard address (orders by phone, delivery only), so the seat stays, flagged. The seller
@@ -351,7 +354,10 @@ sources:
 
   - id: ridera_ostrava
     seller: ridera.cz
-    seller_key: ridepal
+    name: Ridera – uhelný sklad Ostrava
+    location:
+      ruian: 25252810
+      note: "/provozovny/ostrava-marianske-hory/ a ridepal.eu/kontakt: Uhelný sklad Ridera, Švermova 171/120, Ostrava-Mariánské Hory."
     ico: "26847833"
     base_url: https://ridera.cz
     kind: static_html
@@ -361,9 +367,11 @@ sources:
     price_region: Moravskoslezský kraj
     consent: none
     notes: >-
-      Price list of the Ridera coal yard in Ostrava-Mariánské Hory, the same yard as the
-      ridepal.eu e-shop (Švermova 171/120), so both export to one seller. Prices without and
-      with VAT side by side. Other branch pages: Karviná-Barbora sells recycled aggregates
+      Price list of the Ridera coal yard in Ostrava-Mariánské Hory (Švermova 171/120, also
+      the address of the ridepal.eu e-shop). A seller of its own, not seller_key ridepal: the
+      web treats a seller with any nationwide price (ridepal, price_region CZ) as nationwide,
+      without a pin and outside the regional median, which would hide this local yard.
+      Prices without and with VAT side by side. Other branch pages: Karviná-Barbora sells recycled aggregates
       only, Dolní Suchá and Malé Březno publish no price list.
 
   - id: uhli_pribor
@@ -520,8 +528,9 @@ sources:
     consent: none
     notes: >-
       Prices are rendered by JavaScript, so the page is read in a headless browser. They
-      show as "184,-" without "Kč", plus a unit price "(1 Kilogram = 12,27)". IČO found in
-      ARES by name (BAUHAUS k.s., Brno-Štýřice); the site names only "CZ-639 00 Brno" (/o-nas).
+      show as "184,-" without "Kč", plus a unit price "(1 Kilogram = 12,27)". IČO as stated
+      on bauhaus.cz/impressum (BAUHAUS k.s., checked on 2026-11-18); the pages the seller
+      check reads render by JavaScript, so podpalto-verify-sellers does not find it.
 
   # --- pillar 4: forests and firewood sellers -----------------------------------------------
 

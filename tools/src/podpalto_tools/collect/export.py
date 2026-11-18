@@ -655,6 +655,9 @@ def build_export(
         source = by_id.get(source_id)
         if source is None:
             continue  # not in the registry any more, or disabled
+        if not source.export:
+            payload.skipped.append(Skipped(source_id=source_id, reason="export_disabled"))
+            continue  # collected for the tools only; no seller, products or runs on the web
         seller_key = source.export_seller_key
         for snapshot in picked[source_id]:
             run = ExportRun(

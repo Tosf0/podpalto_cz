@@ -715,6 +715,33 @@
   "note": "/kontakt: Uhelný sklad Ridera, Švermova 171/120, Ostrava-Mariánské Hory. Druhý sklad Malé Březno 74 u Mostu (RÚIAN 25376152)."
  },
  {
+  "seller_key": "ridera_ostrava",
+  "source_id": "ridera_ostrava",
+  "address": {
+   "street": "Švermova 171/120",
+   "city": "Ostrava",
+   "zip": "709 00",
+   "region": "MSK",
+   "ruian_address_code": 25252810
+  },
+  "location": {
+   "lat": 49.842721,
+   "lng": 18.243781,
+   "source": "ruian",
+   "precision": "address_point"
+  },
+  "registry": {
+   "status": "verified",
+   "ico": "26847833",
+   "name": "Ridera Bohemia a.s.",
+   "seat": "28. října 2092/216, Mariánské Hory, 70900 Ostrava"
+  },
+  "checked_at": "2026-11-18T20:41:41+00:00",
+  "flags": [],
+  "detail": "",
+  "note": "/provozovny/ostrava-marianske-hory/ a ridepal.eu/kontakt: Uhelný sklad Ridera, Švermova 171/120, Ostrava-Mariánské Hory."
+ },
+ {
   "seller_key": "stefl",
   "source_id": "stefl",
   "address": {

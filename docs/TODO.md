@@ -143,12 +143,16 @@ API klíč mezi Vercelem a Railway.
         zdroj už neuvádí, dostanou `active = false`; snímek exportovaný podruhé přeskočí
         (`scrape_runs` `source_key + snapshot_id`). Job `collect` exportuje jen snímky
         svého běhu, s `params.export_all = true` nejnovější snímek každého zdroje.
-      - [ ] **První import (s `SUPABASE_SECRET_KEY`, domluvit s Lukášem):**
+      - [x] **Požadavky z handoffu #02 (Lukáš), splněno 18. 11.:** Havelka se neexportuje
+        (`export: false` v registru, sběr běží dál pro nástroje); Bauhaus má IČO ověřené
+        na `bauhaus.cz/impressum`; update existujícího prodejce neposílá prázdné hodnoty
+        (`ico`, `lat`/`lng`, `website`…), příznaky ano. `valid_in_regions` jde u každé ceny.
+        Sklad Ridera Ostrava je samostatný prodejce (s `ridepal` by se stal celostátním
+        a zmizel z mapy).
+      - [ ] **První import (s `SUPABASE_SECRET_KEY`):** databáze je od 18. 11. prázdná
+        (čistý start), `link_sellers` už není potřeba.
         1. `uv run uvicorn podpalto_tools.api:app --port 8001` (lokální data v `data/`),
-        2. `uv run python -m podpalto_app.worker.link_sellers` – návrh spárování
-           s 81 prodejci od subagentů (podle domény, pak IČO); po schválení `--apply`.
-           Jejich staré produkty pak export deaktivuje (nic nemaže),
-        3. `uv run python -m podpalto_app.worker.export --dry-run`, kontrola počtů, pak bez
+        2. `uv run python -m podpalto_app.worker.export --dry-run`, kontrola počtů, pak bez
            `--dry-run`, nakonec `select public.refresh_market_stats();`.
       - [x] Akční a množstevní ceny (18. 11. 2026): export je pozná z textu varianty
         (`price_tier`, `is_promo`, `base_product_key`, spec §7). Cenová pásma Havelky
@@ -615,8 +619,8 @@ a `podpalto-verify-sellers`. Adresy jsou z PDF; před zápisem je ověřit.
       web než palivapolice.cz se dřevem) (PDF s. 14–15)
 - [x] **Moravskoslezský kraj** (18. 11. 2026): `uhli_pribor` a `uhli_opava` (Uhlí Morava,
       pobočky Příbor a Velké Hoštice, každá s vlastním ceníkem, 18 + 18 cen) a
-      `ridera_ostrava` (ceník skladu Ostrava-Mariánské Hory, 17 cen, sdílí prodejce s
-      `ridepal`). Ostatní stránky Ridery: Karviná-Barbora jen recyklát, Dolní Suchá a Malé
+      `ridera_ostrava` (ceník skladu Ostrava-Mariánské Hory, 17 cen, samostatný prodejce
+      vedle celostátního e-shopu `ridepal`). Ostatní stránky Ridery: Karviná-Barbora jen recyklát, Dolní Suchá a Malé
       Březno bez ceníku. Akční paleta Ridery („E-SHOP – AKČNÍ NABÍDKA“ v nadpisu, ne v řádku)
       se jako akce nepozná.
 - [ ] **SD Bílina, velkoobchodní PDF ceník** (`sd-bilinskeuhli.cz/dokumenty/cenik-2025.pdf`):

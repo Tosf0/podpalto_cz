@@ -140,6 +140,11 @@ class Source(BaseModel):
         "image_ocr reads every matching image",
     )
     enabled: bool = True
+    export: bool = Field(
+        True,
+        description="False = collected for the tools, but not sent to the web app "
+        "(e.g. a seller whose delivery areas the map cannot show yet)",
+    )
     consent: Consent = Consent.NONE
     notes: str = ""
 

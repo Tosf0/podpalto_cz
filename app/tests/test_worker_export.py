@@ -266,3 +266,18 @@ def test_tiers_and_promotions_point_to_their_regular_product() -> None:
         None, None, False)  # fmt: skip
     assert variant["base_product_id"] == base["id"]
     assert (variant["price_tier_min_quantity"], variant["price_tier_unit"]) == (1.5, "t")
+
+
+def test_an_update_does_not_erase_values_filled_in_by_hand() -> None:
+    db = MemoryDb()
+    write_export(payload(), db)  # type: ignore[arg-type]
+    db.tables["sellers"][0]["flags"] = ["location_unknown"]
+    unknown = dict(SELLER, company_ico=None, legal_name=None, location=None)
+    write_export(dict(payload(8), sellers=[unknown]), db)  # type: ignore[arg-type]
+    seller = db.tables["sellers"][0]
+    assert (seller["ico"], seller["legal_name"], seller["lat"]) == (
+        "19240538",
+        "Demo Uhlí s.r.o.",
+        49.38,
+    )
+    assert seller["flags"] == []  # flags are the collection's own: always written

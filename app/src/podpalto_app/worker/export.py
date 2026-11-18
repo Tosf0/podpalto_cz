@@ -7,8 +7,10 @@ units). This module only writes it, in the order sellers -> products -> price_ob
 
 * **sellers** by ``external_key`` (= ``seller_key``, the source id). A new seller gets slug,
   name and address; an existing one only the columns the collection owns (address,
-  location, IČO, registry, flags), so a name or description edited on the web stays.
-  Sellers with an owner (claimed profile) are left alone, with their products and prices.
+  location, IČO, registry, flags), so a name or description edited on the web stays; a
+  value the collection does not know (empty IČO, no location) is not sent, so it does not
+  erase one filled in by hand. Sellers with an owner (claimed profile) are left alone, with
+  their products and prices.
 * **products** by ``(seller_id, external_id)`` (``external_id`` = ``item_id``). The current
   price of an existing product is not touched: the price trigger compares it with the new
   price to decide about review. Products of an exported seller that are not in the source
@@ -117,6 +119,13 @@ def _seller_columns(seller: dict[str, Any], last_scraped_at: str | None) -> dict
     }
 
 
+def _known(columns: dict[str, Any]) -> dict[str, Any]:
+    """Columns for updating an existing seller: what the collection does not know (None or
+    "") is left out, so it does not erase values filled in by hand in the admin. ``flags`` is
+    always sent: an empty list clears a problem that went away (e.g. location found)."""
+    return {k: v for k, v in columns.items() if k == "flags" or v not in (None, "")}
+
+
 def write_export(
     payload: dict[str, Any],
     db: SupabaseClient,
@@ -175,7 +184,7 @@ def write_export(
         if row is not None:
             seller_ids[key] = row["id"]
             if not dry_run:
-                db.update("sellers", {"id": row["id"]}, columns)
+                db.update("sellers", {"id": row["id"]}, _known(columns))
             counts["sellers_updated"] += 1
         else:
             new_rows.append(

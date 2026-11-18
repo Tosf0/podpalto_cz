@@ -255,3 +255,10 @@ def test_zones_merge_into_one_from_price_and_tiers_link_to_their_base(data_dir):
     assert tier.base_product_key == promo.base_product_key == "demosklad:/#o2-do-15"
     assert promo.is_promo and promo.price_tier is None
     assert payload.runs[0].exported_count == 4 and payload.runs[0].skipped_count == 2
+
+
+def test_a_source_with_export_false_is_collected_but_not_sent(store):
+    hidden = SOURCE.model_copy(update={"export": False})
+    payload = build_export(store, [hidden], {"demosklad": LOCATED})
+    assert payload.sellers == [] and payload.products == [] and payload.runs == []
+    assert [(s.source_id, s.reason) for s in payload.skipped] == [("demosklad", "export_disabled")]
