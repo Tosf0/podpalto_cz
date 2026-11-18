@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/components/providers/auth-provider";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
+import { authErrorMessage } from "@/lib/supabase/auth-errors";
 import { useI18n } from "@/lib/i18n";
 
 /** Nastavení nového hesla po kliknutí na odkaz z e-mailu (session už vytvořil /auth/callback). */
@@ -32,7 +33,7 @@ export function NewPasswordPage() {
     const { error: err } = await supabase.auth.updateUser({ password });
     setBusy(false);
     if (err) {
-      setError(t("account.auth.errorGeneric", { message: err.message }));
+      setError(authErrorMessage(err));
       return;
     }
     toast.success(t("account.auth.newPasswordSaved"));

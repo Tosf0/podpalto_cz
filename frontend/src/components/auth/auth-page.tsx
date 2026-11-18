@@ -12,25 +12,13 @@ import { useI18n } from "@/lib/i18n";
 import { usePreferences } from "@/components/providers/preferences-provider";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
 import { safeNext } from "@/lib/supabase/config";
+import { authErrorMessage } from "@/lib/supabase/auth-errors";
 import { cn } from "@/lib/utils";
 
 type Mode = "signin" | "signup" | "reset";
 
 function modeFrom(value: string | null): Mode {
   return value === "signup" || value === "reset" ? value : "signin";
-}
-
-/** Převede chybu Supabase Auth na srozumitelnou hlášku. */
-function useAuthError() {
-  const { t } = useI18n();
-  return (message: string) => {
-    const m = message.toLowerCase();
-    if (m.includes("invalid login")) return t("account.auth.errorInvalid");
-    if (m.includes("not confirmed")) return t("account.auth.errorNotConfirmed");
-    if (m.includes("already registered") || m.includes("already exists")) return t("account.auth.errorExists");
-    if (m.includes("password") && (m.includes("6") || m.includes("8") || m.includes("short") || m.includes("weak"))) return t("account.auth.errorWeak");
-    return t("account.auth.errorGeneric", { message });
-  };
 }
 
 /**
@@ -46,7 +34,6 @@ export function AuthPage() {
   const gated = params.has("next");
   const callbackFailed = params.get("error") === "callback";
   const supabase = getSupabaseBrowser();
-  const toMessage = useAuthError();
 
   const [mode, setMode] = useState<Mode>(modeFrom(params.get("mode")));
   const [name, setName] = useState("");
@@ -102,7 +89,7 @@ export function AuthPage() {
       if (err) throw err;
       setSentTo({ email: email.trim(), kind: "reset" });
     } catch (err) {
-      setError(toMessage(err instanceof Error ? err.message : String(err)));
+      setError(authErrorMessage(err));
     } finally {
       setBusy(false);
     }
