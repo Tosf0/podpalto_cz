@@ -14,12 +14,27 @@ from __future__ import annotations
 import logging
 import os
 import socket
+import sys
+
+
+def configure_logging() -> None:
+    """INFO and WARNING to stdout, ERROR and above to stderr.
+
+    Railway marks every stderr line as an error; logging's default handler writes everything
+    to stderr, so the dashboard showed normal progress ("HTTP 200 OK") in red."""
+    fmt = logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s")
+    out = logging.StreamHandler(sys.stdout)
+    out.setLevel(logging.INFO)
+    out.addFilter(lambda record: record.levelno < logging.ERROR)
+    err = logging.StreamHandler(sys.stderr)
+    err.setLevel(logging.ERROR)
+    for handler in (out, err):
+        handler.setFormatter(fmt)
+    logging.basicConfig(level=logging.INFO, handlers=[out, err], force=True)
 
 
 def main() -> None:
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s"
-    )
+    configure_logging()
 
     import podpalto_app.settings  # noqa: F401  (loads .env, turns CrewAI tracing off)
     from podpalto_app.worker.handlers import ANALYSIS_HANDLERS, JOB_HANDLERS
