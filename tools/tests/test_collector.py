@@ -163,3 +163,30 @@ def test_registry_rejects_a_seller_key_that_is_no_source(data_dir):
     registry.write_text(_TWO_SOURCES.format(key="shop"), encoding="utf-8")
     with pytest.raises(ValueError, match="is not a source id"):
         load_sources()
+
+
+def _price(item_id: str, price: float, unit: str = "q"):
+    from podpalto_tools.collect.normalize import SolidFuelPriceRecord
+    from podpalto_tools.schemas import FuelType
+
+    return SolidFuelPriceRecord(
+        seller_name="Demo", source_id="demo", source_url="https://demo.example/cenik/",
+        item_id=item_id, fuel_category=FuelType.BROWN_COAL, product_name_raw=item_id,
+        original_price=price, original_price_vat=price, original_unit=unit,
+    )  # fmt: skip
+
+
+def test_a_price_that_moved_by_more_than_30_percent_is_flagged(data_dir):
+    from podpalto_tools.collect.collector import flag_price_jumps
+
+    store = Store(data_dir / "prices.sqlite")
+    store.add_snapshot(source_id="demo", fetched_at="2026-11-01T08:00:00+00:00", status="ok",
+                       records=[_price("orech", 690), _price("koks", 1000),
+                                _price("kostka", 700)])  # fmt: skip
+    now = [_price("orech", 699), _price("koks", 1350), _price("kostka", 69), _price("novy", 10)]
+    flag_price_jumps(now, store, "demo")
+    assert [record.flags for record in now] == [[], ["price_jump"], ["price_jump"], []]
+    # Another unit is another price: no comparison.
+    other_unit = [_price("orech", 6900, unit="t")]
+    flag_price_jumps(other_unit, store, "demo")
+    assert other_unit[0].flags == []

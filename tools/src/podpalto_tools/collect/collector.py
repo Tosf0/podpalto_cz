@@ -295,6 +295,7 @@ def collect_source(
         if (record := normalize(item, source, fetched_at)) is not None
     ]
     flag_market_outliers(records, store, source.id)
+    flag_price_jumps(records, store, source.id)
     store.add_snapshot(
         source_id=source.id,
         fetched_at=fetched_at,
@@ -363,6 +364,32 @@ def flag_market_outliers(
         middle = median(peers)
         if not middle / OUTLIER_FACTOR <= value <= middle * OUTLIER_FACTOR:
             record.flags.append("outlier_vs_market")
+
+
+PRICE_JUMP = 0.30  # spec section 9: a change of more than 30 % between runs goes to review
+
+
+def flag_price_jumps(records: list[SolidFuelPriceRecord], store: Store, source_id: str) -> None:
+    """Flag ``price_jump`` when an item's price moved by more than 30 % since the previous
+    successful snapshot of the same source (same ``item_id`` and unit, price incl. VAT per
+    one unit). A misread price list then waits for a person instead of reaching the web;
+    a genuine change is confirmed in the admin review. Items new in this run are not flagged.
+    """
+    previous = store.last_snapshot(source_id, ok_only=True)
+    if previous is None:
+        return
+    before = {
+        (record.item_id, record.original_unit): record.original_price_vat
+        / (record.original_quantity or 1)
+        for record in store.records(previous.id)
+    }
+    for record in records:
+        old = before.get((record.item_id, record.original_unit))
+        if not old:
+            continue
+        new = record.original_price_vat / (record.original_quantity or 1)
+        if abs(new / old - 1) > PRICE_JUMP and "price_jump" not in record.flags:
+            record.flags.append("price_jump")
 
 
 def _unit_price(record: SolidFuelPriceRecord) -> tuple[str, float | None]:
@@ -660,6 +687,7 @@ def ingest_extraction(
 
     records = [v.record for v in accepted if v.record is not None]
     flag_market_outliers(records, store, source.id)
+    flag_price_jumps(records, store, source.id)
     raw_file = settings.raw_dir / source.id / f"{now:%Y%m%dT%H%M%SZ}.extraction.json"
     raw_file.parent.mkdir(parents=True, exist_ok=True)
     raw_file.write_text(

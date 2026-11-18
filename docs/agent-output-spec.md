@@ -472,7 +472,9 @@ QA má dvě úrovně (rozhodnuto 18. 11. 2026):
    mediánu ostatních prodejců téhož paliva (`flag_market_outliers` v `collector.py`). Cena se
    publikuje, ale jde do ruční kontroly. Pásmo jde s trhem, proto tu nejsou pevná čísla.
 
-Navíc meziběhová změna ceny o víc než 30 % → příznak `price_jump` a do ruční kontroly.
+Navíc meziběhová změna ceny o víc než 30 % → příznak `price_jump` a do ruční kontroly
+(`flag_price_jumps` v `collector.py`, 18. 11. 2026: stejná položka a jednotka jako
+v předchozím úspěšném snímku zdroje, cena s DPH za jednotku; nové položky se neoznačují).
 
 ---
 
