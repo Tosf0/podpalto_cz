@@ -27,6 +27,7 @@ export function isPublicPath(pathname: string): boolean {
   if (TEASER_PATHS.includes(pathname)) return true;
   // veřejné SEO stránky: ceny podle krajů a paliv, metodika, llms.txt
   if (pathname === "/ceny" || pathname.startsWith("/ceny/") || pathname === "/metodika" || pathname.startsWith("/llms")) return true;
+  if (pathname === "/obchodni-podminky" || pathname === "/ochrana-osobnich-udaju") return true;
   if (pathname === "/blog") return true;
   if (pathname.startsWith("/blog/")) return !pathname.startsWith("/blog/novy");
   return (

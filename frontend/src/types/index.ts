@@ -237,6 +237,28 @@ export interface Seller {
   verified?: boolean;
   /** Profil má vlastníka (schválená žádost prodejce). */
   claimed?: boolean;
+  /** Akční ceny a množstevní slevy (v `products` je jen základní ceník). */
+  offers?: SellerOffer[];
+}
+
+/** Akční cena nebo množstevní sleva prodejce (`products.is_promo` / `price_tier_min_quantity`). */
+export interface SellerOffer {
+  id: string;
+  /** Základní produkt, ke kterému akce / sleva patří (může chybět – samostatná akce). */
+  baseProductId?: string | null;
+  name: string;
+  category: FuelCategory;
+  price: number;
+  unit: PriceUnit;
+  packageKg?: number;
+  isPromo: boolean;
+  /** Akce platí do (ISO datum). */
+  promoValidUntil?: string | null;
+  /** Množstevní cena platí od tohoto množství… */
+  tierMinQuantity?: number | null;
+  /** …v této jednotce. */
+  tierUnit?: PriceUnit | null;
+  updatedAt: string;
 }
 
 /** Recenze prodejce od přihlášeného uživatele (tabulka `reviews`). */

@@ -67,6 +67,8 @@ export const layout = defineMessages({
       data: "Data",
       methodology: "Metodika a zdroje dat",
       prices: "Ceny podle krajů",
+      terms: "Obchodní podmínky",
+      privacy: "Ochrana osobních údajů",
       disclaimer: "Ceny jsou orientační, vč. DPH. Data © podpalto.cz, mapové podklady © přispěvatelé OpenStreetMap.",
     },
     notFound: {
@@ -145,6 +147,8 @@ export const layout = defineMessages({
       data: "Daten",
       methodology: "Methodik und Datenquellen",
       prices: "Preise nach Regionen",
+      terms: "AGB",
+      privacy: "Datenschutz",
       disclaimer:
         "Preise sind Richtwerte inkl. MwSt. Daten © podpalto.cz, Kartendaten © OpenStreetMap-Mitwirkende.",
     },
@@ -224,6 +228,8 @@ export const layout = defineMessages({
       data: "Data",
       methodology: "Methodology and data sources",
       prices: "Prices by region",
+      terms: "Terms",
+      privacy: "Privacy",
       disclaimer: "Prices are indicative, incl. VAT. Data © podpalto.cz, map data © OpenStreetMap contributors.",
     },
     notFound: {

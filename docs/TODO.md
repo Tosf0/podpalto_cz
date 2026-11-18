@@ -72,6 +72,62 @@ indexovala smyšlená čísla). Postup v `frontend/README.md`, kap. 7 („TODO �
 Co přijde až později (veřejné profily prodejců, stránky měst, IndexNow, Seznam Webmaster…):
 `frontend/README.md`, kap. 7 („TODO – SEO a GEO do budoucna“).
 
+**Stav 18. 11. 2026 – právní stránky, převzetí profilu, akce** (Lukáš / Claude):
+- Hotovo: `/obchodni-podminky` a `/ochrana-osobnich-udaju` (odkazy v patičce a u registrace),
+  převzetí profilu prodejcem (žádost na detailu prodejce → admin `/admin/kontrola` → záložka
+  „Převzetí profilů“ → vlastník upravuje popis, kontakty, dopravu a nahraje vlastní fotku),
+  akční a množstevní ceny na detailu prodejce (API `api_sellers` → pole `offers`),
+  kontrola celého UI po úpravách (bod 9) – zkontrolováno ručně.
+- [ ] **Údaje provozovatele do právních stránek:** ve Vercelu vyplnit `NEXT_PUBLIC_LEGAL_OPERATOR_NAME`,
+      `NEXT_PUBLIC_LEGAL_OPERATOR_ICO`, `NEXT_PUBLIC_LEGAL_OPERATOR_ADDRESS` a případně
+      `NEXT_PUBLIC_LEGAL_CONTACT_EMAIL` (výchozí `info@podpalto.cz` – zřídit schránku s doménou).
+      Dokud nejsou vyplněné, stránky uvádějí jen „provozovatel služby podpalto.cz“ a e-mail.
+      Texty nechat před spuštěním zkontrolovat právníkem (hlavně tarify, odstoupení, zpracovatelé).
+- [ ] **Převzetí profilu – dotáhnout s platbami:** schvalovat až po zaplacení tarifu Prodejce
+      (dnes schválení v `approve_seller_claim` tarif Prodejce rovnou přidělí), e-mail žadateli
+      o schválení / zamítnutí, automatická kontrola IČO v ARES a shody domény e-mailu s webem
+      (v administraci se dnes jen zvýrazní), úprava ceníku (produktů) vlastníkem v UI – práva
+      v DB už jsou (`products`: vlastník s tarifem Prodejce smí přidávat, upravovat, mazat).
+- [ ] **(do budoucna) Trendy – karta Sčítání 2021:** podíl domácností podle vytápění po krajích
+      (tabulka `heating_census` už je a čtou ji stránky `/ceny`).
+- [ ] **(do budoucna) Vlastní SMTP pro e-maily z účtů** (např. Resend, odesílatel
+      `noreply@podpalto.cz`): vestavěný e-mail Supabase má nízký hodinový limit – při větším počtu
+      registrací přestanou chodit potvrzovací e-maily. Postup a DNS záznamy (SPF, DKIM, DMARC)
+      v `frontend/README.md`, kap. 7, „TODO – vlastní doména“.
+
+### CI Studio – co zbývá na straně `app` (pro kolegu)
+
+Databáze i frontend jsou hotové; analýzy čekají ve frontě, dokud je nezačne zpracovávat worker
+ve službě `app`. Kontrakt je v `frontend/README.md`, kap. 5.2. Co je potřeba udělat:
+
+1. **Připojení:** worker se připojí k Supabase *secret* klíčem (service role) z proměnných
+   prostředí služby `app` (`SUPABASE_URL`, `SUPABASE_SECRET_KEY`) – nikdy ne do frontendu ani repozitáře.
+2. **Převzetí běhu:** ve smyčce (každé 2–5 s) volat RPC `select * from claim_analysis_run('<id workeru>')`.
+   Vrátí nejstarší běh ve stavu `queued` a atomicky ho přepne na `running` (`claimed_by`, `claimed_at`),
+   nebo nic. Místo pollingu lze poslouchat Supabase Realtime (INSERT do `analysis_runs`).
+3. **Podle `kind` spustit crew:**
+   - `url` – dnešní analýza konkurence z `competitor_url`,
+   - `market` – `MarketResearchFlow` s `params = {"fuel_category": "...", "region": "STC"}`,
+   - `seller` – `SellerProfileFlow` pro `subject_seller_id` (údaje prodejce z tabulky `sellers`,
+     ceny z `products`).
+4. **Průběh:** po každém kroku `update analysis_runs set progress, steps, logs where run_id = …`
+   (`steps` = `CrewStep[]`, `logs` = `CrewLogEntry[]`, typy ve `frontend/src/types/index.ts`).
+   Frontend běh každých 1,5 s načítá a zobrazuje.
+5. **Výsledek:** `insert into analysis_reports (id, kind, params, competitor_url, competitor_name,
+   competitor_domain, report, status, model, duration_s, seller_id, region, categories, swot,
+   requested_by)` – `report` v Markdownu, `swot` jako `SwotMatrix` ze `src/types`, `requested_by`
+   = `analysis_runs.user_id`. Pak `update analysis_runs set status = 'completed', report_id,
+   finished_at = now(), progress = 100`.
+6. **U `kind = seller`** navíc upsert `seller_intel (seller_id, report_id, positioning,
+   tone_of_voice, usp, swot, price_index_vs_cz, market_comparison, analyzed_at)` – zobrazuje se
+   v sekci „Analýza“ na detailu prodejce (Pro).
+7. **Chyby:** `status = 'failed'`, text do `error`, `finished_at = now()`. Běhy, které visí ve stavu
+   `running` déle než ~15 min (`claimed_at`), vrátit do `queued` nebo označit `failed`
+   (při startu workeru nebo cronem).
+8. **Test:** v aplikaci účet s tarifem Pro → CI Studio → spustit analýzu; běh se objeví
+   v `analysis_runs` jako `queued`, worker ho převezme a frontend ukáže průběh a report.
+9. Až worker poběží, na frontendu doplníme záložky „Trh“ (palivo + kraj) a „Prodejce“ (výběr z katalogu).
+
 **Reálná data místo demo dat** (zapsáno 18. 11. 2026): 26 fiktivních prodejců a demo
 statistiky jsou smazané. V databázi je **81 reálných prodejců** ze 14 krajů a **371 cen**
 z jejich veřejných webů a ceníků (sběr: jednorázově subagenti Claude, ne pipeline v `tools`).
@@ -104,9 +160,8 @@ v `/admin/kontrola` → záložka Blog. Fotky jsou zatím v Supabase Storage (`b
 u smazaných a zamítnutých článků se mažou. **Do budoucna přesunout na Cloudflare R2** – viz
 „TODO – obrázky z Cloudflare R2“ v `frontend/README.md`. Migrace `20261118160000_blog_review.sql`.
 
-**Zbývá na frontendu:** zobrazení akčních a množstevních variant na detailu prodejce (bod 1),
-CI Studio se záložkami „Trh“ / „Prodejce“, karta Sčítání 2021 v Trendech. V Supabase
-dashboardu zapnout *Leaked password protection* (Auth → Password security).
+**Zbývá na frontendu:** CI Studio se záložkami „Trh“ / „Prodejce“ (až poběží worker, viz níže).
+Akční a množstevní ceny na detailu prodejce jsou hotové (18. 11.), *Leaked password protection* je zapnutá.
 
 ## Rozhodnutí: jediný zdroj dat je Supabase (18. 11. 2026)
 

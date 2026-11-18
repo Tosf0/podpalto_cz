@@ -52,6 +52,8 @@ import { usePreferences } from "@/components/providers/preferences-provider";
 import { useAuth } from "@/components/providers/auth-provider";
 import { invalidateApiCache } from "@/lib/api";
 import { SellerReviews } from "./seller-reviews";
+import { SellerClaimBox } from "./seller-claim";
+import { SellerOffers } from "./seller-offers";
 import { SwotMatrix } from "@/components/ci/swot-matrix";
 import { EmptyState, FuelBadge, PriceDelta, SellerTags, StarRating, StockBadge } from "@/components/common";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -151,7 +153,7 @@ function Fact({ label, children }: { label: string; children: React.ReactNode })
 /* Hero                                                                */
 /* ------------------------------------------------------------------ */
 
-function Hero({ seller }: { seller: Seller }) {
+function Hero({ seller, onChanged }: { seller: Seller; onChanged: () => void }) {
   const { compareIds, toggleCompare } = usePreferences();
   const inCompare = compareIds.includes(seller.id);
   const a = seller.address;
@@ -231,6 +233,7 @@ function Hero({ seller }: { seller: Seller }) {
       </dl>
 
       {seller.tags.length > 0 && <SellerTags tags={seller.tags} className="mt-5" />}
+      <SellerClaimBox seller={seller} onChanged={onChanged} />
     </div>
   );
 }
@@ -319,7 +322,7 @@ function PriceList({ seller }: { seller: Seller }) {
   if (seller.products.length === 0) {
     return (
       <Section title={t("sellers.detail.priceList.title")} icon={<Store />}>
-        <EmptyState title={t("sellers.detail.priceList.empty")} />
+        {seller.offers?.length ? <SellerOffers seller={seller} /> : <EmptyState title={t("sellers.detail.priceList.empty")} />}
       </Section>
     );
   }
@@ -391,6 +394,11 @@ function PriceList({ seller }: { seller: Seller }) {
           </TableBody>
         </Table>
       </div>
+      {seller.offers?.length ? (
+        <div className="mt-6">
+          <SellerOffers seller={seller} />
+        </div>
+      ) : null}
       <div className="mt-6">
         <PriceHistoryChart product={selected} trends={trends} />
       </div>
@@ -731,7 +739,13 @@ export function SellerDetail({ slug }: { slug: string }) {
         />
       ) : (
         <>
-          <Hero seller={seller} />
+          <Hero
+            seller={seller}
+            onChanged={() => {
+              invalidateApiCache("sellers:");
+              reload();
+            }}
+          />
           <PriceList seller={seller} />
           <DeliverySection seller={seller} />
           <SellerReviews

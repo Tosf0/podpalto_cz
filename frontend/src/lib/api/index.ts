@@ -13,5 +13,6 @@ export * from "./reviews";
 export * from "./orders";
 export * from "./public";
 export * from "./review-queue";
+export * from "./claims";
 export { IS_MOCK } from "./config";
 export { USES_DB, invalidate as invalidateApiCache } from "./db";

@@ -4,6 +4,7 @@ import { ShieldCheck } from "lucide-react";
 import { PageHeader } from "@/components/common";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AdminBlogPanel } from "./admin-blog-panel";
+import { AdminClaimsPanel } from "./admin-claims-panel";
 import { AdminSettingsPanel } from "./admin-settings-panel";
 import { ReviewQueuePage } from "./review-queue-page";
 
@@ -16,7 +17,7 @@ export function AdminPage({
   initialTab = "blog",
 }: {
   role: "admin" | "editor";
-  initialTab?: "blog" | "data" | "nastaveni";
+  initialTab?: "blog" | "data" | "prevzeti" | "nastaveni";
 }) {
   if (role === "editor") {
     return (
@@ -43,6 +44,7 @@ export function AdminPage({
         <TabsList>
           <TabsTrigger value="blog">Blog</TabsTrigger>
           <TabsTrigger value="data">Data od agentů</TabsTrigger>
+          <TabsTrigger value="prevzeti">Převzetí profilů</TabsTrigger>
           <TabsTrigger value="nastaveni">Nastavení</TabsTrigger>
         </TabsList>
         <TabsContent value="blog">
@@ -50,6 +52,9 @@ export function AdminPage({
         </TabsContent>
         <TabsContent value="data">
           <ReviewQueuePage embedded />
+        </TabsContent>
+        <TabsContent value="prevzeti">
+          <AdminClaimsPanel />
         </TabsContent>
         <TabsContent value="nastaveni">
           <AdminSettingsPanel />

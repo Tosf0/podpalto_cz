@@ -59,7 +59,15 @@ export function SiteFooter() {
       <div className="border-t border-border">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 px-4 py-4 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
           <p>{t("layout.footer.disclaimer")}</p>
-          <p className="num">© 2026 podpalto.cz</p>
+          <p className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <Link href="/obchodni-podminky" className="hover:text-foreground">
+              {t("layout.footer.terms")}
+            </Link>
+            <Link href="/ochrana-osobnich-udaju" className="hover:text-foreground">
+              {t("layout.footer.privacy")}
+            </Link>
+            <span className="num">© 2026 podpalto.cz</span>
+          </p>
         </div>
       </div>
     </footer>

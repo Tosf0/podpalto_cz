@@ -58,6 +58,8 @@ cp .env.example .env.local      # Windows PowerShell: copy .env.example .env.loc
 | `NEXT_PUBLIC_SITE_INDEXABLE` | *(prázdné)* | `true` **jen na produkci s vlastní doménou** – povolí indexaci vyhledávači a AI crawlery. Jinak (lokálně, náhledy, `*.vercel.app`) má každá stránka `noindex`, hlavičku `X-Robots-Tag: noindex` a `robots.txt` zakazuje vše. |
 | `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` | *(prázdné)* | Kód z Google Search Console (ověření meta tagem; alternativa k TXT záznamu v DNS). |
 | `NEXT_PUBLIC_BING_SITE_VERIFICATION` | *(prázdné)* | Kód z Bing Webmaster Tools (`msvalidate.01`). |
+| `NEXT_PUBLIC_LEGAL_OPERATOR_NAME`, `…_ICO`, `…_ADDRESS` | *(prázdné)* | Provozovatel služby pro obchodní podmínky a zásady ochrany osobních údajů (jméno/firma, IČO, sídlo). Vyplnit jen ve Vercelu. |
+| `NEXT_PUBLIC_LEGAL_CONTACT_EMAIL` | `info@podpalto.cz` | Kontaktní e-mail na právních stránkách. |
 | `NEXT_PUBLIC_SUPABASE_URL` | *(prázdné)* | Supabase projekt „Podpalto“ (`https://sdhinkqouseaaesodqyy.supabase.co`). Vyplněné = data z databáze a povinné přihlášení; prázdné = demo režim na `src/data/` bez účtů. |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | *(prázdné)* | Veřejný (publishable) klíč Supabase. Přístup k datům hlídá RLS. |
 | `NEXT_PUBLIC_EUR_CZK_RATE` | `24.43` | Kurz Kč za 1 € pro zobrazení cen v eurech (Nastavení → Měna). Výchozí kurz ČNB z 16. 11. 2026. Data i API zůstávají v Kč. |

@@ -237,6 +237,20 @@ export function AuthPage() {
                 {mode === "signup" ? t("account.auth.submitSignup") : mode === "reset" ? t("account.auth.submitReset") : t("account.auth.submitSignin")}
               </Button>
 
+              {mode === "signup" && (
+                <p className="text-center text-xs leading-relaxed text-muted-foreground">
+                  {t("account.auth.consentPrefix")}{" "}
+                  <Link href="/obchodni-podminky" target="_blank" className="underline underline-offset-2 hover:text-foreground">
+                    {t("account.auth.consentTerms")}
+                  </Link>{" "}
+                  {t("account.auth.consentMiddle")}{" "}
+                  <Link href="/ochrana-osobnich-udaju" target="_blank" className="underline underline-offset-2 hover:text-foreground">
+                    {t("account.auth.consentPrivacy")}
+                  </Link>
+                  {t("account.auth.consentSuffix")}
+                </p>
+              )}
+
               {mode === "reset" && (
                 <button
                   type="button"
