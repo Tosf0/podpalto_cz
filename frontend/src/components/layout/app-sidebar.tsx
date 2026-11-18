@@ -211,8 +211,8 @@ function AccountRow({ onNavigate }: { onNavigate?: () => void }) {
         <Link
           href="/admin/kontrola"
           onClick={onNavigate}
-          aria-label="Kontrola dat"
-          title="Kontrola dat"
+          aria-label="Administrace"
+          title="Administrace – blog a kontrola dat"
           className="flex size-10 items-center justify-center rounded-xl text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground [&_svg]:size-[18px]"
         >
           <ShieldCheck aria-hidden />

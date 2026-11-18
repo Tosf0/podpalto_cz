@@ -1,10 +1,14 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { CiStudio } from "@/components/ci/ci-studio";
 import { getServerAccount } from "@/lib/supabase/server";
 import { LOGIN_PATH, PLANS_PATH, SUPABASE_ENABLED } from "@/lib/supabase/config";
 
-export const metadata = { title: "CI Studio – analýza konkurence" };
+export const metadata: Metadata = {
+  title: "CI Studio – analýza konkurence",
+  robots: { index: false, follow: false },
+};
 
 /** CI Studio je jen pro tarif Pro (nebo admina). Ostatní přesměruje na ceník. Data navíc chrání RLS. */
 async function ProGate({ children }: { children: React.ReactNode }) {

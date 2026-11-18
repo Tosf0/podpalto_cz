@@ -60,7 +60,7 @@ function DecisionButtons({ onDecide }: { onDecide: (d: ReviewDecision) => Promis
  * Fronta ruční kontroly (role admin): záznamy, které agenti označili blokujícím příznakem.
  * Schválení = zobrazí se v aplikaci, zamítnutí = zůstane skryté (historie se nemaže).
  */
-export function ReviewQueuePage() {
+export function ReviewQueuePage({ embedded = false }: { embedded?: boolean }) {
   const { data, loading, error, reload } = useApi(() => getReviewQueue(), []);
 
   const decide = async (kind: "product" | "seller", id: string, d: ReviewDecision) => {
@@ -76,13 +76,19 @@ export function ReviewQueuePage() {
   const empty = data && data.sellers.length === 0 && data.products.length === 0;
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
-      <PageHeader
-        icon={<ShieldCheck />}
-        eyebrow="Administrace"
-        title="Kontrola dat od agentů"
-        description="Ceny a prodejci s blokujícím příznakem čekají na ruční kontrolu. Do té doby se v aplikaci nezobrazují."
-      />
+    <div className={embedded ? "space-y-8" : "mx-auto w-full max-w-6xl space-y-8 px-4 py-8 sm:px-6 lg:px-8"}>
+      {embedded ? (
+        <p className="text-sm text-muted-foreground">
+          Ceny a prodejci s blokujícím příznakem čekají na ruční kontrolu. Do té doby se v aplikaci nezobrazují.
+        </p>
+      ) : (
+        <PageHeader
+          icon={<ShieldCheck />}
+          eyebrow="Administrace"
+          title="Kontrola dat od agentů"
+          description="Ceny a prodejci s blokujícím příznakem čekají na ruční kontrolu. Do té doby se v aplikaci nezobrazují."
+        />
+      )}
 
       {loading && !data ? (
         <div className="space-y-3">

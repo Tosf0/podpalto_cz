@@ -7,8 +7,8 @@ import { useI18n } from "@/lib/i18n";
 import { NAV_LINKS } from "./nav-links";
 
 const DATA_LINKS = [
-  { href: "/kalkulacka#metodika", key: "methodology" },
-  { href: "/ci-studio", key: "api" },
+  { href: "/ceny", key: "prices" },
+  { href: "/metodika", key: "methodology" },
 ] as const;
 
 function FooterColumn({ title, children }: { title: string; children: ReactNode }) {

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { SellerDetail } from "@/components/sellers/seller-detail";
 import { ListSkeleton } from "@/components/common";
@@ -7,7 +8,11 @@ export async function generateStaticParams() {
   return getMockSellerSlugs().map((slug) => ({ slug }));
 }
 
-export const metadata = { title: "Profil prodejce" };
+export const metadata: Metadata = {
+  title: "Profil prodejce",
+  // detail prodejce je za přihlášením – neindexovat
+  robots: { index: false, follow: true },
+};
 
 export default function ProdejceDetailPage({ params }: PageProps<"/prodejci/[slug]">) {
   return (

@@ -102,6 +102,8 @@ export function RegionComparison({ regions }: { regions: RegionStats[] }) {
           price: r.avgPrices[commodity],
           value: toDisplayCurrency(r.avgPrices[commodity]),
         }))
+        // kraj bez nabídky dané komodity v grafu vynecháme
+        .filter((d) => d.price != null && Number.isFinite(d.price))
         .sort((a, b) => a.price - b.price),
     [regions, commodity],
   );
@@ -111,8 +113,8 @@ export function RegionComparison({ regions }: { regions: RegionStats[] }) {
   const priciest = chartData[chartData.length - 1];
   // Osa je v zobrazované měně; krok zaokrouhlení se přizpůsobí (Kč vs. €).
   const step = toDisplayCurrency(50) < 10 ? 2 : 50;
-  const lo = Math.floor((toDisplayCurrency(cheapest.price) * 0.9) / step) * step;
-  const hi = Math.ceil((toDisplayCurrency(priciest.price) * 1.03) / step) * step;
+  const lo = cheapest ? Math.floor((toDisplayCurrency(cheapest.price) * 0.9) / step) * step : 0;
+  const hi = priciest ? Math.ceil((toDisplayCurrency(priciest.price) * 1.03) / step) * step : step;
 
   const sorted = useMemo(() => {
     const dir = sortDir === "asc" ? 1 : -1;
@@ -121,7 +123,11 @@ export function RegionComparison({ regions }: { regions: RegionStats[] }) {
       if (sortKey === "priceIndex" || sortKey === "changePct" || sortKey === "sellerCount") {
         return dir * (a[sortKey] - b[sortKey]);
       }
-      return dir * (a.avgPrices[sortKey] - b.avgPrices[sortKey]);
+      // chybějící hodnoty vždy na konec
+      const av = a.avgPrices[sortKey];
+      const bv = b.avgPrices[sortKey];
+      if (av == null || bv == null) return av == null ? (bv == null ? 0 : 1) : -1;
+      return dir * (av - bv);
     });
   }, [regions, sortKey, sortDir]);
 

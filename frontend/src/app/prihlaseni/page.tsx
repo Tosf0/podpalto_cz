@@ -5,6 +5,7 @@ import { AuthPage } from "@/components/auth/auth-page";
 export const metadata: Metadata = {
   title: "Přihlášení a registrace",
   description: "Založte si zdarma účet na podpalto.cz – mapa cen paliv, kalkulačka, prodejci a trendy.",
+  robots: { index: false, follow: true },
 };
 
 export default function PrihlaseniPage() {

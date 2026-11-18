@@ -6,6 +6,7 @@ import { BlogProse } from "@/components/blog/blog-prose";
 import { ListSkeleton } from "@/components/common";
 import { getBlogPost, getBlogSlugs, getRelatedPosts } from "@/lib/api/blog";
 import { SITE_URL, extractToc } from "@/lib/blog/utils";
+import { breadcrumbJsonLd, jsonLd } from "@/lib/seo";
 
 export async function generateStaticParams() {
   return (await getBlogSlugs()).map(({ slug }) => ({ slug }));
@@ -17,7 +18,6 @@ export async function generateMetadata({ params }: PageProps<"/blog/[slug]">): P
   if (!post) return { title: "Článek nenalezen" };
   const title = post.seo_title || post.title;
   const description = post.seo_description || post.excerpt;
-  const image = post.cover ? [{ url: post.cover.url, alt: post.cover.alt, width: 1200, height: 630 }] : undefined;
   return {
     title,
     description,
@@ -33,9 +33,9 @@ export async function generateMetadata({ params }: PageProps<"/blog/[slug]">): P
       modifiedTime: post.updated_at,
       authors: [post.author.name],
       tags: post.tags,
-      images: image,
     },
-    twitter: { card: post.cover ? "summary_large_image" : "summary", title, description },
+    // Náhledový obrázek dodává opengraph-image.tsx (obálky jsou SVG, které sociální sítě nezobrazí).
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 
@@ -45,16 +45,19 @@ async function Article({ slug }: { slug: string }) {
   const related = await getRelatedPosts(post);
   const { content, ...summary } = post;
 
-  const jsonLd = {
+  const isOrg = post.author.name.startsWith("Redakce");
+  const article = {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
     headline: post.title,
     description: post.seo_description || post.excerpt,
-    image: post.cover ? new URL(post.cover.url, SITE_URL).toString() : undefined,
+    image: `${SITE_URL}/blog/${post.slug}/opengraph-image`,
     datePublished: post.published_at,
     dateModified: post.updated_at,
-    author: { "@type": "Person", name: post.author.name },
-    publisher: { "@type": "Organization", name: "podpalto.cz", url: SITE_URL },
+    author: isOrg
+      ? { "@type": "Organization", name: post.author.name, url: SITE_URL }
+      : { "@type": "Person", name: post.author.name },
+    publisher: { "@id": `${SITE_URL}/#organization` },
     mainEntityOfPage: `${SITE_URL}/blog/${post.slug}`,
     keywords: post.tags.join(", "),
     inLanguage: "cs-CZ",
@@ -62,7 +65,18 @@ async function Article({ slug }: { slug: string }) {
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: jsonLd([
+            article,
+            breadcrumbJsonLd([
+              { name: "Blog", path: "/blog" },
+              { name: post.title, path: `/blog/${post.slug}` },
+            ]),
+          ]),
+        }}
+      />
       <BlogArticle post={summary} toc={extractToc(content)} related={related}>
         <BlogProse markdown={content} />
       </BlogArticle>

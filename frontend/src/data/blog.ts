@@ -7,8 +7,9 @@ import { estimateReadingMinutes } from "@/lib/blog/utils";
  */
 
 const REDAKCE: BlogAuthor = { name: "Redakce podpalto.cz", role: "Tým podpalto.cz" };
-const JANA: BlogAuthor = { name: "Jana Dřevíčková", role: "Lesní inženýrka" };
-const PETR: BlogAuthor = { name: "Petr Kamnář", role: "Topenář a kominík" };
+// v offline režimu také jen redakce – smyšlení „odborníci“ by škodili důvěryhodnosti (E-E-A-T)
+const JANA: BlogAuthor = REDAKCE;
+const PETR: BlogAuthor = REDAKCE;
 
 type Draft = Omit<BlogPost, "reading_minutes">;
 

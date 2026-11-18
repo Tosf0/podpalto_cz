@@ -55,6 +55,9 @@ cp .env.example .env.local      # Windows PowerShell: copy .env.example .env.loc
 | `NEXT_PUBLIC_MAP_TILE_ATTRIBUTION` | *(prázdné)* | Text atribuce k dlaždicím (HTML). |
 | `NEXT_PUBLIC_GEOCODER_URL` | `https://photon.komoot.io/api/` | Geokodér pro našeptávač adres nad mapou (Photon, data OpenStreetMap, omezeno na ČR). `off` = jen lokální shody (PSČ, města). Pro produkci vlastní instance Photonu nebo komerční API. |
 | `NEXT_PUBLIC_SITE_URL` | `https://podpalto.cz` | Veřejná adresa webu pro kanonické URL, `sitemap.xml`, `robots.txt` a Open Graph. |
+| `NEXT_PUBLIC_SITE_INDEXABLE` | *(prázdné)* | `true` **jen na produkci s vlastní doménou** – povolí indexaci vyhledávači a AI crawlery. Jinak (lokálně, náhledy, `*.vercel.app`) má každá stránka `noindex`, hlavičku `X-Robots-Tag: noindex` a `robots.txt` zakazuje vše. |
+| `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` | *(prázdné)* | Kód z Google Search Console (ověření meta tagem; alternativa k TXT záznamu v DNS). |
+| `NEXT_PUBLIC_BING_SITE_VERIFICATION` | *(prázdné)* | Kód z Bing Webmaster Tools (`msvalidate.01`). |
 | `NEXT_PUBLIC_SUPABASE_URL` | *(prázdné)* | Supabase projekt „Podpalto“ (`https://sdhinkqouseaaesodqyy.supabase.co`). Vyplněné = data z databáze a povinné přihlášení; prázdné = demo režim na `src/data/` bez účtů. |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | *(prázdné)* | Veřejný (publishable) klíč Supabase. Přístup k datům hlídá RLS. |
 | `NEXT_PUBLIC_EUR_CZK_RATE` | `24.43` | Kurz Kč za 1 € pro zobrazení cen v eurech (Nastavení → Měna). Výchozí kurz ČNB z 16. 11. 2026. Data i API zůstávají v Kč. |
@@ -325,7 +328,8 @@ Kód žádnou adresu napevno nemá – kanonické URL, sitemapa, `robots.txt`, O
 - [ ] Projekt `podpalto-cz` → Settings → Domains: přidat `podpalto.cz` a `www.podpalto.cz`; jednu nastavit jako hlavní a druhou přesměrovat (doporučeno `www` → `podpalto.cz`, 308).
 - [ ] V Cloudflare vytvořit záznamy přesně podle Vercelu (typicky `A` pro kořen a `CNAME` pro `www`) a nechat je **DNS only** (šedý mráček), jinak Vercel nevydá SSL certifikát.
 - [ ] Počkat na „Valid Configuration“ a vydání certifikátu u obou domén.
-- [ ] Environment Variables (Production): `NEXT_PUBLIC_SITE_URL=https://podpalto.cz`. Preview může zůstat na `*.vercel.app`.
+- [ ] Environment Variables (Production): `NEXT_PUBLIC_SITE_URL=https://podpalto.cz` a **`NEXT_PUBLIC_SITE_INDEXABLE=true`** (jen Production – Preview ho mít nesmí, jinak by se indexovaly náhledy). Preview může zůstat na `*.vercel.app`.
+- [ ] Settings → Domains: `podpalto-cz.vercel.app` přesměrovat (308) na `https://podpalto.cz`, aby se ve vyhledávačích neobjevil duplikát. Alternativa: nechat ho bez `NEXT_PUBLIC_SITE_INDEXABLE` (pak má `noindex`).
 - [ ] **Redeploy** produkce (proměnné `NEXT_PUBLIC_*` se zapékají do buildu).
 
 **3. Supabase (projekt Podpalto)**
@@ -343,7 +347,9 @@ Kód žádnou adresu napevno nemá – kanonické URL, sitemapa, `robots.txt`, O
 **5. Ostatní služby**
 - [ ] Mapové dlaždice / geokodér s API klíčem (např. MapTiler): přidat `podpalto.cz` mezi povolené domény klíče.
 - [ ] Stripe (až bude): webhook `https://podpalto.cz/api/stripe/webhook`, success/cancel URL a doména v nastavení Checkoutu.
-- [ ] Google Search Console: ověřit doménu TXT záznamem v Cloudflare a odeslat `https://podpalto.cz/sitemap.xml`. Případně totéž v Bing Webmaster Tools.
+- [ ] Google Search Console: ověřit doménu TXT záznamem v Cloudflare (nebo meta tagem přes `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`) a odeslat `https://podpalto.cz/sitemap.xml`. Totéž v Bing Webmaster Tools (`NEXT_PUBLIC_BING_SITE_VERIFICATION`) – Bing napájí i vyhledávání ChatGPT a Copilotu.
+- [ ] Cloudflare → Security → Bots: **AI Crawl Control / „Block AI bots“ nechat vypnuté** – web AI crawlery záměrně pouští (GEO). Pokud se zapne proxy (oranžový mráček), zkontrolovat i *Bot Fight Mode*, aby neblokoval Googlebot/Bingbot.
+- [ ] **Před spuštěním indexace nahradit ukázková data reálnými** – stránky `/ceny`, `llms.txt` a náhledové obrázky ukazují průměry z databáze; od 18. 11. 2026 jsou v ní reálné ceny 81 prodejců, ale pokrytí je slabé (v několika krajích 1–2 ceny, Moravskoslezský bez cen) – indexaci zapnout až po ověření cen a doplnění krajů, jinak by vyhledávače indexovaly průměry z jednoho prodejce.
 - [ ] Lokální `.env.local` a `.env.example`: `NEXT_PUBLIC_SITE_URL` nechat na localhost / doplnit produkční hodnotu do dokumentace.
 
 **6. Kontrola po přepnutí**
@@ -351,7 +357,73 @@ Kód žádnou adresu napevno nemá – kanonické URL, sitemapa, `robots.txt`, O
 - [ ] Registrace → e-mail → odkaz vede na `https://podpalto.cz/auth/callback…` a uživatel je přihlášený.
 - [ ] Obnova hesla → `/nove-heslo` funguje.
 - [ ] `https://podpalto.cz/sitemap.xml` a `robots.txt` obsahují novou doménu; kanonická URL článku blogu ukazuje na `podpalto.cz`.
-- [ ] Nepřihlášený na `/` → přesměrování na registraci; blog čitelný bez účtu.
+- [ ] Indexace zapnutá: `curl -I https://podpalto.cz` **nemá** hlavičku `X-Robots-Tag: noindex`, `robots.txt` povoluje `/` a v HTML není `<meta name="robots" content="noindex">`. Na `*.vercel.app` naopak `noindex` zůstává.
+- [ ] Náhledy sdílení: odkaz na `/`, `/ceny/<kraj>` a článek blogu ukáže obrázek (např. v Facebook Sharing Debuggeru nebo náhledu ve Slacku/WhatsAppu); strukturovaná data projdou [Rich Results Testem](https://search.google.com/test/rich-results).
+- [ ] `https://podpalto.cz/llms.txt` vrací aktuální průměry a odkazy na novou doménu.
+- [ ] Nepřihlášený na `/` → ukázková mapa krajů; `/kalkulacka` → přesměrování na registraci; blog čitelný bez účtu.
+
+### TODO – SEO a GEO do budoucna (až poběží indexace)
+
+Hotové: veřejné `/ceny` (kraje, paliva), `/metodika`, `/llms.txt`, OG obrázky, JSON-LD, sitemapa,
+robots s povolenými AI crawlery, indexace vypnutá do `NEXT_PUBLIC_SITE_INDEXABLE=true`.
+Teď to nedává smysl (data nebo doména ještě nejsou), proto až později:
+
+- [ ] **Veřejné profily prodejců** – `/prodejci/[slug]` je dnes za přihlášením a `noindex`. Až budou
+      reálná data, zvážit veřejnou verzi (název, adresa, nabízená paliva, odkaz na web, bez
+      cen pro hosty) s JSON-LD `LocalBusiness` – stránky „palivové dřevo <město>“ jsou největší
+      zdroj návštěv z vyhledávání. Pozor na souhlas/námitky prodejců a GDPR u živnostníků (fyzické osoby).
+- [ ] **Stránky měst** (`/ceny/<kraj>/<okres nebo město>`) generované z reálných prodejců – až
+      bude v každém okrese aspoň pár prodejců, jinak hrozí „thin content“.
+- [ ] **IndexNow** (Bing, Seznam, Yandex): po publikaci článku nebo změně cen poslat ping –
+      route handler + klíč v `public/<klíč>.txt`.
+- [ ] **Seznam.cz**: registrace v Seznam Webmaster (český trh – Seznam má stále podíl), odeslat sitemapu.
+- [ ] **`llms-full.txt`** s plným textem metodiky a článků, až bude obsahu víc.
+- [ ] **Recenze a hodnocení** v JSON-LD (`AggregateRating`) – jen z vlastních ověřených recenzí,
+      ne z převzatých hodnocení Google (porušuje pravidla rich results).
+- [ ] **Autoři článků**: stránka autora (`/blog/autor/<slug>`) s bio a JSON-LD `Person`, až budou
+      psát skuteční lidé (dnes vše „Redakce podpalto.cz“; smyšlené autory jsme odstranili).
+- [ ] **Core Web Vitals**: po spuštění sledovat ve Search Console (mapa s Leafletem je těžká –
+      na úvodní stránce pro hosty zvážit statický náhled místo plné mapy).
+- [ ] **Historie cen pro `/ceny`**: dnes je v grafu vývoj z měsíčních průměrů; s reálnými daty
+      potřebujeme aspoň 3–6 měsíců sběru, než bude vývoj vypovídat.
+
+### TODO – obrázky z Cloudflare R2 (spolu s přesunem DNS na Cloudflare)
+
+Dnes: ilustrace ukázkových článků leží v `public/blog/*.svg` (servíruje Vercel), fotky nahrané
+v editoru blogu jdou do Supabase Storage (bucket `blog-images`, cesta `<uid autora>/<rok-měsíc>/<uuid>.<ext>`,
+i u článků, které ještě čekají na schválení), připravené jsou buckety `seller-photos` a `avatars`.
+Fotky smazaného nebo zamítnutého článku se z bucketu mažou hned (administrace → Blog) a tlačítko
+„Uklidit fotky“ smaže soubory, na které neodkazuje žádný článek (RPC `blog_orphan_images`). Cíl: **všechna média z Cloudflare R2** přes vlastní doménu –
+nulové poplatky za přenos dat, cache na CDN Cloudflare, Vercel ani Supabase nic neservírují.
+
+- [ ] **Bucket a doména:** v Cloudflare vytvořit R2 bucket (např. `podpalto-media`, složky
+      `blog/`, `sellers/`, `avatars/`) a připojit ho jako veřejný přes vlastní doménu
+      `media.podpalto.cz` (R2 → Settings → Custom Domains; funguje až po přesunu DNS na Cloudflare).
+- [ ] **Cache a bezpečnost:** pravidlo cache pro `media.podpalto.cz` (dlouhá platnost,
+      názvy souborů jsou unikátní), CORS bucketu jen pro `https://podpalto.cz` a
+      `https://*.vercel.app` (nahrávání z prohlížeče), limit velikosti a typů souborů.
+- [ ] **Nahrávání:** R2 API token (Access Key + Secret, jen *Object Read & Write* pro tento
+      bucket) uložit **jen do proměnných Vercelu** (serverové, bez `NEXT_PUBLIC_`). Nový route
+      handler / server action ověří v Supabase roli (editor/admin u blogu, vlastník u fotek
+      prodejce, uživatel u avataru) a vrátí předpodepsanou URL (S3 API, `PutObject`, platnost pár
+      minut); prohlížeč nahraje soubor rovnou do R2. U blogu smí nahrávat **kdokoli přihlášený**
+      (články čekající na schválení), ale jen do své složky `blog/<uid>/…`. Upravit
+      `uploadBlogImage` / `blogImageUrl` / `removeBlogImages` v `src/lib/blog/supabase.ts`.
+- [ ] **Mazání:** smazání / zamítnutí článku a úklid nepoužitých fotek (`blog_orphan_images`)
+      přepsat na mazání v R2 (server action s `DeleteObjects`); úklid ideálně automaticky
+      (Vercel Cron nebo Cloudflare Worker jednou denně) místo ručního tlačítka.
+- [ ] **Limity pro nové autory:** max. velikost a počet fotek na článek a uživatele (dnes 5 MB
+      na soubor z nastavení bucketu, počet neomezený) – hlídat při vydávání předpodepsané URL.
+- [ ] **Proměnná:** `NEXT_PUBLIC_MEDIA_URL=https://media.podpalto.cz` – všechny URL obrázků
+      skládat z ní (blog, prodejci, avatary).
+- [ ] **Přesun existujících souborů:** `public/blog/*.svg` a obsah Supabase bucketů
+      zkopírovat do R2 a v databázi přepsat URL (`blog_posts.cover_url`, obrázky v
+      `blog_posts.content`, `sellers.photo_url`, `profiles.avatar_url`) – jednorázový skript.
+- [ ] **Úklid:** po ověření vypnout zápis do Supabase bucketů (storage policies) a smazat
+      `public/blog/*.svg` z repozitáře; v `docs/agent-output-spec.md` doplnit, že fotky
+      prodejců od agentů jdou do R2 (`sellers/<seller_id>/…`).
+- [ ] **Optimalizace obrázků:** zvážit Cloudflare Images / Image Resizing (zmenšování a WebP
+      na CDN) místo `next/image`, aby se optimalizace neúčtovala na Vercelu.
 
 ---
 

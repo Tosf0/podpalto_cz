@@ -456,7 +456,8 @@ export interface UserProfile {
 /** Rubrika článku (popisky jsou v překladech `blog.categories.*`). */
 export type BlogCategory = "rady" | "trh" | "pruvodce";
 
-export type BlogPostStatus = "draft" | "published";
+/** draft = koncept, pending = čeká na schválení adminem, published = na webu, rejected = zamítnuto. */
+export type BlogPostStatus = "draft" | "pending" | "published" | "rejected";
 
 /** Obrázek článku – URL může mířit do /public nebo do Supabase Storage (bucket `blog-images`). */
 export interface BlogImage {
@@ -496,6 +497,10 @@ export interface BlogPost {
   /** Volitelné přepsání titulku a popisu pro vyhledávače. */
   seo_title?: string | null;
   seo_description?: string | null;
+  /** Schvalování (jen v editoru a administraci; veřejné stránky je nepotřebují). */
+  author_id?: string | null;
+  submitted_at?: string | null;
+  review_note?: string | null;
 }
 
 /** Článek bez těla – pro výpisy. */

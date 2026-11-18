@@ -16,11 +16,14 @@ export { priceScale };
 
 /** Hodnota kraje pro barvu: cena zvolené komodity, jinak cenový index. */
 function valueOf(s: RegionStats, metric: CommodityKey | null): number {
-  return metric ? s.avgPrices[metric] : s.priceIndex;
+  return metric ? (s.avgPrices[metric] ?? NaN) : s.priceIndex;
 }
 
 /** Normalizace s minimálním rozpětím (malé rozdíly nemají vypadat dramaticky). */
-function normalizer(values: number[], metric: CommodityKey | null): (v: number) => number {
+function normalizer(all: number[], metric: CommodityKey | null): (v: number) => number {
+  // kraj bez dat (NaN) se do rozpětí nepočítá
+  const values = all.filter((v) => Number.isFinite(v));
+  if (values.length === 0) return () => NaN;
   let min = Math.min(...values);
   let max = Math.max(...values);
   const mean = values.reduce((a, b) => a + b, 0) / values.length;
@@ -105,7 +108,7 @@ export function RegionLayer({ stats, metric, dark }: { stats: RegionStats[]; met
           return {
             color: dark ? "#2b302a" : "#ffffff",
             weight: 1.5,
-            fillColor: s ? priceScale(n(valueOf(s, metric))) : "#a8a39a",
+            fillColor: s && Number.isFinite(n(valueOf(s, metric))) ? priceScale(n(valueOf(s, metric))) : "#a8a39a",
             fillOpacity: 0.55,
           };
         }}
@@ -189,7 +192,7 @@ function HeatLayer({ stats, metric, dark }: { stats: RegionStats[]; metric: Comm
     return renderHeatImage(
       geo.shapes.flatMap((shape) => {
         const s = byRegion.get(shape.code);
-        return s ? [{ polygons: shape.polygons, t: n(valueOf(s, metric)) }] : [];
+        return s && Number.isFinite(n(valueOf(s, metric))) ? [{ polygons: shape.polygons, t: n(valueOf(s, metric)) }] : [];
       }),
       frame,
     );

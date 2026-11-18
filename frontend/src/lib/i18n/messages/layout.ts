@@ -65,8 +65,8 @@ export const layout = defineMessages({
       tagline: "Férové ceny paliva na topení v ČR – včetně dopravy a přepočtu na kWh.",
       tools: "Nástroje",
       data: "Data",
-      methodology: "Metodika přepočtů",
-      api: "REST API",
+      methodology: "Metodika a zdroje dat",
+      prices: "Ceny podle krajů",
       disclaimer: "Ceny jsou orientační, vč. DPH. Data © podpalto.cz, mapové podklady © přispěvatelé OpenStreetMap.",
     },
     notFound: {
@@ -143,8 +143,8 @@ export const layout = defineMessages({
       tagline: "Faire Heizstoffpreise in Tschechien – inklusive Lieferung und Umrechnung auf kWh.",
       tools: "Werkzeuge",
       data: "Daten",
-      methodology: "Umrechnungsmethodik",
-      api: "REST API",
+      methodology: "Methodik und Datenquellen",
+      prices: "Preise nach Regionen",
       disclaimer:
         "Preise sind Richtwerte inkl. MwSt. Daten © podpalto.cz, Kartendaten © OpenStreetMap-Mitwirkende.",
     },
@@ -222,8 +222,8 @@ export const layout = defineMessages({
       tagline: "Fair heating fuel prices in Czechia – including delivery and per-kWh conversion.",
       tools: "Tools",
       data: "Data",
-      methodology: "Conversion methodology",
-      api: "REST API",
+      methodology: "Methodology and data sources",
+      prices: "Prices by region",
       disclaimer: "Prices are indicative, incl. VAT. Data © podpalto.cz, map data © OpenStreetMap contributors.",
     },
     notFound: {

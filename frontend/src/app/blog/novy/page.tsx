@@ -13,27 +13,32 @@ export const metadata: Metadata = {
 };
 
 /**
- * Editor blogu – vyžaduje přihlášení (hlídá proxy). Ukládat do databáze a publikovat smí jen redaktor
- * (`profiles.role` = editor / admin); ostatním se koncept uloží jen v prohlížeči.
+ * Editor blogu – vyžaduje přihlášení (hlídá proxy). Psát smí kdokoli přihlášený: běžný uživatel
+ * článek uloží jako koncept nebo odešle ke schválení, redaktor/admin rovnou publikuje.
+ * `?id=<uuid>` otevře konkrétní článek (odkaz „Upravit“ z administrace).
  */
-async function EditorWithPosts() {
+async function EditorWithPosts({ searchParams }: { searchParams: Promise<{ id?: string | string[] }> }) {
   if (!SUPABASE_ENABLED) return <BlogEditor drafts={await getBlogDrafts()} canPublish={false} />;
 
-  const account = await getServerAccount();
+  const [account, params] = await Promise.all([getServerAccount(), searchParams]);
+  const initialId = typeof params.id === "string" ? params.id : undefined;
   const canPublish = account?.role === "editor" || account?.role === "admin";
   let posts: BlogPost[] = [];
-  if (canPublish) {
-    const supabase = await getSupabaseServer();
-    const { data } = (await supabase?.from("blog_posts").select("*").order("updated_at", { ascending: false }).limit(50)) ?? {};
+  const supabase = await getSupabaseServer();
+  if (supabase && account) {
+    // redaktor vidí všechny články, ostatní jen své (RLS by vrátila i cizí publikované)
+    let query = supabase.from("blog_posts").select("*").order("updated_at", { ascending: false }).limit(100);
+    if (!canPublish) query = query.eq("author_id", account.userId);
+    const { data } = await query;
     posts = ((data as BlogRow[] | null) ?? []).map(rowToPost);
   }
-  return <BlogEditor drafts={posts} canPublish={canPublish} />;
+  return <BlogEditor drafts={posts} canPublish={canPublish} initialId={initialId} />;
 }
 
-export default function NewBlogPostPage() {
+export default function NewBlogPostPage({ searchParams }: PageProps<"/blog/novy">) {
   return (
     <Suspense fallback={null}>
-      <EditorWithPosts />
+      <EditorWithPosts searchParams={searchParams} />
     </Suspense>
   );
 }

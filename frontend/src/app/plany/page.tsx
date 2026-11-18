@@ -5,6 +5,7 @@ import { PlansPage } from "@/components/account/plans-page";
 export const metadata: Metadata = {
   title: "Tarify",
   description: "Zdarma, Pro s analýzou konkurence, nebo účet pro prodejce paliv.",
+  alternates: { canonical: "/plany" },
 };
 
 export default function PlanyPage() {

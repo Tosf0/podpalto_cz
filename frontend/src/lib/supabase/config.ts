@@ -17,13 +17,16 @@ export const PLANS_PATH = "/plany";
 /**
  * Cesty dostupné bez přihlášení:
  * - ukázkové verze: mapa `/` (kraje a průměry), `/prodejci` (5 prodejců denně), `/trendy` (6 měsíců),
- * - blog (kromě editoru), ceník, přihlášení / registrace a auth callbacky.
+ * - blog (kromě editoru), ceny podle krajů a paliv (`/ceny`), metodika, llms.txt, ceník,
+ *   přihlášení / registrace a auth callbacky.
  * Za účtem: detail prodejce, kalkulačka, CI Studio (Pro), editor blogu, administrace.
  */
 export const TEASER_PATHS = ["/", "/prodejci", "/trendy"];
 
 export function isPublicPath(pathname: string): boolean {
   if (TEASER_PATHS.includes(pathname)) return true;
+  // veřejné SEO stránky: ceny podle krajů a paliv, metodika, llms.txt
+  if (pathname === "/ceny" || pathname.startsWith("/ceny/") || pathname === "/metodika" || pathname.startsWith("/llms")) return true;
   if (pathname === "/blog") return true;
   if (pathname.startsWith("/blog/")) return !pathname.startsWith("/blog/novy");
   return (
@@ -32,6 +35,7 @@ export function isPublicPath(pathname: string): boolean {
     pathname.startsWith("/auth/") ||
     pathname === "/nove-heslo" ||
     pathname === "/robots.txt" ||
+    pathname === "/opengraph-image" ||
     pathname === "/sitemap.xml"
   );
 }

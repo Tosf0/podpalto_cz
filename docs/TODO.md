@@ -49,10 +49,46 @@ Frontend:
 2. **Zápis do Supabase** (export podle `docs/agent-output-spec.md`, upsert přes
    `sellers.external_key` a `products (seller_id, external_id)`; při vložení produktu
    `price_updated_at = observed_at` první ceny).
-3. **`market_stats`** (bod 5) – plní `commodity_price_stats` a `region_stats`.
+3. **`market_stats`** (bod 5) – v databázi je hotová funkce `public.refresh_market_stats()`
+   (migrace `…170000_refresh_market_stats.sql`): po každém importu ji stačí zavolat
+   (`select public.refresh_market_stats();`, service role). Mediány ze schválených nabídek,
+   bez akcí, převod na PRMS / tunu, kraj bez nabídky nemá hodnotu.
 4. Rozhodnout body **6–8, 10–12** níže (kWh konstanty, pásma, klíč prodejce, geolokace,
    hodnocení, smazání 26 fiktivních prodejců při prvním zápisu reálných dat).
 5. `MarketResearchFlow` / `SellerProfileFlow` podle rozhodnutí o CI Studiu (DB část hotová).
+
+**Média na Cloudflare R2** (zapsáno 18. 11. 2026): obrázky blogu, fotky prodejců a avatary
+přesunout ze Supabase Storage a `frontend/public/` do R2 přes `media.podpalto.cz`, spolu
+s přesunem DNS z Wedosu na Cloudflare. Postup v `frontend/README.md`, kap. 7
+(„TODO – obrázky z Cloudflare R2“). Fotky prodejců od agentů pak ukládat rovnou do R2.
+
+**SEO a GEO** (zapsáno 18. 11. 2026): veřejné stránky `/ceny` (rozcestník, 14 krajů, 4 paliva),
+`/metodika`, `/llms.txt`, náhledové obrázky (Open Graph), JSON-LD (Organization, WebSite,
+BreadcrumbList, FAQPage, Dataset, BlogPosting), sitemapa a robots s povolenými AI crawlery;
+na blogu 8 nových článků. Indexace je **vypnutá**, dokud na produkci není
+`NEXT_PUBLIC_SITE_INDEXABLE=true` – zapnout až s vlastní doménou a **až v databázi budou
+reálné ceny** (stránky `/ceny` čtou průměry z `api_public_overview`; s demo daty by se
+indexovala smyšlená čísla). Postup v `frontend/README.md`, kap. 7 („TODO – vlastní doména“).
+Co přijde až později (veřejné profily prodejců, stránky měst, IndexNow, Seznam Webmaster…):
+`frontend/README.md`, kap. 7 („TODO – SEO a GEO do budoucna“).
+
+**Reálná data místo demo dat** (zapsáno 18. 11. 2026): 26 fiktivních prodejců a demo
+statistiky jsou smazané. V databázi je **81 reálných prodejců** ze 14 krajů a **371 cen**
+z jejich veřejných webů a ceníků (sběr: jednorázově subagenti Claude, ne pipeline v `tools`).
+Každá cena má `source_url`, převody jednotek (q → t, kg → t, balení → t, pytel 1,6 PRMS → PRMS)
+jsou v `price_observations.original_unit/original_price`. Statistiky přepočítává
+`select public.refresh_market_stats();` (medián přes prodejce).
+Stav pokrytí: 50 prodejců s cenou, 31 jen s kontaktem; 29 prodejců má polohu jen na úrovni obce;
+Moravskoslezský kraj zatím bez jediné průměrné ceny, Praha, Ústecký, Vysočina, Olomoucký a Zlínský
+kraj mají 1–2 prodejce s cenou. Přesnost cen je třeba ověřit (stahování stránek vracelo
+shrnutí, ne surové HTML) – pro produkční data patří sběr do pipeline v `tools` podle
+`docs/agent-output-spec.md` (snapshot stránky, citace ceny, ARES, RÚIAN).
+
+**Blog se schvalováním** (zapsáno 18. 11. 2026): článek napíše kdokoli přihlášený a odešle ke
+schválení (`blog_posts.status = 'pending'`); publikuje, zamítá (s poznámkou), upravuje a maže admin
+v `/admin/kontrola` → záložka Blog. Fotky jsou zatím v Supabase Storage (`blog-images/<uid>/…`),
+u smazaných a zamítnutých článků se mažou. **Do budoucna přesunout na Cloudflare R2** – viz
+„TODO – obrázky z Cloudflare R2“ v `frontend/README.md`. Migrace `20261118160000_blog_review.sql`.
 
 **Zbývá na frontendu:** zobrazení akčních a množstevních variant na detailu prodejce (bod 1),
 CI Studio se záložkami „Trh“ / „Prodejce“, karta Sčítání 2021 v Trendech. V Supabase
@@ -99,7 +135,7 @@ proti živé databázi (lokálně není Docker ani Postgres).
 | (2) chybějící pole | Hotovo, viz poznámky k mapování níže. |
 | (3) „neuvedeno“ | Hotovo (DB i frontend, 18. 11.). |
 | (4) stav kontroly | Hotovo: DB, opravené triggery (`…130000_review_fixes.sql`) a stránka `/admin/kontrola`. |
-| (5) `market_stats` | Nezačato. Tabulky `commodity_price_stats` a `region_stats` už existují, změna DB není potřeba. |
+| (5) `market_stats` | Funkce `refresh_market_stats()` v DB (18. 11.); služba `tools` ji jen zavolá po importu. |
 | (9) fronta CI | DB (`…140000`) a frontend hotové; zbývá worker v `app`. |
 
 Co migrace dělá navíc nebo jinak, než říká text rozhodnutí níže:
@@ -213,7 +249,7 @@ a frontendu. Čísla odpovídají bodům kontroly.
 - [ ] **(11) Zdroj externího hodnocení.** Google přes stahování stránek ne (podmínky), Firmy.cz
       zakazuje robots.txt. Zbývá placené Google Places API, nebo jen recenze z aplikace.
 - [ ] **(12) Další otevřené body:**
-      - 26 fiktivních prodejců v produkčním Supabase: smazat při prvním zápisu reálných dat?
+      - ~~26 fiktivních prodejců~~ – smazáni 18. 11. 2026, nahrazeni reálnými prodejci (viz níže),
       - doprava celostátních e-shopů: frontend ji počítá podle vzdálenosti od pinu, což
         u kurýrní dopravy palet nesedí (potřeba typ „celostátní ceník dopravy“),
       - po smazání REST větví upravit `docs/architecture.md` a `frontend/ARCHITECTURE.md`

@@ -72,14 +72,16 @@ function moneyDigits(display: number): number {
 }
 
 /** Jen číslo částky (převedené do zobrazované měny), bez symbolu: 1890 Kč → „1 890“ / „77,36“. */
-export function formatMoneyNumber(czk: number): string {
+export function formatMoneyNumber(czk: number | null | undefined): string {
+  if (czk == null || !Number.isFinite(czk)) return "–";
   const v = toDisplayCurrency(czk);
   const d = moneyDigits(v);
   return nf(d, d).format(d === 0 ? Math.round(v) : v);
 }
 
 /** Částka v Kč → „1 890 Kč“ nebo „77,36 €“. */
-export function formatCzk(czk: number): string {
+export function formatCzk(czk: number | null | undefined): string {
+  if (czk == null || !Number.isFinite(czk)) return "–";
   return `${formatMoneyNumber(czk)}${NBSP}${currencySymbol()}`;
 }
 
@@ -97,12 +99,14 @@ export function unitLabel(unit: string): string {
 }
 
 /** 1490, "PRMS" → „1 490 Kč/PRMS“ / „60,99 €/PRMS“; „paleta“ → „€/pallet“ / „Kč/Palette“ */
-export function formatCzkPerUnit(czk: number, unit: string): string {
+export function formatCzkPerUnit(czk: number | null | undefined, unit: string): string {
+  if (czk == null || !Number.isFinite(czk)) return "–";
   return `${formatCzk(czk)}/${unitLabel(unit)}`;
 }
 
 /** Cena za kWh: „1,52 Kč/kWh“ / „0,062 €/kWh“ */
-export function formatKwhPrice(czkPerKwh: number): string {
+export function formatKwhPrice(czkPerKwh: number | null | undefined): string {
+  if (czkPerKwh == null || !Number.isFinite(czkPerKwh)) return "–";
   const v = toDisplayCurrency(czkPerKwh);
   const d = settings.currency === "EUR" ? 3 : 2;
   return `${nf(d, d).format(v)}${NBSP}${currencySymbol()}/kWh`;

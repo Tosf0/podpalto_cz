@@ -60,11 +60,13 @@ function buildInsight(pulse: MarketPulseItem[], trends: PriceTrendPoint[], regio
   }
 
   if (regions.length) {
-    const sorted = [...regions].sort((a, b) => a.avgPrices.hardWoodPrms - b.avgPrices.hardWoodPrms);
+    const sorted = regions.filter((r) => r.avgPrices.hardWoodPrms != null).sort((a, b) => a.avgPrices.hardWoodPrms - b.avgPrices.hardWoodPrms);
     const c = sorted[0];
-    parts.push(
-      t("trends.insight.cheapestRegion", { region: REGIONS[c.region].short, price: formatCzk(c.avgPrices.hardWoodPrms) }),
-    );
+    if (c) {
+      parts.push(
+        t("trends.insight.cheapestRegion", { region: REGIONS[c.region].short, price: formatCzk(c.avgPrices.hardWoodPrms) }),
+      );
+    }
   }
   return parts.join(" ");
 }
