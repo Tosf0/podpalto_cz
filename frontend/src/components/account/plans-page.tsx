@@ -15,25 +15,29 @@ import { cn } from "@/lib/utils";
 
 interface PlanDef {
   id: PlanTier;
-  priceUsd: number;
+  /** Měsíční cena v Kč (výchozí měna) a v eurech (když si uživatel v Nastavení zvolí EUR). */
+  priceCzk: number;
+  priceEur: number;
   icon: React.ReactNode;
   tagline: MessageKey;
   features: MessageKey[];
   highlight?: boolean;
 }
 
-/** Ceník – shodný s tabulkou `plans` v Supabase (Stripe zatím nenapojený). */
+/** Ceník – shodný s tabulkou `plans` v Supabase (`price_czk_month`, `price_eur_month`; Stripe zatím nenapojený). */
 const PLANS: PlanDef[] = [
   {
     id: "free",
-    priceUsd: 0,
+    priceCzk: 0,
+    priceEur: 0,
     icon: <User />,
     tagline: "account.plans.freeTagline",
     features: ["account.plans.freeF1", "account.plans.freeF2", "account.plans.freeF3", "account.plans.freeF4", "account.plans.freeF5"],
   },
   {
     id: "pro",
-    priceUsd: 20,
+    priceCzk: 490,
+    priceEur: 20,
     icon: <Bot />,
     tagline: "account.plans.proTagline",
     features: ["account.plans.proF1", "account.plans.proF2", "account.plans.proF3", "account.plans.proF4"],
@@ -41,7 +45,8 @@ const PLANS: PlanDef[] = [
   },
   {
     id: "seller",
-    priceUsd: 20,
+    priceCzk: 490,
+    priceEur: 20,
     icon: <Store />,
     tagline: "account.plans.sellerTagline",
     features: ["account.plans.sellerF1", "account.plans.sellerF2", "account.plans.sellerF3", "account.plans.sellerF4"],
@@ -51,11 +56,12 @@ const PLANS: PlanDef[] = [
 /** /plany – tarify Zdarma, Pro a Prodejce. Tlačítko platby zatím jen oznámí, že platby nejsou v provozu. */
 export function PlansPage() {
   const { t } = useI18n();
-  const { lang } = usePreferences();
+  const { lang, currency } = usePreferences();
   const { user, plan: currentPlan, enabled } = useAuth();
   const params = useSearchParams();
   const feature = params.get("feature");
-  const price = new Intl.NumberFormat(localeOf(lang), { style: "currency", currency: "USD", currencyDisplay: "narrowSymbol", maximumFractionDigits: 0 });
+  // ceny jsou v Kč, v eurech jen když si uživatel zvolí EUR (Nastavení → Měna)
+  const price = new Intl.NumberFormat(localeOf(lang), { style: "currency", currency, currencyDisplay: "symbol", maximumFractionDigits: 0 });
 
   const choose = () =>
     toast(t("account.plans.paymentsOff"), {
@@ -93,7 +99,7 @@ export function PlansPage() {
               <h2 className="mt-4 font-heading text-2xl font-semibold">{t(`account.planNames.${p.id}`)}</h2>
               <p className="mt-1 text-sm text-muted-foreground">{t(p.tagline)}</p>
               <p className="mt-5 flex items-baseline gap-1.5">
-                <span className="num font-heading text-4xl font-semibold">{price.format(p.priceUsd)}</span>
+                <span className="num font-heading text-4xl font-semibold">{price.format(currency === "EUR" ? p.priceEur : p.priceCzk)}</span>
                 <span className="text-sm text-muted-foreground">{t("account.plans.perMonth")}</span>
               </p>
               <ul className="mt-5 flex-1 space-y-2.5">
