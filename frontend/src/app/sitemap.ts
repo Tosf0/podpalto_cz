@@ -5,8 +5,9 @@ import { SITE_URL } from "@/lib/blog/utils";
 import { SUPABASE_ENABLED } from "@/lib/supabase/config";
 
 /**
- * /sitemap.xml. S účty (Supabase) jsou veřejně dostupné jen blog, ceník a přihlášení –
- * aplikace za přihlášením se do sitemapy nedává (vyhledávač by viděl jen přesměrování).
+ * /sitemap.xml. S účty (Supabase) jsou veřejné ukázkové verze mapy, prodejců a trendů, blog,
+ * ceník a přihlášení – stránky za přihlášením se do sitemapy nedávají (vyhledávač by viděl
+ * jen přesměrování).
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const posts = (await getBlogSlugs()).map(({ slug, updated_at }) => ({
@@ -18,7 +19,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   if (SUPABASE_ENABLED) {
     return [
-      { url: `${SITE_URL}/blog`, changeFrequency: "weekly", priority: 1 },
+      { url: SITE_URL, changeFrequency: "daily", priority: 1 },
+      { url: `${SITE_URL}/prodejci`, changeFrequency: "daily", priority: 0.8 },
+      { url: `${SITE_URL}/trendy`, changeFrequency: "weekly", priority: 0.8 },
+      { url: `${SITE_URL}/blog`, changeFrequency: "weekly", priority: 0.9 },
       ...posts,
       { url: `${SITE_URL}/plany`, changeFrequency: "monthly", priority: 0.6 },
       { url: `${SITE_URL}/prihlaseni`, changeFrequency: "yearly", priority: 0.4 },

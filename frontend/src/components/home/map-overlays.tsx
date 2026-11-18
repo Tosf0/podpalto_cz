@@ -211,11 +211,14 @@ export function MapBottomDock({
   open,
   onToggle,
   onInsetChange,
+  showTierLegend = true,
   className,
 }: {
   open: boolean;
   onToggle: () => void;
   onInsetChange?: (px: number) => void;
+  /** Legenda barev cenovek – v ukázce bez prodejců se nezobrazuje. */
+  showTierLegend?: boolean;
   className?: string;
 }) {
   const { t } = useI18n();
@@ -239,9 +242,11 @@ export function MapBottomDock({
 
   return (
     <div className={cn("pointer-events-none absolute inset-x-0 bottom-0 z-[1000] flex flex-col", className)}>
-      <div className="px-4 pb-3">
-        <PriceTierLegend />
-      </div>
+      {showTierLegend && (
+        <div className="px-4 pb-3">
+          <PriceTierLegend />
+        </div>
+      )}
       <div className="relative">
         {/* Výčnělek – při rozbaleném pásu sedí na jeho horní hraně, při sbaleném na spodním okraji mapy */}
         <button

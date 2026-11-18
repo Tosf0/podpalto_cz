@@ -4,6 +4,60 @@ Průběžný seznam otevřených úkolů a dočasných rozhodnutí. Hotové věc
 důležitá rozhodnutí přesouváme do README příslušné služby. Datum = kdy byla položka
 zapsána nebo naposledy změněna.
 
+## Stav k 18. 11. 2026 večer: frontend + Supabase (Lukáš / Claude)
+
+Nasazeno v projektu Podpalto (migrace `frontend/supabase/migrations/2026111812*` až `…150000`,
+v tomto pořadí; ověřeno testy v transakci s rollbackem):
+
+- **`20261118120000_agent_output.sql` (Franta)** nasazená. Při kontrole se našla chyba
+  v triggerech kontroly: schválený záznam se vracel do fronty, když agent poslal stejné příznaky
+  v jiném pořadí nebo přidal jen informační příznak, a schválený prodejce bez polohy po každé
+  změně příznaků.
+- **`20261118130000_review_fixes.sql`** – opraveno: triggery porovnávají jen množinu
+  blokujících příznaků; když blokující příznaky zmizí (čistá cena, dohledaná poloha), záznam se
+  sám vrátí do `ok`. Dále: vlastník prodejce smí vkládat produkty a ceny jen do vybraných
+  sloupců (ne `review_status`, `flags`…), základ varianty jen vlastní produkt; historie cen jen
+  u viditelných produktů; unikátní `(source_key, snapshot_id)` v `scrape_runs`;
+  `seller_intel.threat_level` zrušen, nově `market_comparison` (jsonb); tabulka
+  `heating_census` se Sčítáním 2021 (15 řádků, data z `census2021_heating.json`).
+- **`20261118140000_ci_queue_and_review_queue.sql`** – fronta analýz: `analysis_runs.kind`
+  (`url` | `market` | `seller`), `params`, `subject_seller_id`, `claimed_by/at`,
+  `competitor_url` nepovinné; `claim_analysis_run(worker)` pro službu app (jen service role);
+  `analysis_runs` v publikaci Realtime; `analysis_reports.kind/params`; RPC
+  `api_review_queue()` pro admina.
+- **`20261118150000_public_teaser.sql`** – ukázková data pro nepřihlášené:
+  `api_public_overview()` a `api_public_seller_sample()` (5 prodejců denně, bez CI shrnutí).
+
+Frontend:
+
+- **REST větve smazané**, `NEXT_PUBLIC_API_URL` zrušena. Bez Supabase = offline režim nad
+  `src/data/`. Kontrakt je v `frontend/README.md` kap. 5 (tabulka volání + fronta analýz).
+- **„Neuvedeno“ (bod 3) hotové:** typy, `estimateDelivery` vrací `unknown`, odznak skladu,
+  doprava v detailu, katalogu, kalkulačce a poptávce.
+- **Fronta kontroly (bod 4):** stránka `/admin/kontrola` (jen admin) – schválit / zamítnout.
+- **CI Studio:** analýzu vkládá do `analysis_runs` a polluje stav; bez workera zůstane
+  „Ve frontě“. Odznak „hrozby“ odstraněn z detailu prodejce i katalogu.
+- **Ukázkové verze pro nepřihlášené:** výchozí stránka je mapa – heat mapa krajů a žebříček
+  krajů podle ceny místo prodejců; `/prodejci` 5 prodejců denně + zamčený zbytek; `/trendy`
+  6 měsíců + zamčené sekce. Za registrací: kalkulačka, detail prodejce, CI Studio (Pro),
+  editor blogu, administrace.
+
+**Co je teď na straně `app` / `tools` (Franta):**
+
+1. **Worker fronty analýz** v `app` podle `frontend/README.md` kap. 5.2 (`claim_analysis_run`,
+   průběžný zápis `progress/steps/logs`, report do `analysis_reports`, `status`).
+2. **Zápis do Supabase** (export podle `docs/agent-output-spec.md`, upsert přes
+   `sellers.external_key` a `products (seller_id, external_id)`; při vložení produktu
+   `price_updated_at = observed_at` první ceny).
+3. **`market_stats`** (bod 5) – plní `commodity_price_stats` a `region_stats`.
+4. Rozhodnout body **6–8, 10–12** níže (kWh konstanty, pásma, klíč prodejce, geolokace,
+   hodnocení, smazání 26 fiktivních prodejců při prvním zápisu reálných dat).
+5. `MarketResearchFlow` / `SellerProfileFlow` podle rozhodnutí o CI Studiu (DB část hotová).
+
+**Zbývá na frontendu:** zobrazení akčních a množstevních variant na detailu prodejce (bod 1),
+CI Studio se záložkami „Trh“ / „Prodejce“, karta Sčítání 2021 v Trendech. V Supabase
+dashboardu zapnout *Leaked password protection* (Auth → Password security).
+
 ## Rozhodnutí: jediný zdroj dat je Supabase (18. 11. 2026)
 
 Stav: frontend na produkci už čte **všechna data jen ze Supabase** (projekt Podpalto).
@@ -17,11 +71,11 @@ Cíl: **agenti zapisují do Supabase, frontend čte ze Supabase, žádné veřej
       produkty, ceny, běhy). Nejdřív export do JSON souboru, pak přímý zápis se *secret*
       klíčem (jen na serveru) v pořadí `sellers` → `products` → `price_observations` →
       `scrape_runs`.
-- [ ] **Frontend: smazat REST větve** v `src/lib/api/sellers.ts`, `market.ts`, `reports.ts`,
+- [x] **Frontend: smazat REST větve** (hotovo 18. 11.) v `src/lib/api/sellers.ts`, `market.ts`, `reports.ts`,
       `analysis.ts` a `client.ts`; ukázková data ponechat jen jako offline režim bez
       Supabase. V `frontend/README.md` nahradit kapitolu 5 (REST kontrakt) odkazem na schéma
       (`frontend/supabase/migrations/`) a `docs/agent-output-spec.md`.
-- [ ] **CI Studio přes frontu v databázi místo REST:**
+- [ ] **CI Studio přes frontu v databázi místo REST:** DB a frontend hotové 18. 11., zbývá worker v `app`.
       - frontend vloží řádek do `analysis_runs` (tabulka a RLS pro tarif Pro už existují),
       - služba `app` si nové řádky (`status = 'queued'`) vyzvedává – polling, nebo
         databázový webhook / Supabase Realtime – a spustí příslušný flow,
@@ -29,24 +83,24 @@ Cíl: **agenti zapisují do Supabase, frontend čte ze Supabase, žádné veřej
         `report_id` a výsledek do `analysis_reports` (+ `seller_intel` u profilu prodejce),
       - frontend sleduje řádek přes Supabase Realtime (žádná URL backendu, CORS ani
         veřejný endpoint na Railway).
-- [ ] Na straně databáze doplnit sloupce pro frontu a typy reportů (viz rozhodnutí o CI
+- [x] Na straně databáze doplnit sloupce pro frontu a typy reportů (hotovo 18. 11.) (viz rozhodnutí o CI
       Studiu níže) a `sellers.external_key` pro upsert od agentů.
 
 ### Opravy API: současný stav (18. 11. 2026)
 
 Databázová část rozhodnutí 1–4 je hotová v migraci
 `frontend/supabase/migrations/20261118120000_agent_output.sql`. Syntaxe je ověřená
-parserem PostgreSQL, ale **migrace zatím není nasazená** v projektu Podpalto a neproběhla
+parserem PostgreSQL, ale **migrace **je nasazená** (18. 11. večer, spolu s opravami)** v projektu Podpalto a neproběhla
 proti živé databázi (lokálně není Docker ani Postgres).
 
 | Rozhodnutí | Stav |
 |---|---|
 | (1) akce a pásma jako produkt | DB hotová. Zbývá: §7 ve specu, zobrazení variant na detailu prodejce. |
 | (2) chybějící pole | Hotovo, viz poznámky k mapování níže. |
-| (3) „neuvedeno“ | DB hotová. **Zbývá frontend** (typy, `pricing.ts`, štítky, odznak skladu). |
-| (4) stav kontroly | DB hotová (sloupce, triggery, RLS, admin RPC). Zbývá: obrazovka fronty kontroly pro admina. |
+| (3) „neuvedeno“ | Hotovo (DB i frontend, 18. 11.). |
+| (4) stav kontroly | Hotovo: DB, opravené triggery (`…130000_review_fixes.sql`) a stránka `/admin/kontrola`. |
 | (5) `market_stats` | Nezačato. Tabulky `commodity_price_stats` a `region_stats` už existují, změna DB není potřeba. |
-| (9) fronta CI | Odloženo podle rozhodnutí, migrace na ni nesahá. |
+| (9) fronta CI | DB (`…140000`) a frontend hotové; zbývá worker v `app`. |
 
 Co migrace dělá navíc nebo jinak, než říká text rozhodnutí níže:
 
@@ -83,7 +137,7 @@ musí být hotový dřív, než do produkce zapíšeme první reálná data.
 Kontrola `docs/agent-output-spec.md` proti schématu Supabase (`frontend/supabase/migrations/`)
 a frontendu. Čísla odpovídají bodům kontroly.
 
-- [ ] **(1) Akční a množstevní ceny = samostatný produkt.** Trigger `apply_price_observation`
+- [ ] **(1) Akční a množstevní ceny = samostatný produkt.** DB a §7 specu hotové; zbývá zobrazení variant na detailu prodejce. Trigger `apply_price_observation`
       přepisuje aktuální cenu produktu posledním zjištěním, takže akční cena nebo cena
       „od 10 PRMS“ poslaná ke stejnému produktu by na mapě nahradila běžnou cenu.
       - Akce a množstevní pásmo dostanou vlastní `product_key` (např.
@@ -105,13 +159,13 @@ a frontendu. Čísla odpovídají bodům kontroly.
         `ruian_address_code`, `location_source`, `location_precision`,
         `location_checked_at`, `flags`, `registry` (jsonb), `delivery_zones` (jsonb),
         `delivery_free_over_quantity_unit`, `delivery_evidence` (jsonb).
-- [ ] **(3) „Neuvedeno“ musí jít uložit i zobrazit.**
+- [x] **(3) „Neuvedeno“ musí jít uložit i zobrazit.** (hotovo 18. 11.)
       - `products.stock` bez `not null` a bez výchozího `'in_stock'`; `null` = neuvedeno.
       - Doprava v `sellers`: sloupce bez výchozích nul, `own_delivery = null` = neznámo.
       - Frontend: `lib/pricing.ts` při neznámé dopravě vrátí „doprava neuvedena“ (ne
         „nedováží“), sklad „neuvedeno“; štítky (`skladem`, `vlastni-doprava`…) se
         z `null` neodvozují. Upravit typy v `src/types/index.ts` a RPC `api_sellers`.
-- [ ] **(4) Podezřelé ceny skrýt přes stav kontroly, ne přes `active`.** `active` dál znamená
+- [x] **(4) Podezřelé ceny skrýt přes stav kontroly, ne přes `active`.** (hotovo 18. 11., vč. obrazovky pro admina) `active` dál znamená
       jen „produkt u zdroje existuje“. Nově:
       - `products.review_status` (`ok` | `needs_review` | `rejected`) a `review_reasons`
         (pole příznaků, které kontrolu vyvolaly),
@@ -211,7 +265,7 @@ obchodník, prodejce), ne z pohledu podpalto.cz. Podpalto.cz je srovnávač, ne 
       osnovy v bodě 1 + strukturovaná data (ceny, index, počet nabídek) pro grafy.
 - [ ] `app`: nový `SellerProfileFlow` vstup `{seller_key}` → Markdown + strukturovaný
       profil do `seller_intel` (bez `threat_level`, se „Srovnáním s trhem“).
-- [ ] DB: `analysis_reports.kind` (`market` | `seller`), `analysis_reports.params`
+- [x] DB: `analysis_reports.kind` (`market` | `seller`), `analysis_reports.params` (hotovo 18. 11.: `kind` má navíc `url` pro dnešní formulář)
       (jsonb: palivo, kraj), `analysis_reports.subject_seller_id`; stejné sloupce
       v `analysis_runs`; z `seller_intel` odstranit `threat_level`, přidat
       `market_comparison` (jsonb).

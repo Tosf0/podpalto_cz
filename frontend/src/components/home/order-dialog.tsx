@@ -78,7 +78,7 @@ export function OrderDialog({
                 unit: product.unit,
                 quantity: qty,
                 unitPriceCzk: product.price,
-                deliveryFeeCzk: offer.delivery.outOfRange ? null : offer.delivery.fee,
+                deliveryFeeCzk: offer.delivery.outOfRange || offer.delivery.unknown ? null : offer.delivery.fee,
                 hydraulicArm: arm,
                 totalCzk: offer.total,
                 distanceKm: Number.isFinite(offer.delivery.distanceKm) ? Math.round(offer.delivery.distanceKm * 10) / 10 : null,
@@ -154,7 +154,13 @@ export function OrderDialog({
                 <Truck aria-hidden className="size-3" /> {t("home.order.delivery")}
               </p>
               <p className="num text-sm font-semibold text-secondary-foreground">
-                {offer.delivery.outOfRange ? t("home.order.pickup") : offer.delivery.free ? t("home.order.free") : formatCzk(offer.delivery.fee)}
+                {offer.delivery.unknown
+                  ? t("sellers.delivery.unspecified")
+                  : offer.delivery.outOfRange
+                    ? t("home.order.pickup")
+                    : offer.delivery.free
+                      ? t("home.order.free")
+                      : formatCzk(offer.delivery.fee)}
               </p>
             </div>
             <div>

@@ -4,7 +4,7 @@ import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { LogIn, LogOut, Menu, Moon, Settings, Sparkles, Sun } from "lucide-react";
+import { Lock, LogIn, LogOut, Menu, Moon, Settings, ShieldCheck, Sparkles, Sun } from "lucide-react";
 import { toast } from "sonner";
 import { Logo } from "@/components/common/logo";
 import { initialsOf, useAuth } from "@/components/providers/auth-provider";
@@ -12,6 +12,7 @@ import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
 import { NAV_LINKS, isActivePath } from "./nav-links";
+import { TEASER_PATHS } from "@/lib/supabase/config";
 import { SettingsDialog } from "./settings-dialog";
 
 /** Šířka bočních panelů – levá navigace a pravý panel filtrů sdílí stejnou hodnotu (symetrie). */
@@ -44,6 +45,9 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const { t } = useI18n();
   const isDark = mounted && resolvedTheme === "dark";
+  const auth = useAuth();
+  // nepřihlášený: u ukázkových stránek štítek „Ukázka“, u stránek za účtem zámek
+  const anonymous = auth.enabled && !auth.loading && !auth.user;
 
   return (
     <div className="flex h-full flex-col">
@@ -98,6 +102,14 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
                           {badge}
                         </span>
                       )}
+                      {anonymous && TEASER_PATHS.includes(href) && (
+                        <span className="rounded-md bg-wood/25 px-1.5 py-px text-[10px] font-bold tracking-wide text-sidebar-foreground">
+                          {t("account.teaser.badge")}
+                        </span>
+                      )}
+                      {anonymous && !TEASER_PATHS.includes(href) && href !== "/blog" && (
+                        <Lock aria-label={t("account.teaser.navLocked")} className="ml-auto size-3.5 opacity-60" />
+                      )}
                     </span>
                     <span
                       className={cn(
@@ -133,7 +145,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 function AccountRow({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useI18n();
   const router = useRouter();
-  const { enabled, loading, user, profile, plan, signOut } = useAuth();
+  const { enabled, loading, user, profile, plan, signOut, isAdmin } = useAuth();
 
   // Demo režim bez Supabase – původní ukázkový účet
   if (!enabled) {
@@ -172,7 +184,7 @@ function AccountRow({ onNavigate }: { onNavigate?: () => void }) {
     await signOut();
     toast(t("account.menu.loggedOut"));
     onNavigate?.();
-    router.replace("/prihlaseni");
+    router.replace("/");
     router.refresh();
   };
 
@@ -195,6 +207,17 @@ function AccountRow({ onNavigate }: { onNavigate?: () => void }) {
           {profile && profile.role !== "user" && ` · ${t(`account.roles.${profile.role}`)}`}
         </Link>
       </span>
+      {isAdmin && (
+        <Link
+          href="/admin/kontrola"
+          onClick={onNavigate}
+          aria-label="Kontrola dat"
+          title="Kontrola dat"
+          className="flex size-10 items-center justify-center rounded-xl text-sidebar-foreground/75 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground [&_svg]:size-[18px]"
+        >
+          <ShieldCheck aria-hidden />
+        </Link>
+      )}
       <PanelIconButton label={t("account.menu.logout")} onClick={() => void logout()}>
         <LogOut aria-hidden />
       </PanelIconButton>

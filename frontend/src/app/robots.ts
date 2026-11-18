@@ -4,7 +4,7 @@ import { SITE_URL } from "@/lib/blog/utils";
 /** /robots.txt – interní CI Studio a editor blogu se neindexují. */
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: { userAgent: "*", allow: "/", disallow: ["/ci-studio", "/blog/novy"] },
+    rules: { userAgent: "*", allow: "/", disallow: ["/ci-studio", "/blog/novy", "/admin"] },
     sitemap: `${SITE_URL}/sitemap.xml`,
   };
 }

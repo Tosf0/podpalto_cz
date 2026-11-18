@@ -5,7 +5,8 @@ import { updateSession } from "@/lib/supabase/proxy";
 /**
  * Next.js 16 Proxy (dříve middleware):
  * 1. obnoví Supabase session v cookies,
- * 2. nepřihlášeného uživatele pošle na registraci – volně dostupný je jen blog (čtení), ceník a přihlášení,
+ * 2. nepřihlášeného uživatele pošle na registraci – volně dostupné jsou ukázkové verze mapy, prodejců
+ *    a trendů, blog (čtení), ceník a přihlášení (viz `isPublicPath`),
  * 3. přihlášeného z /prihlaseni vrátí do aplikace.
  * Tarif (Pro pro CI Studio) se ověřuje až na stránce, data navíc chrání RLS v databázi.
  */

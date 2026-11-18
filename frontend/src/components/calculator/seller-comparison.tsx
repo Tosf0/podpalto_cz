@@ -151,18 +151,22 @@ export function SellerComparison() {
               const d = s.delivery;
               return (
                 <Cell key={s.id}>
-                  {d.ownDelivery ? (
+                  {d.ownDelivery == null ? (
+                    <span className="text-xs text-muted-foreground">{t("sellers.delivery.unspecified")}</span>
+                  ) : d.ownDelivery ? (
                     <ul className="num space-y-0.5 text-xs">
-                      <li>{t("calculator.compare.flatFee", { price: formatCzk(d.baseFee) })}</li>
+                      <li>{t("calculator.compare.flatFee", { price: d.baseFee != null ? formatCzk(d.baseFee) : "–" })}</li>
                       <li>
-                        {formatNumber(toDisplayCurrency(d.pricePerKm), currencySymbol() === "€" ? 2 : 1)} {currencySymbol()}/km
+                        {d.pricePerKm != null
+                          ? `${formatNumber(toDisplayCurrency(d.pricePerKm), currencySymbol() === "€" ? 2 : 1)} ${currencySymbol()}/km`
+                          : "–"}
                       </li>
                       <li>
                         {t("calculator.compare.freeUpTo", {
-                          distance: d.freeRadiusKm > 0 ? formatKm(d.freeRadiusKm) : t("calculator.compare.freeNever"),
+                          distance: (d.freeRadiusKm ?? 0) > 0 ? formatKm(d.freeRadiusKm ?? 0) : t("calculator.compare.freeNever"),
                         })}
                       </li>
-                      <li>{t("calculator.compare.range", { distance: formatKm(d.maxRadiusKm) })}</li>
+                      <li>{t("calculator.compare.range", { distance: d.maxRadiusKm != null ? formatKm(d.maxRadiusKm) : "–" })}</li>
                     </ul>
                   ) : (
                     <span className="text-xs text-muted-foreground">{t("calculator.compare.noOwnDelivery")}</span>

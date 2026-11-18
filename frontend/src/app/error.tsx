@@ -18,8 +18,7 @@ export default function Error({ error, reset }: { error: Error & { digest?: stri
       </div>
       <h1 className="text-3xl font-semibold">{t("layout.error.title")}</h1>
       <p className="text-muted-foreground">
-        {t("layout.error.textBefore")} <code className="num">NEXT_PUBLIC_API_URL</code>
-        {t("layout.error.textAfter")}
+        {t("layout.error.textBefore")}
       </p>
       <Button onClick={reset}>{t("common.actions.retry")}</Button>
     </div>

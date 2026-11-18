@@ -1,5 +1,6 @@
 import type { StockLevel } from "@/types";
 import { STOCK_LEVELS } from "@/lib/constants";
+import { t } from "@/lib/i18n/translate";
 import { cn } from "@/lib/utils";
 
 const TONE_CLASS = {
@@ -9,9 +10,9 @@ const TONE_CLASS = {
   neutral: { text: "text-muted-foreground", dot: "bg-coal/50" },
 } as const;
 
-/** Stav skladem: tečka + popisek. */
-export function StockBadge({ stock, className }: { stock: StockLevel; className?: string }) {
-  const meta = STOCK_LEVELS[stock];
+/** Stav skladem: tečka + popisek. Bez údaje = „neuvedeno“ (agent dostupnost nezjistil). */
+export function StockBadge({ stock, className }: { stock?: StockLevel; className?: string }) {
+  const meta = stock ? STOCK_LEVELS[stock] : { tone: "neutral" as const, label: t("common.stock.unknown") };
   const tone = TONE_CLASS[meta.tone];
   return (
     <span className={cn("inline-flex items-center gap-1.5 text-xs font-medium", tone.text, className)}>

@@ -58,7 +58,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
-import { sizeLabel, THREAT_META } from "./seller-utils";
+import { sizeLabel } from "./seller-utils";
 
 /* ------------------------------------------------------------------ */
 /* Pomocné funkce                                                      */
@@ -422,27 +422,35 @@ function DeliverySection({ seller }: { seller: Seller }) {
       <div className="grid items-stretch gap-6 lg:grid-cols-2">
         <dl className="grid grid-cols-2 gap-x-6 gap-y-4">
           <Fact label={t("sellers.detail.deliverySection.method")}>
-            {d.ownDelivery ? t("sellers.detail.deliverySection.own") : t("sellers.detail.deliverySection.pickupOnlyMethod")}
+            {d.ownDelivery == null
+              ? t("sellers.delivery.unspecified")
+              : d.ownDelivery
+                ? t("sellers.detail.deliverySection.own")
+                : t("sellers.detail.deliverySection.pickupOnlyMethod")}
           </Fact>
           <Fact label={t("sellers.detail.deliverySection.pickup")}>
-            {d.pickupAvailable ? t("sellers.detail.deliverySection.possible") : t("sellers.detail.deliverySection.notOffered")}
+            {d.pickupAvailable == null
+              ? t("sellers.delivery.unspecified")
+              : d.pickupAvailable
+                ? t("sellers.detail.deliverySection.possible")
+                : t("sellers.detail.deliverySection.notOffered")}
           </Fact>
           {d.ownDelivery && (
             <>
               <Fact label={t("sellers.detail.deliverySection.baseFee")}>
-                <span className="num">{formatCzk(d.baseFee)}</span>
+                <span className="num">{d.baseFee != null ? formatCzk(d.baseFee) : "–"}</span>
               </Fact>
               <Fact label={t("sellers.detail.deliverySection.perKm")}>
-                <span className="num">{formatCzk(d.pricePerKm)}/km</span>
+                <span className="num">{d.pricePerKm != null ? `${formatCzk(d.pricePerKm)}/km` : "–"}</span>
               </Fact>
               <Fact label={t("sellers.detail.deliverySection.freeUpTo")}>
-                <span className="num">{d.freeRadiusKm > 0 ? formatKm(d.freeRadiusKm) : "–"}</span>
+                <span className="num">{(d.freeRadiusKm ?? 0) > 0 ? formatKm(d.freeRadiusKm ?? 0) : "–"}</span>
               </Fact>
               <Fact label={t("sellers.detail.deliverySection.freeOverQty")}>
                 <span className="num">{d.freeOverQuantity != null ? formatNumber(d.freeOverQuantity) : "–"}</span>
               </Fact>
               <Fact label={t("sellers.detail.deliverySection.maxRange")}>
-                <span className="num">{formatKm(d.maxRadiusKm)}</span>
+                <span className="num">{d.maxRadiusKm != null ? formatKm(d.maxRadiusKm) : "–"}</span>
               </Fact>
             </>
           )}
@@ -609,7 +617,6 @@ function IntelSection({ seller }: { seller: Seller }) {
     );
   }
 
-  const threat = THREAT_META[intel.threatLevel];
   return (
     <Section
       title="Competitive Intelligence"
@@ -625,16 +632,7 @@ function IntelSection({ seller }: { seller: Seller }) {
             <p className="mt-1 text-sm">{intel.toneOfVoice}</p>
           </div>
           <div className="rounded-xl bg-secondary p-4">
-            <p className="text-xs font-medium text-muted-foreground">{t("sellers.detail.intel.threatLevel")}</p>
-            <span
-              className={cn(
-                "mt-1.5 inline-flex items-center rounded-lg border px-2.5 py-0.5 text-sm font-medium",
-                threat.className,
-              )}
-            >
-              {threat.label}
-            </span>
-            <p className="mt-3 text-xs font-medium text-muted-foreground">{t("sellers.detail.intel.priceIndex")}</p>
+            <p className="text-xs font-medium text-muted-foreground">{t("sellers.detail.intel.priceIndex")}</p>
             <p className="mt-1">
               <PriceDelta value={intel.priceIndexVsCz} />
             </p>

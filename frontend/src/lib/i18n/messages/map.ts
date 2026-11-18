@@ -8,7 +8,7 @@ export const map = defineMessages({
     skeleton: { loading: "Načítám mapu…" },
     ui: {
       mockBadge: "Demo data",
-      mockBadgeHint: "Běží bez backendu – data jsou ukázková. Nastavte NEXT_PUBLIC_API_URL.",
+      mockBadgeHint: "Běží bez databáze – data jsou ukázková. Nastavte NEXT_PUBLIC_SUPABASE_URL.",
       listLoading: "Načítání…",
       logoAria: "podpalto.cz – úvodní stránka",
       tagline: "Cenová mapa & CI tuhých paliv",
@@ -24,7 +24,7 @@ export const map = defineMessages({
     skeleton: { loading: "Karte wird geladen…" },
     ui: {
       mockBadge: "Demodaten",
-      mockBadgeHint: "Läuft ohne Backend – die Daten sind Beispieldaten. Setzen Sie NEXT_PUBLIC_API_URL.",
+      mockBadgeHint: "Läuft ohne Datenbank – die Daten sind Beispieldaten. Setzen Sie NEXT_PUBLIC_SUPABASE_URL.",
       listLoading: "Wird geladen…",
       logoAria: "podpalto.cz – Startseite",
       tagline: "Preiskarte & CI für feste Brennstoffe",
@@ -40,7 +40,7 @@ export const map = defineMessages({
     skeleton: { loading: "Loading map…" },
     ui: {
       mockBadge: "Demo data",
-      mockBadgeHint: "Running without a backend – data is sample data. Set NEXT_PUBLIC_API_URL.",
+      mockBadgeHint: "Running without a database – data is sample data. Set NEXT_PUBLIC_SUPABASE_URL.",
       listLoading: "Loading…",
       logoAria: "podpalto.cz – home page",
       tagline: "Price map & CI for solid fuels",

@@ -10,7 +10,6 @@ import {
   Forklift,
   LayoutGrid,
   Search,
-  ShieldAlert,
   SlidersHorizontal,
   Store,
   Table2,
@@ -22,6 +21,9 @@ import { FUEL_CATEGORIES, FUEL_META, REGION_CODES, REGIONS } from "@/lib/constan
 import { formatCzk, formatNumber, formatRelative, moneyUnit } from "@/lib/format";
 import { t } from "@/lib/i18n/translate";
 import { getSellers } from "@/lib/api/sellers";
+import { getSellerSample } from "@/lib/api/public";
+import { RegisterButtons, RegisterCta, TeaserBadge, useTeaser } from "@/components/account/register-gate";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useApi } from "@/hooks/use-api";
 import { cn } from "@/lib/utils";
 import {
@@ -40,7 +42,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { cheapestHardWood, cheapestPellets, deliveryShort, sizeLabel, THREAT_META } from "./seller-utils";
+import { cheapestHardWood, cheapestPellets, deliveryShort, sizeLabel } from "./seller-utils";
 
 type SortKey = "name" | "rating" | "hardwood" | "breadth" | "updated";
 type DeliveryKey = "own" | "arm" | "free" | "pickup";
@@ -71,13 +73,13 @@ function matchesDelivery(s: Seller, k: DeliveryKey): boolean {
   const d = s.delivery;
   switch (k) {
     case "own":
-      return d.ownDelivery;
+      return d.ownDelivery === true;
     case "arm":
-      return d.hydraulicArm;
+      return d.hydraulicArm === true;
     case "free":
-      return d.ownDelivery && d.freeRadiusKm > 0;
+      return d.ownDelivery === true && (d.freeRadiusKm ?? 0) > 0;
     case "pickup":
-      return d.pickupAvailable;
+      return d.pickupAvailable === true;
   }
 }
 
@@ -235,23 +237,6 @@ function ViewToggle({ value, onChange }: { value: "table" | "grid"; onChange: (v
 /* Buňky                                                               */
 /* ------------------------------------------------------------------ */
 
-function ThreatIcon({ seller }: { seller: Seller }) {
-  if (!seller.intel) return null;
-  const m = THREAT_META[seller.intel.threatLevel];
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <span
-          className={cn("inline-flex size-6 shrink-0 items-center justify-center rounded-lg border", m.className)}
-          aria-label={m.label}
-        >
-          <ShieldAlert aria-hidden="true" className="size-3.5" />
-        </span>
-      </TooltipTrigger>
-      <TooltipContent>{m.label}</TooltipContent>
-    </Tooltip>
-  );
-}
 
 function DeliveryLine({ seller, truck = true }: { seller: Seller; truck?: boolean }) {
   return (
@@ -324,7 +309,6 @@ function SellerRow({ seller }: { seller: Seller }) {
       <TableCell>
         <div className="flex items-center gap-2">
           <StarRating rating={seller.rating} reviewCount={seller.reviewCount} className="whitespace-nowrap" />
-          <ThreatIcon seller={seller} />
         </div>
       </TableCell>
     </TableRow>
@@ -383,7 +367,6 @@ function SellerCard({ seller }: { seller: Seller }) {
           <Clock aria-hidden="true" className="size-3.5" />
           {t("sellers.catalog.card.updated", { when: formatRelative(seller.lastScrapedAt) })}
         </span>
-        <ThreatIcon seller={seller} />
       </div>
     </article>
   );
@@ -393,7 +376,84 @@ function SellerCard({ seller }: { seller: Seller }) {
 /* Katalog                                                             */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Katalog prodejců. Nepřihlášený vidí ukázku (5 prodejců denně + výzvu k registraci zdarma),
+ * přihlášený celý katalog s filtry.
+ */
 export function SellersCatalog() {
+  const teaser = useTeaser();
+  if (teaser === null) {
+    return (
+      <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <ListSkeleton count={4} />
+      </div>
+    );
+  }
+  return teaser ? <SellersTeaser /> : <FullSellersCatalog />;
+}
+
+/** Ukázka katalogu pro nepřihlášené. */
+function SellersTeaser() {
+  const { data, loading } = useApi(() => getSellerSample(), []);
+  const shown = data?.sellers.length ?? 0;
+  const total = data?.total ?? 0;
+  const hidden = Math.max(0, total - shown);
+
+  return (
+    <div className="mx-auto w-full max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+      <PageHeader
+        title={t("sellers.catalog.title")}
+        icon={<Store />}
+        description={t("sellers.catalog.description")}
+        actions={<TeaserBadge />}
+      />
+
+      <RegisterCta
+        title={t("account.teaser.sellersTitle")}
+        text={total ? t("account.teaser.sellersText", { shown, total }) : undefined}
+      />
+
+      {loading && !data ? (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 3 }, (_, i) => (
+            <Skeleton key={i} className="h-72 rounded-2xl" />
+          ))}
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {data?.sellers.map((s) => (
+            <SellerCard key={s.id} seller={s} />
+          ))}
+        </div>
+      )}
+
+      {hidden > 0 && (
+        <section className="relative overflow-hidden rounded-2xl">
+          <div aria-hidden className="grid gap-4 opacity-60 blur-[3px] select-none sm:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 3 }, (_, i) => (
+              <div key={i} className="h-56 rounded-2xl border border-border bg-card p-5">
+                <div className="h-5 w-2/3 rounded bg-muted" />
+                <div className="mt-3 h-3 w-1/2 rounded bg-muted" />
+                <div className="mt-6 grid grid-cols-2 gap-2">
+                  <div className="h-14 rounded-xl bg-secondary" />
+                  <div className="h-14 rounded-xl bg-secondary" />
+                </div>
+                <div className="mt-6 h-3 w-3/4 rounded bg-muted" />
+              </div>
+            ))}
+          </div>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-b from-background/10 to-background/85 p-4 text-center">
+            <p className="font-heading text-2xl font-semibold">{t("account.teaser.sellersHidden", { count: hidden })}</p>
+            <p className="max-w-md text-sm text-muted-foreground">{t("account.teaser.sellersUnlock", { total })}</p>
+            <RegisterButtons className="justify-center" size="lg" />
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function FullSellersCatalog() {
   const { data: sellers, loading, error, reload } = useApi(() => getSellers(), []);
   const [view, setView] = useState<"table" | "grid">("table");
   const [query, setQuery] = useState("");

@@ -6,6 +6,7 @@ import type { MarketPulseItem, PriceTrendPoint, RegionStats } from "@/types";
 import { EmptyState, MockModeBadge, PageHeader, PriceDelta, Sparkline } from "@/components/common";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApi } from "@/hooks/use-api";
+import { LockedPreview, RegisterCta, TeaserBadge, useTeaser } from "@/components/account/register-gate";
 import { getEnergyCosts, getMarketPulse, getPriceTrends, getRegionStats } from "@/lib/api";
 import { COMMODITY_META, REGIONS } from "@/lib/constants";
 import { formatCzk, formatMonthGenitive, formatMoneyNumber, formatNumber } from "@/lib/format";
@@ -100,10 +101,12 @@ function SectionSkeleton({ height = "h-96" }: { height?: string }) {
 
 export function TrendsView() {
   const { t } = useI18n();
-  const pulse = useApi(() => getMarketPulse(), []);
-  const trends = useApi(() => getPriceTrends(12), []);
-  const regions = useApi(() => getRegionStats(), []);
-  const energy = useApi(() => getEnergyCosts(), []);
+  // nepřihlášený: ukazatele a 6 měsíců vývoje volně, zbytek zamčený (`null` = načítá se session)
+  const teaser = useTeaser();
+  const pulse = useApi(() => (teaser === null ? new Promise<never>(() => {}) : getMarketPulse()), [teaser]);
+  const trends = useApi(() => (teaser === null ? new Promise<never>(() => {}) : getPriceTrends(12)), [teaser]);
+  const regions = useApi(() => (teaser === null ? new Promise<never>(() => {}) : getRegionStats()), [teaser]);
+  const energy = useApi(() => (teaser === null ? new Promise<never>(() => {}) : getEnergyCosts()), [teaser]);
 
   const insight =
     pulse.data && trends.data && trends.data.length > 0 && regions.data
@@ -119,8 +122,10 @@ export function TrendsView() {
         title={t("trends.view.title")}
         icon={<BarChart3 />}
         description={t("trends.view.description")}
-        actions={<MockModeBadge />}
+        actions={teaser ? <TeaserBadge /> : <MockModeBadge />}
       />
+
+      {teaser && <RegisterCta text={t("account.teaser.trendsText")} />}
 
       {failed && (
         <EmptyState
@@ -145,9 +150,20 @@ export function TrendsView() {
       </section>
 
       {trends.data && trends.data.length > 0 ? <PriceTrendChart trends={trends.data} /> : !failed && <SectionSkeleton />}
-      {regions.data && regions.data.length > 0 ? <RegionComparison regions={regions.data} /> : !failed && <SectionSkeleton height="h-[48rem]" />}
-      {energy.data && energy.data.length > 0 ? <EnergyCostChart items={energy.data} /> : !failed && <SectionSkeleton />}
-      {trends.data && trends.data.length > 0 && <Seasonality trends={trends.data} />}
+      {teaser ? (
+        <LockedPreview title={t("account.teaser.trendsLocked")}>
+          <div className="space-y-10">
+            {regions.data && regions.data.length > 0 && <RegionComparison regions={regions.data} />}
+            {energy.data && energy.data.length > 0 && <EnergyCostChart items={energy.data} />}
+          </div>
+        </LockedPreview>
+      ) : (
+        <>
+          {regions.data && regions.data.length > 0 ? <RegionComparison regions={regions.data} /> : !failed && <SectionSkeleton height="h-[48rem]" />}
+          {energy.data && energy.data.length > 0 ? <EnergyCostChart items={energy.data} /> : !failed && <SectionSkeleton />}
+          {trends.data && trends.data.length > 0 && <Seasonality trends={trends.data} />}
+        </>
+      )}
     </div>
   );
 }

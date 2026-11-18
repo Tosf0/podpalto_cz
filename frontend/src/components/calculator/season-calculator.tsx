@@ -440,6 +440,7 @@ function ResultRow({ row: r, rank }: { row: Row; rank: number }) {
 
 function DeliveryCell({ row }: { row: Row }) {
   const d = row.offer.delivery;
+  if (d.unknown) return <span className="text-muted-foreground">{t("sellers.delivery.unspecified")}</span>;
   if (d.outOfRange) return <span className="text-muted-foreground">{t("calculator.season.pickup")}</span>;
   if (d.free) return <span className="font-medium text-moss-strong">{t("calculator.season.free")}</span>;
   return <span className="num">{formatCzk(d.fee)}</span>;

@@ -32,8 +32,8 @@ palivem topí. Platforma nic neprodává a žádného prodejce nezvýhodňuje.
 
 ```
                            ┌──────────────────────── app :8000 ────────────────────────┐
- frontend ──HTTP──────────▶│ FastAPI /runs                                              │
- (zatím není)              │                                                            │
+ (frontend sem nevolá)     │ FastAPI /runs                                              │
+                           │ + worker fronty analysis_runs (Supabase, zatím není)      │
  CLI: uv run collect ─────▶│ CollectionFlow ──▶ ExtractionCrew (extractor → auditor)    │
  CLI: uv run kickoff ─────▶│ MarketResearchFlow ──▶ SolidFuelsCrew (manažer → 5 agentů) │
                            │            ToolsClient / RemoteTool (HTTP)                 │
@@ -49,11 +49,16 @@ palivem topí. Platforma nic neprodává a žádného prodejce nezvýhodňuje.
                     weby prodejců (feedy, Shoptet, ceníky HTML/PDF/obrázky), ČSÚ, ARES
 ```
 
+**Frontend a Supabase (od 18. 11. 2026):** frontend s `app` ani `tools` přímo nekomunikuje. Data
+čte jen ze Supabase (projekt Podpalto); `tools` do ní zapisují ceny a prodejce podle
+[agent-output-spec.md](agent-output-spec.md), `app` zpracovává frontu analýz `analysis_runs`
+(`claim_analysis_run`, viz `frontend/README.md` kap. 5.2) a ukládá reporty do `analysis_reports`.
+
 | Část | Balíček | Port | Hlavní závislosti | Kontejner |
 |---|---|---|---|---|
 | `tools/` | `podpalto_tools` | 8001 | FastAPI, SQLite, httpx, pypdf, Playwright, Tesseract | `tools/Dockerfile` |
 | `app/` | `podpalto_app` | 8000 | CrewAI, FastAPI | `app/Dockerfile` |
-| `frontend/` | — | — | zatím nevybráno | — |
+| `frontend/` | — | — | Next.js 16, Supabase (supabase-js) | Vercel |
 
 ## Služba `tools`: data
 

@@ -113,8 +113,8 @@ section("CI shrnutí prodejců");
 for (const s of SELLERS) {
   const i = s.intel;
   if (!i) continue;
-  out.push(`insert into public.seller_intel (seller_id, report_id, positioning, tone_of_voice, usp, swot, price_index_vs_cz, threat_level, analyzed_at)
-values ('${uuidOf(s.id)}', ${i.reportId && reportIds.has(i.reportId) ? q(i.reportId) : "null"}, ${q(i.positioning)}, ${q(i.toneOfVoice)}, ${arrNN(i.usp, "text")}, ${json(i.swot)}, ${n(i.priceIndexVsCz)}, ${q(i.threatLevel)}, ${q(i.analyzedAt)})
+  out.push(`insert into public.seller_intel (seller_id, report_id, positioning, tone_of_voice, usp, swot, price_index_vs_cz, analyzed_at)
+values ('${uuidOf(s.id)}', ${i.reportId && reportIds.has(i.reportId) ? q(i.reportId) : "null"}, ${q(i.positioning)}, ${q(i.toneOfVoice)}, ${arrNN(i.usp, "text")}, ${json(i.swot)}, ${n(i.priceIndexVsCz)}, ${q(i.analyzedAt)})
 on conflict (seller_id) do nothing;`);
 }
 

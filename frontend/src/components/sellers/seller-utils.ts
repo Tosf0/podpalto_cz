@@ -3,33 +3,14 @@ import { formatCzk, formatKm } from "@/lib/format";
 import { t } from "@/lib/i18n/translate";
 import { pricePerBaseUnit, productWoodGroup } from "@/lib/pricing";
 
-export function sizeLabel(size: SellerSize): string {
-  return t(`common.sizes.${size}`);
+/** Velikost firmy; bez údaje „neuvedeno“. */
+export function sizeLabel(size: SellerSize | undefined): string {
+  return size ? t(`common.sizes.${size}`) : t("sellers.delivery.unspecified");
 }
 
-export const THREAT_META = {
-  low: {
-    get label() {
-      return t("sellers.threat.low");
-    },
-    rank: 1,
-    className: "border-moss/30 bg-moss-soft text-moss-strong",
-  },
-  medium: {
-    get label() {
-      return t("sellers.threat.medium");
-    },
-    rank: 2,
-    className: "border-wood/30 bg-wood-soft text-wood-strong",
-  },
-  high: {
-    get label() {
-      return t("sellers.threat.high");
-    },
-    rank: 3,
-    className: "border-clay/30 bg-clay-soft text-clay-strong",
-  },
-} as const;
+function km(v: number | undefined): string {
+  return v == null ? "–" : formatKm(v);
+}
 
 function cheapest(products: FuelProduct[]): FuelProduct | undefined {
   const avail = products.filter((p) => p.stock !== "out_of_stock");
@@ -51,12 +32,13 @@ export function cheapestPellets(s: Seller): number | undefined {
 
 export function deliverySummary(s: Seller): string {
   const d = s.delivery;
+  if (d.ownDelivery == null && d.pickupAvailable == null) return t("sellers.delivery.unspecified");
   const parts: string[] = [];
   if (d.ownDelivery) {
     parts.push(
-      d.freeRadiusKm > 0
-        ? t("sellers.delivery.freeUpTo", { km: formatKm(d.freeRadiusKm) })
-        : t("sellers.delivery.upTo", { km: formatKm(d.maxRadiusKm) }),
+      (d.freeRadiusKm ?? 0) > 0
+        ? t("sellers.delivery.freeUpTo", { km: km(d.freeRadiusKm) })
+        : t("sellers.delivery.upTo", { km: km(d.maxRadiusKm) }),
     );
   }
   if (d.hydraulicArm) parts.push(t("sellers.delivery.arm"));
@@ -74,9 +56,9 @@ export function priceOrDash(value: number | undefined): string {
 export function deliveryShort(s: Seller): string {
   const d = s.delivery;
   if (d.ownDelivery) {
-    return d.freeRadiusKm > 0
-      ? t("sellers.delivery.shortFree", { km: formatKm(d.freeRadiusKm) })
-      : t("sellers.delivery.shortOwn", { km: formatKm(d.maxRadiusKm) });
+    return (d.freeRadiusKm ?? 0) > 0
+      ? t("sellers.delivery.shortFree", { km: km(d.freeRadiusKm) })
+      : t("sellers.delivery.shortOwn", { km: km(d.maxRadiusKm) });
   }
   if (d.pickupAvailable) return t("sellers.delivery.shortPickup");
   return t("sellers.delivery.unspecified");

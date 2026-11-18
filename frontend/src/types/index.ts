@@ -136,29 +136,34 @@ export interface FuelProduct {
   packagePrm?: number;
   minOrder?: number;
 
-  stock: StockLevel;
+  /** Dostupnost; chybí = neuvedeno. */
+  stock?: StockLevel;
   /** Posledních 12 měsíců (nejstarší první). */
   priceHistory: PricePoint[];
   /** ISO datum poslední aktualizace ceny. */
   updatedAt: string;
 }
 
+/**
+ * Podmínky dopravy. Chybějící pole = „neuvedeno“ (agent je nezjistil) – neznamená „nevozí“
+ * ani „zdarma“. Viz `estimateDelivery` v `lib/pricing.ts` (výsledek `unknown`).
+ */
 export interface DeliveryTerms {
-  ownDelivery: boolean;
-  hydraulicArm: boolean;
-  pickupAvailable: boolean;
+  ownDelivery?: boolean;
+  hydraulicArm?: boolean;
+  pickupAvailable?: boolean;
   /** Paušál za dopravu v Kč (účtuje se mimo `freeRadiusKm`). */
-  baseFee: number;
+  baseFee?: number;
   /** Cena za km vzdálenosti (jedna cesta) v Kč – účtuje se nad `freeRadiusKm`. */
-  pricePerKm: number;
+  pricePerKm?: number;
   /** Do této vzdálenosti je doprava zdarma (0 = nikdy). */
-  freeRadiusKm: number;
+  freeRadiusKm?: number;
   /** Doprava zdarma při objednávce alespoň tohoto množství (v jednotce produktu). */
   freeOverQuantity?: number | null;
   /** Příplatek za složení hydraulickou rukou v Kč. */
   hydraulicArmFee?: number;
   /** Maximální dojezd vlastní dopravy v km. */
-  maxRadiusKm: number;
+  maxRadiusKm?: number;
   notes?: string;
 }
 
@@ -194,7 +199,11 @@ export interface SellerIntel {
   swot: Swot;
   /** Odchylka cen prodejce od průměru ČR v % (záporná = levnější). */
   priceIndexVsCz: number;
-  threatLevel: "low" | "medium" | "high";
+  /**
+   * Srovnání s trhem (kde je prodejce levnější / dražší a v čem) – strukturovaně od
+   * SellerProfileFlow. Dřívější „úroveň hrozby“ byla zrušena (rozhodnutí o CI Studiu).
+   */
+  marketComparison?: Record<string, unknown>;
   analyzedAt: string;
 }
 
@@ -212,7 +221,8 @@ export interface Seller {
   photoUrl?: string;
   address: Address;
   location: GeoPoint;
-  size: SellerSize;
+  /** Velikost firmy; chybí = neuvedeno. */
+  size?: SellerSize;
   foundedYear?: number;
   rating: number;
   reviewCount: number;

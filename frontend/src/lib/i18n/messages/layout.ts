@@ -77,8 +77,7 @@ export const layout = defineMessages({
     },
     error: {
       title: "Něco se pokazilo",
-      textBefore: "Nepodařilo se načíst data. Pokud je nastavené",
-      textAfter: ", zkontrolujte, že backend na Railway běží.",
+      textBefore: "Nepodařilo se načíst data z databáze. Zkontrolujte připojení a zkuste to znovu.",
     },
   },
   de: {
@@ -157,8 +156,7 @@ export const layout = defineMessages({
     },
     error: {
       title: "Etwas ist schiefgelaufen",
-      textBefore: "Die Daten konnten nicht geladen werden. Wenn",
-      textAfter: " gesetzt ist, prüfen Sie, ob das Backend auf Railway läuft.",
+      textBefore: "Die Daten konnten nicht aus der Datenbank geladen werden. Prüfen Sie die Verbindung und versuchen Sie es erneut.",
     },
   },
   en: {
@@ -236,8 +234,7 @@ export const layout = defineMessages({
     },
     error: {
       title: "Something went wrong",
-      textBefore: "Couldn't load the data. If",
-      textAfter: " is set, check that the backend on Railway is running.",
+      textBefore: "Could not load data from the database. Check your connection and try again.",
     },
   },
 });

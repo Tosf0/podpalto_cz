@@ -142,6 +142,8 @@ export interface DeliveryEstimate {
   free: boolean;
   /** Mimo dojezd prodejce – nutný osobní odběr. */
   outOfRange: boolean;
+  /** Prodejce podmínky dopravy neuvádí – cenu dopravy nelze spočítat (ne „nevozí“). */
+  unknown?: boolean;
   distanceKm: number;
 }
 
@@ -158,15 +160,23 @@ export function estimateDelivery(
 ): DeliveryEstimate {
   const d = seller.delivery;
   const distanceKm = roadDistanceKm(seller.location, from);
-  if (!d.ownDelivery || distanceKm > d.maxRadiusKm) {
+  // neuvedeno ≠ nevozí: bez údajů cenu dopravy nehádáme
+  if (d.ownDelivery == null) {
+    return { fee: 0, free: false, outOfRange: false, unknown: true, distanceKm };
+  }
+  if (!d.ownDelivery || (d.maxRadiusKm != null && distanceKm > d.maxRadiusKm)) {
     return { fee: 0, free: false, outOfRange: true, distanceKm };
   }
   const armFee = withHydraulicArm && d.hydraulicArm ? (d.hydraulicArmFee ?? 0) : 0;
+  const freeRadius = d.freeRadiusKm ?? 0;
   const freeByQty = d.freeOverQuantity != null && quantity >= d.freeOverQuantity;
-  if (distanceKm <= d.freeRadiusKm || freeByQty) {
+  if (distanceKm <= freeRadius || freeByQty) {
     return { fee: armFee, free: armFee === 0, outOfRange: false, distanceKm };
   }
-  const billableKm = Math.max(0, distanceKm - d.freeRadiusKm);
+  if (d.baseFee == null || d.pricePerKm == null) {
+    return { fee: armFee, free: false, outOfRange: false, unknown: true, distanceKm };
+  }
+  const billableKm = Math.max(0, distanceKm - freeRadius);
   const fee = Math.round(d.baseFee + billableKm * d.pricePerKm + armFee);
   return { fee, free: false, outOfRange: false, distanceKm };
 }

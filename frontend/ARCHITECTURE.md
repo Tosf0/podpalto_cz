@@ -1,6 +1,6 @@
 # Architektura frontendu podpalto.cz
 
-Technický popis frontendu: vrstvy, rendering, stav, doménová logika, design systém a známá omezení. Praktický návod a REST kontrakt pro backend jsou v [README.md](./README.md).
+Technický popis frontendu: vrstvy, rendering, stav, doménová logika, design systém a známá omezení. Praktický návod a datový kontrakt (Supabase) jsou v [README.md](./README.md), výstup agentů v `docs/agent-output-spec.md`.
 
 ---
 
@@ -11,7 +11,7 @@ Technický popis frontendu: vrstvy, rendering, stav, doménová logika, design s
 3. [Vrstvy a odpovědnosti](#3-vrstvy-a-odpovědnosti)
 4. [Rendering strategie](#4-rendering-strategie)
 5. [Stav aplikace](#5-stav-aplikace)
-6. [Datová vrstva a mock režim](#6-datová-vrstva-a-mock-režim)
+6. [Datová vrstva: Supabase a offline režim](#6-datová-vrstva-supabase-a-offline-režim)
 7. [Doménová logika](#7-doménová-logika)
 8. [Design systém](#8-design-systém)
 9. [Mapa](#9-mapa)
@@ -22,13 +22,13 @@ Technický popis frontendu: vrstvy, rendering, stav, doménová logika, design s
 
 ## 1. Přehled a kontext
 
-podpalto.cz je veřejná cenová mapa tuhých paliv v ČR a interní nástroj **Competitive Intelligence**. Frontend je **Next.js 16** aplikace (App Router) nasazená na **Vercelu**. Backend je **FastAPI** nad **CrewAI** na **Railway**. Monorepo obsahuje ještě části `app/` (agenti, úlohy, flows) a `tools/` (vlastní nástroje, např. `PageTextTool`). Frontend na nich závisí jen přes REST API.
+podpalto.cz je veřejná cenová mapa tuhých paliv v ČR a interní nástroj **Competitive Intelligence**. Frontend je **Next.js 16** aplikace (App Router) nasazená na **Vercelu**. Data drží **Supabase** (Postgres + Auth + Storage, projekt Podpalto). Monorepo obsahuje ještě služby `tools/` (sběr a normalizace cen) a `app/` (CrewAI flows); ty data do Supabase zapisují. **Frontend s nimi přímo nekomunikuje** – vše jde přes databázi (rozhodnutí z 18. 11. 2026, `docs/TODO.md`).
 
 Klíčová rozhodnutí:
 
-- **Žádná serverová logika ve frontendu.** Aplikace nemá route handlery (`app/api`). Veškerá data přicházejí z REST API nebo z lokálních mock dat.
+- **Jediný zdroj dat je Supabase.** Klientské komponenty čtou přes `@supabase/supabase-js` (RPC a tabulky s RLS); server jen ověřuje přihlášení a tarif (proxy, CI Studio, administrace) a čte blog. Jediný route handler je `/auth/callback`.
 - **Čisté výpočty.** Ceny, doprava, filtry a parser reportů jsou čisté funkce bez React a Leafletu. Lze je testovat i spouštět na serveru.
-- **Plně funkční bez backendu.** Při prázdném `NEXT_PUBLIC_API_URL` běží celá aplikace na mock datech, včetně simulace CrewAI běhu.
+- **Plně funkční offline.** Bez proměnných Supabase běží celá aplikace na ukázkových datech ze `src/data/`, bez účtů a se simulací CrewAI běhu.
 - **Stránky jsou tenké.** `page.tsx` jen skládá klientské feature komponenty.
 
 ---
@@ -50,23 +50,20 @@ Klíčová rozhodnutí:
 │        │                                                                                 │
 │        ▼                                                                                 │
 │  src/lib/api/*  (servisní vrstva)                                                        │
-│        │  IS_MOCK = true ─────▶ mock/ + src/data/  (latence, structuredClone)           │
-│        │  IS_MOCK = false ────▶ apiFetch() ──────────────────────────┐                   │
+│        │  bez Supabase ───────▶ mock/ + src/data/  (latence, structuredClone)           │
+│        │  se Supabase ────────▶ supabase-js (RPC, tabulky, RLS) ─────┐                   │
 │        │                                                              │                  │
 │  src/lib/pricing.ts · filters.ts · report-parser.ts  (čisté funkce)   │                  │
 └───────────────────────────────────────────────────────────────────────┼──────────────────┘
-                                                                        ▼  HTTPS, JSON, CORS
-                    ┌──────────────────────── Railway ────────────────────────────────────┐
-                    │  FastAPI  /api/sellers · /api/market/* · /api/reports · /api/analyze │
-                    │      │  POST /api/analyze → run_id, běh na pozadí (BackgroundTasks)  │
-                    │      ▼                                                               │
-                    │  CompetitorAnalysisFlow (CrewAI)                                     │
-                    │    validate_input ─▶ run_research ─▶ save_report                     │
-                    │                      ├─ web_researcher  (PageTextTool)               │
-                    │                      └─ market_analyst  (SWOT, doporučení)           │
-                    │      ▼                                                               │
-                    │  outputs/YYYYMMDD-HHMMSS_<slug>.md  ─▶ GET /api/reports[/{id}]       │
-                    └──────────────────────────────────────────────────────────────────────┘
+                                                                        ▼  HTTPS (PostgREST, Auth)
+                    ┌──────────────────────── Supabase (Podpalto) ─────────────────────────┐
+                    │  Postgres + RLS: sellers · products · price_observations · reviews   │
+                    │  RPC: api_sellers · api_region_stats · api_price_trends · api_public_*│
+                    │  analysis_runs (fronta CI) · analysis_reports · seller_intel         │
+                    │  Auth (účty, tarify) · Storage (blog-images, seller-photos)          │
+                    └───────────────▲──────────────────────────────▲──────────────────────┘
+                                    │ zápis (secret klíč)          │ fronta analýz
+                         služba tools (sběr cen)          služba app (CrewAI flows)
 ```
 
 Tok dat v úvodní stránce: `HomeView` načte prodejce a kraje přes `useApi`. Výsledek spočítá `computeMatches()` z `lib/filters.ts` (výpočty cen a dopravy z `lib/pricing.ts`). Komponenty `SellerList` a `SellerMap` jen zobrazují výsledek.
@@ -186,34 +183,38 @@ const { data, error, loading, reload } = useApi(() => getSellers(), []);
 
 ---
 
-## 6. Datová vrstva a mock režim
+## 6. Datová vrstva: Supabase a offline režim
 
 ### 6.1 Struktura `src/lib/api/`
 
-| Soubor | Exporty | Endpointy / účel |
+| Soubor | Exporty | Zdroj |
 |---|---|---|
-| `config.ts` | `API_URL`, `IS_MOCK`, `MOCK_LATENCY_MS` | Čtení z env. `API_URL` bez koncového lomítka. |
-| `client.ts` | `apiFetch<T>`, `ApiError`, `qs`, `mockResolve` | Tenký wrapper nad `fetch`. `ApiError` nese `status` a `body`. `qs` vynechá `undefined`, `null` a prázdné řetězce. `mockResolve` klonuje data a přidá latenci. |
-| `sellers.ts` | `getSellers`, `getSeller`, `getMockSellerSlugs` | `/api/sellers`, `/api/sellers/{slug}` (404 → `null`). |
-| `market.ts` | `getMarketPulse`, `getRegionStats`, `getPriceTrends`, `getEnergyCosts` | `/api/market/*`. `getPriceTrends(months)` v mock režimu vrací `slice(-months)`. |
-| `reports.ts` | `getReports`, `getReport` | `/api/reports`, `/api/reports/{id}` (404 → `null`). Mock vrací souhrny a text bez těla. Excerpt se odvozuje z sekce Summary a zkracuje na 240 znaků. |
-| `analysis.ts` | `startAnalysis`, `getAnalysisRun`, `ANALYSIS_POLL_MS` | `POST /api/analyze`, `GET /api/analyze/{run_id}`. Poll interval 1500 ms. |
+| `config.ts` | `IS_MOCK`, `MOCK_LATENCY_MS` | `IS_MOCK` = Supabase není nakonfigurovaný (offline). |
+| `db.ts` | `USES_DB`, `db()`, `isSignedIn()`, `cached()`, `invalidate()`, `unwrap()` | Klient Supabase, 60s cache požadavků, převod chyb. |
+| `client.ts` | `mockResolve` | Latence a klon ukázkových dat. |
+| `sellers.ts` | `getSellers`, `getSeller`, `getMockSellerSlugs` | RPC `api_sellers` (jen přihlášení). |
+| `market.ts` | `getMarketPulse`, `getRegionStats`, `getPriceTrends`, `getEnergyCosts` | RPC `api_price_trends`, `api_region_stats`; nepřihlášený dostane data z `api_public_overview`. KPI a Kč/kWh se počítají z trendů (`mock/market.ts` – `buildMarketPulse`, `buildEnergyCosts`). |
+| `public.ts` | `getPublicOverview`, `getSellerSample` | Ukázková data pro nepřihlášené (`api_public_overview`, `api_public_seller_sample`). |
+| `reports.ts` | `getReports`, `getReport` | Tabulka `analysis_reports` (RLS: Pro). |
+| `analysis.ts` | `startAnalysis`, `getAnalysisRun`, `ANALYSIS_POLL_MS` | Fronta `analysis_runs` (insert + polling 1,5 s); offline simulace. |
+| `reviews.ts`, `orders.ts` | recenze, poptávky | Tabulky `reviews`, `order_requests`. |
+| `review-queue.ts` | `getReviewQueue`, `decideReview` | Admin: `api_review_queue`, `review_product`, `review_seller`. |
 | `index.ts` | barrel | Komponenty importují jen odsud. |
 
-Pravidlo pro chyby: `apiFetch` vyhodí `ApiError` u každého ne-2xx stavu. 404 se v `getSeller` a `getReport` převádí na `null`, ostatní chyby se propagují do `useApi`.
+Chyby Supabase převádí `unwrap()` na běžnou `Error` a propagují se do `useApi`.
 
-### 6.2 Přepínání mock ↔ REST
-
-Každá funkce má stejný tvar:
+### 6.2 Supabase vs. offline
 
 ```ts
 export async function getSellers(query = {}) {
-  if (!IS_MOCK) return apiFetch<Seller[]>(`/api/sellers${qs({ ...query })}`);
+  if (USES_DB) return cached(`sellers:…`, async () => unwrap(await db().rpc("api_sellers", { … })));
   return mockResolve(/* filtrovaná SELLERS */);
 }
 ```
 
-`IS_MOCK` se vyhodnocuje při buildu, protože jde o `NEXT_PUBLIC_*` proměnnou. Přepnutí na REST tedy vyžaduje nový build.
+`USES_DB` / `IS_MOCK` se vyhodnocují při buildu (`NEXT_PUBLIC_*`), přepnutí vyžaduje nový build.
+Ukázkové verze stránek (mapa, prodejci, trendy) rozlišují nepřihlášeného hookem `useTeaser()`
+(`components/account/register-gate.tsx`); data pro ně dávají jen funkce `api_public_*`.
 
 ### 6.3 Mock data
 
@@ -477,21 +478,21 @@ Frontend vznikl v režimu multiagentní práce. **Opus** jako orchestrátor rozd
 
 1. **Geokódování PSČ.** `ZIP_PREFIX_LOCATIONS` mapuje jen první dvě číslice na okresní pobočku (prefixy 10 až 79). Výsledek je přibližný. Pro produkci nahradit geokódováním na backendu (Mapy.cz nebo Nominatim) a vracet souřadnice v odpovědi.
 2. **Vzdálenosti jsou odhad.** Silniční vzdálenost je vzdušná × 1,25, bez routingu. Okruh a doprava na mapě jsou proto přibližné.
-3. **Generátor `generateStaticParams` používá mock slugy** (`getMockSellerSlugs()`) i v REST režimu. Nově přidané prodejce tak nejsou předrenderovaní. Data se ale načítají na klientu, takže funkčnost to neblokuje. Před produkcí ověřit chování dynamických parametrů pro neznámé slugy.
+3. **Generátor `generateStaticParams` používá mock slugy** (`getMockSellerSlugs()`) i se Supabase. Nově přidané prodejce tak nejsou předrenderovaní. Data se ale načítají na klientu, takže funkčnost to neblokuje. Před produkcí ověřit chování dynamických parametrů pro neznámé slugy.
 4. **Vrstva krajů** potřebuje GeoJSON, který není v repozitáři. Adresář `public/` zatím neexistuje. Bez souboru se používají kruhy ve středech krajů.
 5. **OpenStreetMap** má podmínky použití, které nejsou vhodné pro produkční provoz s vyšším objemem. Před produkcí přejít na komerční poskytovatele dlaždic (MapTiler, Stadia nebo podobné) přes `NEXT_PUBLIC_MAP_TILE_URL` a respektovat jejich atribuci.
 6. **Typy pro `leaflet.markercluster`** nejsou nainstalované (`@types/leaflet.markercluster`). `seller-map.tsx` používá lokální minimální typy `ClusterGroupLike` a `ClusterLike`.
 7. **Simulace běhů žije v paměti** prohlížeče (modul `analysis-sim.ts`). Po obnovení stránky zmizí běhy i nově vygenerované reporty. Statických 5 reportů zůstává.
-8. **Reálný běh na pozadí** v backendu zatím nemá persistentní úložiště stavu. Po restartu procesu na Railway se běhy ztratí.
-9. **CI Studio nemá autentizaci.** Stránka i endpointy `POST /api/analyze` jsou veřejné. Před produkcí je nutné ochránit CI Studio a API (například přihlášením nebo API klíčem na backendu). Neplatí to pro veřejnou mapu.
-10. **Ceny jsou fiktivní** v mock režimu. Při nasazení na reálná data musí backend zajistit aktuálnost (`updatedAt`, `lastScrapedAt`).
+8. **Fronta analýz zatím nemá workera.** Běhy zadané v CI Studiu zůstávají ve stavu `queued`, dokud služba `app` nezačne volat `claim_analysis_run` (README kap. 5.2).
+9. **CI Studio je jen pro tarif Pro** (kontrola na stránce + RLS). Platby zatím nejsou, tarif nastavuje admin ručně.
+10. **Ceny jsou zatím fiktivní** (seed z `src/data/`). Reálná data dodají agenti podle `docs/agent-output-spec.md`.
 11. **Parser reportů je tolerantní heuristika.** Pokud se LLM odchýlí od očekávané struktury (jiný název sekce, jiná úroveň nadpisů), zobrazí se celý Markdown bez rozdělení na taby a SWOT může být neúplná. Doporučení je strukturované pole `swot` v odpovědi API.
 12. **Bez testů.** Projekt zatím nemá unit ani E2E testy. Nejdřív by měly přijít testy pro `pricing.ts`, `filters.ts` a `report-parser.ts`, protože jsou čisté a snadno testovatelné.
-13. **Zdroj `NEXT_PUBLIC_API_URL` je viditelný v prohlížeči.** To je záměr (volání jde z klienta), ale backend musí být zabezpečen sám, ne skrytím URL.
+13. **Veřejný klíč Supabase je viditelný v prohlížeči.** To je záměr; přístup k datům hlídá RLS, *secret* klíč patří jen na server agentů.
 
 ### 11.2 Další kroky
 
-- Backend: endpointy podle README sekce 5, CORS a asynchronní běh analýzy.
+- Backend: zápis do Supabase podle `docs/agent-output-spec.md` a worker fronty analýz (README kap. 5.2).
 - Geokódování PSČ na backendu a vracení souřadnic prodejců a lokalit.
 - Testy čistých funkcí (`pricing`, `filters`, `report-parser`) a E2E smoke testy hlavních stránek.
 - Persistentní úložiště běhů (Redis nebo databáze) a archiv reportů v DB místo souborů v `outputs/`.

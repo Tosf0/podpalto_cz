@@ -223,7 +223,9 @@ export function RunPanel({
                     ? t("ci.run.statusDone")
                     : run.status === "failed"
                       ? t("ci.run.statusFailed")
-                      : t("ci.run.statusRunning")}
+                      : run.status === "queued"
+                        ? t("ci.run.statusQueued")
+                        : t("ci.run.statusRunning")}
                 </span>
                 <span className="num text-muted-foreground">{run.progress} %</span>
               </div>

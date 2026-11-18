@@ -63,6 +63,7 @@ export const common = defineMessages({
       low: "Poslední kusy",
       out_of_stock: "Vyprodáno",
       preorder: "Na objednávku",
+      unknown: "Neuvedeno",
     },
     priceTiers: {
       below: "Pod průměrem kraje",
@@ -185,6 +186,7 @@ export const common = defineMessages({
       low: "Letzte Stücke",
       out_of_stock: "Ausverkauft",
       preorder: "Auf Bestellung",
+      unknown: "Keine Angabe",
     },
     priceTiers: {
       below: "Unter Regionsschnitt",
@@ -307,6 +309,7 @@ export const common = defineMessages({
       low: "Last items",
       out_of_stock: "Sold out",
       preorder: "To order",
+      unknown: "Not specified",
     },
     priceTiers: {
       below: "Below regional average",

@@ -129,7 +129,15 @@ export function SellerPanel({ match, isBest, onClose }: { match: SellerMatch; is
             <InfoTile
               icon={<Truck aria-hidden />}
               label={t("home.panel.deliveryEstimate")}
-              value={match.delivery.outOfRange ? "—" : match.delivery.free ? t("home.panel.free") : formatCzk(match.delivery.fee)}
+              value={
+                match.delivery.unknown
+                  ? t("sellers.delivery.unspecified")
+                  : match.delivery.outOfRange
+                    ? "—"
+                    : match.delivery.free
+                      ? t("home.panel.free")
+                      : formatCzk(match.delivery.fee)
+              }
               hint={deliveryLabel(match.delivery, seller)}
             />
             <InfoTile
@@ -141,8 +149,22 @@ export function SellerPanel({ match, isBest, onClose }: { match: SellerMatch; is
             <InfoTile
               icon={<MapPin aria-hidden />}
               label={t("home.panel.reach")}
-              value={d.ownDelivery ? `${d.maxRadiusKm} km` : t("home.panel.pickupOnly")}
-              hint={d.freeRadiusKm ? t("home.panel.freeWithin", { km: d.freeRadiusKm }) : formatCzkPerUnit(d.pricePerKm, "km")}
+              value={
+                d.ownDelivery == null
+                  ? t("sellers.delivery.unspecified")
+                  : d.ownDelivery
+                    ? d.maxRadiusKm != null
+                      ? `${d.maxRadiusKm} km`
+                      : "–"
+                    : t("home.panel.pickupOnly")
+              }
+              hint={
+                d.freeRadiusKm
+                  ? t("home.panel.freeWithin", { km: d.freeRadiusKm })
+                  : d.pricePerKm != null
+                    ? formatCzkPerUnit(d.pricePerKm, "km")
+                    : undefined
+              }
             />
             <InfoTile
               icon={<Truck aria-hidden />}

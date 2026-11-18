@@ -15,10 +15,15 @@ export const LOGIN_PATH = "/prihlaseni";
 export const PLANS_PATH = "/plany";
 
 /**
- * Cesty dostupné bez přihlášení: blog (kromě editoru), přihlášení / registrace, ceník a auth callbacky.
- * Vše ostatní (mapa, kalkulačka, prodejci, trendy, CI Studio, editor blogu) vyžaduje účet.
+ * Cesty dostupné bez přihlášení:
+ * - ukázkové verze: mapa `/` (kraje a průměry), `/prodejci` (5 prodejců denně), `/trendy` (6 měsíců),
+ * - blog (kromě editoru), ceník, přihlášení / registrace a auth callbacky.
+ * Za účtem: detail prodejce, kalkulačka, CI Studio (Pro), editor blogu, administrace.
  */
+export const TEASER_PATHS = ["/", "/prodejci", "/trendy"];
+
 export function isPublicPath(pathname: string): boolean {
+  if (TEASER_PATHS.includes(pathname)) return true;
   if (pathname === "/blog") return true;
   if (pathname.startsWith("/blog/")) return !pathname.startsWith("/blog/novy");
   return (

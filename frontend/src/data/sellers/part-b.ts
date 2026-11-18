@@ -156,7 +156,7 @@ function deriveTags(products: FuelProduct[], delivery: DeliveryTerms, extra: Sel
   }
   if (delivery.ownDelivery) tags.add("vlastni-doprava");
   if (delivery.pickupAvailable) tags.add("osobni-odber");
-  if (delivery.freeRadiusKm > 0) tags.add("doprava-zdarma");
+  if ((delivery.freeRadiusKm ?? 0) > 0) tags.add("doprava-zdarma");
   return [...tags];
 }
 
@@ -257,7 +257,6 @@ const s14: Seller = seller({
     reportId: "20261021-110247_https-www-hradecke-pelety-cz",
     analyzedAt: "2026-10-21T11:02:47Z",
     priceIndexVsCz: -5.8,
-    threatLevel: "high",
     positioning:
       "Cenově agresivní regionální dodavatel pelet ENplus A1 a A2, který konkuruje hlavně cenou a rychlým rozvozem paletových objednávek do Hradce Králové a Pardubicka.",
     toneOfVoice:
@@ -425,7 +424,6 @@ const s17: Seller = seller({
       threats: ["Nedostatek suchého dřeva v jarní sezóně"],
     },
     priceIndexVsCz: -3.1,
-    threatLevel: "low",
     analyzedAt: "2026-10-29T10:12:00Z",
   },
 });
@@ -515,7 +513,6 @@ const s19: Seller = seller({
     reportId: "20261112-160933_https-www-brnenske-palivo-cz",
     analyzedAt: "2026-11-12T16:09:33Z",
     priceIndexVsCz: 1.9,
-    threatLevel: "medium",
     positioning:
       "Prémiová brněnská značka s širokým portfoliem dřeva, pelet a služeb. Ceny jsou mírně nad průměrem ČR, zákazník platí za jistotu dodávky, servis a rychlost.",
     toneOfVoice:
@@ -639,7 +636,6 @@ const s21: Seller = seller({
       threats: ["Konkurence velkých dodavatelů v Olomouci"],
     },
     priceIndexVsCz: -2.4,
-    threatLevel: "low",
     analyzedAt: "2026-11-04T14:30:00Z",
   },
 });
@@ -739,7 +735,6 @@ const s23: Seller = seller({
       threats: ["Kolísání dostupnosti surového dřeva z lesů"],
     },
     priceIndexVsCz: 0.6,
-    threatLevel: "medium",
     analyzedAt: "2026-11-07T09:45:00Z",
   },
 });
@@ -830,7 +825,6 @@ const s25: Seller = seller({
     reportId: "20261008-084520_https-www-ostravske-uhli-a-drevo-cz",
     analyzedAt: "2026-10-08T08:45:20Z",
     priceIndexVsCz: -7.4,
-    threatLevel: "medium",
     positioning:
       "Levný dodavatel uhlí v Moravskoslezském kraji, který přitahuje zákazníky citlivé na cenu. Dřevo a brikety nabízí jako doplněk k uhlí.",
     toneOfVoice:

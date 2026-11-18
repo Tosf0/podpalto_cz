@@ -1,6 +1,5 @@
 import type { CrewAnalysisReport, CrewAnalysisReportSummary } from "@/types";
-import { IS_MOCK } from "./config";
-import { apiFetch, mockResolve } from "./client";
+import { mockResolve } from "./client";
 import { USES_DB, cached, db, unwrap } from "./db";
 import { REPORTS } from "@/data/reports";
 import { getSimulatedReports } from "./mock/analysis-sim";
@@ -56,7 +55,6 @@ export async function getReports(): Promise<CrewAnalysisReportSummary[]> {
     const all = [...getSimulatedReports(), ...(await dbReports())].sort((a, b) => b.created_at.localeCompare(a.created_at));
     return all.map(toSummary);
   }
-  if (!IS_MOCK) return apiFetch<CrewAnalysisReportSummary[]>("/api/reports");
   return mockResolve(allMockReports().map(toSummary));
 }
 
@@ -66,14 +64,6 @@ export async function getReport(id: string): Promise<CrewAnalysisReport | null> 
     const simulated = getSimulatedReports().find((r) => r.id === id);
     if (simulated) return simulated;
     return (await dbReports()).find((r) => r.id === id) ?? null;
-  }
-  if (!IS_MOCK) {
-    try {
-      return await apiFetch<CrewAnalysisReport>(`/api/reports/${encodeURIComponent(id)}`);
-    } catch (e) {
-      if ((e as { status?: number }).status === 404) return null;
-      throw e;
-    }
   }
   return mockResolve(allMockReports().find((r) => r.id === id) ?? null);
 }

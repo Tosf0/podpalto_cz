@@ -8,7 +8,8 @@ import { usePreferences } from "@/components/providers/preferences-provider";
 import { SIDE_PANEL_WIDTH } from "@/components/layout/app-sidebar";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { SellerMap, type MapFocus } from "@/components/map";
-import { getRegionStats, getSellers } from "@/lib/api";
+import { getPublicOverview, getRegionStats, getSellers } from "@/lib/api";
+import { useTeaser } from "@/components/account/register-gate";
 import { COMMODITY_META } from "@/lib/constants";
 import {
   DEFAULT_FILTERS,
@@ -28,6 +29,7 @@ import { AddressSearch } from "./address-search";
 import { FiltersPanel } from "./filters-panel";
 import { MapBottomDock, MapControlsPill, MapTopBar, PriceModePill, RegionLegend } from "./map-overlays";
 import { SellerPanel } from "./seller-panel";
+import { TeaserMapPanel } from "./teaser-panel";
 import { useMediaQuery } from "./use-media-query";
 
 /** Detail prodejce zabírá 2/5 šířky obrazovky (dvojnásobek bočního panelu). */
@@ -62,8 +64,12 @@ export function HomeView() {
   const { priceMode, location, setLocation, mapShowRegions: showRegions, setMapShowRegions: setShowRegions, mapStripOpen, setMapStripOpen } =
     usePreferences();
   const { t } = useI18n();
-  const sellersApi = useApi(() => getSellers(), []);
-  const regionsApi = useApi(() => getRegionStats(), []);
+  // Nepřihlášený vidí ukázku: kraje a průměry, ne jednotlivé prodejce (`null` = session se ještě načítá)
+  const teaser = useTeaser();
+  const sellersApi = useApi(() => (teaser === false ? getSellers() : Promise.resolve([])), [teaser]);
+  const regionsApi = useApi(() => (teaser === null ? Promise.resolve([]) : getRegionStats()), [teaser]);
+  const overviewApi = useApi(() => (teaser ? getPublicOverview() : Promise.resolve(undefined)), [teaser]);
+  const [teaserMetric, setTeaserMetric] = useState<CommodityKey>("hardWoodPrms");
   const isDesktop = useMediaQuery("(min-width: 1024px)");
 
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
@@ -92,7 +98,9 @@ export function HomeView() {
   const selected = matches.find((m) => m.seller.id === selectedId) ?? null;
   const activeCount = countActiveFilters(filters);
   const radiusActive = !deferredFilters.nationwide;
-  const regionMetric = regionMetricFor(deferredFilters);
+  const regionMetric = teaser ? teaserMetric : regionMetricFor(deferredFilters);
+  // v ukázce je vrstva krajů hlavní obsah mapy
+  const regionsVisible = !!teaser || showRegions;
 
   const onChange = useCallback((patch: Partial<FilterState>) => setFilters((f) => ({ ...f, ...patch })), []);
   const onCategoryChange = useCallback((category: FuelCategory | "all") => {
@@ -175,7 +183,7 @@ export function HomeView() {
           onSelect={onSelect}
           regionStats={regionStats}
           regionMetric={regionMetric}
-          showRegions={showRegions}
+          showRegions={regionsVisible}
           fitPadding={isDesktop ? { top: 96, bottom: bottomInset + 150, left: 48, right: 48 } : { top: 80, bottom: 96, left: 24, right: 24 }}
           onMapReady={setMap}
         />
@@ -194,13 +202,13 @@ export function HomeView() {
               />
               <MapControlsPill
                 map={map}
-                showRegions={showRegions}
+                showRegions={regionsVisible}
                 onToggleRegions={() => setShowRegions(!showRegions)}
                 onLocate={onLocate}
                 className="hidden @sm:flex"
               />
             </MapTopBar>
-            {showRegions && (
+            {regionsVisible && (
               <RegionLegend
                 metricLabel={regionMetric ? COMMODITY_META[regionMetric].label : undefined}
                 className="self-start"
@@ -223,7 +231,14 @@ export function HomeView() {
         </div>
 
         {/* Desktop: legenda cenovek vlevo dole + sbalitelný pás průměrných cen přes celou šířku mapy */}
-        {isDesktop && <MapBottomDock open={mapStripOpen} onToggle={() => setMapStripOpen(!mapStripOpen)} onInsetChange={setBottomInset} />}
+        {isDesktop && (
+          <MapBottomDock
+            open={mapStripOpen}
+            onToggle={() => setMapStripOpen(!mapStripOpen)}
+            onInsetChange={setBottomInset}
+            showTierLegend={!teaser}
+          />
+        )}
       </div>
       </div>
 
@@ -235,7 +250,9 @@ export function HomeView() {
             selected ? DETAIL_PANEL_WIDTH : SIDE_PANEL_WIDTH,
           )}
         >
-          {selected ? (
+          {teaser ? (
+            <TeaserMapPanel overview={overviewApi.data} metric={teaserMetric} onMetric={setTeaserMetric} />
+          ) : selected ? (
             <SellerPanel key={selected.seller.id} match={selected} isBest={selected.seller.id === bestId} onClose={() => setSelectedId(null)} />
           ) : (
             filtersPanel
@@ -250,7 +267,11 @@ export function HomeView() {
             <SheetContent side="bottom" className="h-[85dvh] rounded-t-3xl p-0" showCloseButton={false}>
               <SheetTitle className="sr-only">{t("home.view.filtersAndResults")}</SheetTitle>
               <SheetDescription className="sr-only">{t("home.view.filtersDescription")}</SheetDescription>
-              {filtersPanel}
+              {teaser ? (
+                <TeaserMapPanel overview={overviewApi.data} metric={teaserMetric} onMetric={setTeaserMetric} />
+              ) : (
+                filtersPanel
+              )}
             </SheetContent>
           </Sheet>
           <Sheet open={!!selected} onOpenChange={(v) => !v && setSelectedId(null)}>

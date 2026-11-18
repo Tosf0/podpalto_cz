@@ -118,6 +118,18 @@ const STEP_DEFS: StepDef[] = [
 
 const TOTAL_S = 29.5;
 
+/** Kroky flow ve stavu „čeká“ – zobrazí se u běhu, který je zatím jen ve frontě v databázi. */
+export function pendingSteps(): CrewStep[] {
+  return STEP_DEFS.map((d) => ({
+    id: d.id,
+    method: d.method,
+    label: d.label,
+    agent: d.agent,
+    agent_role: d.agent_role,
+    status: "pending" as const,
+  }));
+}
+
 interface LogDef {
   t: number;
   step: CrewStepId;

@@ -349,17 +349,26 @@ Odpovídá tabulce `price_observations`. Aktuální cenu produktu databáze pře
 | **`vat_status`** | `included` \| `added` \| `assumed` | s DPH ze zdroje / dopočteno / předpokládáno z registru plátců |
 | **`source_url`** | URL | odkud cena je |
 | `original_price`, `original_unit`, `original_quantity`, `original_price_includes_vat` | | jako dnes |
-| `is_promo` | bool | akční / sezónní cena (jarní slevy, „při odběru celého kontejneru“) |
-| `promo_valid_until` | datum | do kdy akce platí |
-| `price_tier` | objekt | množstevní cena: `{"min_quantity": 10, "unit": "PRMS"}` |
 | `valid_in_regions` | pole kódů krajů | kde cena platí (`["STC","PHA"]`); celostátně = `["CZ"]`; neznámo = `null` |
 | `delivery_included` | bool | doprava je v ceně |
 | `normalized` | objekt | dnešní přepočty pro kontrolu: `per_kg`, `per_t`, `per_prms`, `per_kwh`, `calorific_mj_kg`, `calorific_source` |
 | `flags` | pole | sekce 9 |
 | `snapshot_id` | int | vazba na běh (sekce 8) |
 
-Akční a množstevní ceny posílat **jako samostatné záznamy** s `is_promo` / `price_tier`,
-ne místo běžné ceny. Na mapě ukazujeme běžnou cenu za nejmenší rozumné množství.
+**Akční a množstevní ceny jsou samostatné produkty** (rozhodnutí 18. 11. 2026, bod 1 v
+`docs/TODO.md`), ne další cena téhož produktu – trigger by jinak běžnou cenu přepsal akční:
+
+| Pole produktu | Typ | Popis |
+|---|---|---|
+| `product_key` | text | vlastní klíč varianty, např. `<seller_key>:<item_id>~promo`, `~od-10-prms` |
+| `base_product_key` | text | klíč běžného produktu, ke kterému varianta patří (zapisovač převede na `products.base_product_id`) |
+| `is_promo` | bool | akční / sezónní cena (jarní slevy, „při odběru celého kontejneru“) |
+| `promo_valid_until` | datum | do kdy akce platí |
+| `price_tier` | objekt | množstevní cena: `{"min_quantity": 10, "unit": "PRMS"}` (v DB `price_tier_min_quantity`, `price_tier_unit`) |
+
+Ceny variant se posílají jako běžné `price_observation` s `product_key` varianty. Mapa,
+srovnání a statistiky berou jen běžné produkty (`is_promo = false`, bez pásma); detail
+prodejce ukáže varianty zvlášť. Na mapě ukazujeme běžnou cenu za nejmenší rozumné množství.
 
 ---
 
@@ -494,14 +503,15 @@ Dnešní plné názvy („Středočeský kraj“) převést na kódy; celostátn
 
 ## 12. Co agenti posílat nemusí (počítá aplikace / databáze)
 
-- průměrné ceny ČR a krajů po měsících (`commodity_price_stats`, `region_stats`) – spočítáme
-  z cen; agent je může posílat jako kontrolu,
+- průměrné ceny ČR a krajů po měsících (`commodity_price_stats`, `region_stats`) – počítá
+  deterministický nástroj `market_stats` ve službě `tools` (bod 5 v `docs/TODO.md`) z cen se
+  `review_status = 'ok'`, bez akcí a pásem,
 - cenu včetně dopravy pro konkrétní adresu zákazníka – počítá aplikace z polí v 5.4,
 - cenu za kWh užitečného tepla (s účinností kotle) – počítá aplikace,
 - slugy pro URL prodejců, souhrnné hodnocení (kombinace externího a recenzí z aplikace).
 
-Data ze Sčítání 2021 (`census2021_heating.json`) posílat dál beze změny, použijeme je na
-stránce Trendy (vytápění domácností po krajích).
+Data ze Sčítání 2021 jsou v tabulce `heating_census` (nahraná 18. 11. 2026 z
+`census2021_heating.json`); při novém sčítání stačí upsert podle kódu kraje (`CZ` = celá ČR).
 
 ---
 

@@ -3,7 +3,7 @@
 import { useCallback, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Archive, ChevronDown, FileText, Radar } from "lucide-react";
-import { API_URL, IS_MOCK, getReports } from "@/lib/api";
+import { IS_MOCK, getReports } from "@/lib/api";
 import { useApi } from "@/hooks/use-api";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/use-i18n";
@@ -94,7 +94,7 @@ export function CiStudio() {
             }
           >
             <span className={`size-1.5 rounded-full ${IS_MOCK ? "bg-wood" : "bg-moss"}`} aria-hidden />
-            {IS_MOCK ? t("ci.studio.simulation") : t("ci.studio.connected", { url: API_URL })}
+            {IS_MOCK ? t("ci.studio.simulation") : t("ci.studio.connected")}
           </Badge>
         }
       />

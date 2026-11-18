@@ -1,6 +1,6 @@
 /**
  * Supabase datový zdroj pro servisní vrstvu (volá se z klientských komponent přes `@/lib/api`).
- * Data přicházejí z RPC funkcí v databázi už v přesném tvaru TypeScript typů (viz migrace `*_market.sql`).
+ * Data přicházejí z RPC funkcí v databázi už v přesném tvaru TypeScript typů (viz migrace).
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseBrowser } from "@/lib/supabase/client";
@@ -13,6 +13,12 @@ export function db(): SupabaseClient {
   const client = getSupabaseBrowser();
   if (!client) throw new Error("Supabase není nakonfigurovaný.");
   return client;
+}
+
+/** Je návštěvník přihlášený? Nepřihlášený dostává jen ukázková (veřejná) data. */
+export async function isSignedIn(): Promise<boolean> {
+  const { data } = await db().auth.getSession();
+  return !!data.session;
 }
 
 /** Krátkodobá cache požadavků – mapa, kalkulačka i detail volají totéž několikrát za sebou. */
