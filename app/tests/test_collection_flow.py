@@ -132,6 +132,18 @@ def test_flow_routes_every_source_by_kind(stub_crew, client):
     assert [run["source_id"] for run in summary] == ["demopaliva", "demosklad"]
 
 
+def test_each_finished_source_is_reported_for_the_progress_bar(stub_crew):
+    seen = []
+    run_collection(on_source=lambda run, done, total: seen.append((run.source_id, done, total)))
+    assert seen == [("demopaliva", 1, 2), ("demosklad", 2, 2)]
+
+    def broken(run, done, total):
+        raise RuntimeError("Supabase down")
+
+    # A failing progress write does not stop the collection.
+    assert by_source(run_collection(["demosklad"], on_source=broken))["demosklad"].status
+
+
 def test_unchanged_price_list_needs_no_crew(stub_crew):
     assert by_source(run_collection(["demosklad"]))["demosklad"].status == "ok"
     StubExtractionCrew.calls.clear()
