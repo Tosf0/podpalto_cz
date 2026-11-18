@@ -216,6 +216,15 @@ export async function fetchEditorPosts(authorId?: string): Promise<BlogPost[]> {
   return ((data as BlogRow[]) ?? []).map(rowToPost);
 }
 
+/** Jeden článek pro editor podle ID (RLS: redaktor kterýkoli, autor jen svůj). */
+export async function fetchEditorPost(id: string): Promise<BlogPost | null> {
+  const supabase = getSupabaseBrowser();
+  if (!supabase) return null;
+  const { data, error } = await supabase.from("blog_posts").select("*").eq("id", id).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ? rowToPost(data as BlogRow) : null;
+}
+
 /** Admin: fotky v bucketu, na které žádný článek neodkazuje (starší než den). */
 export async function fetchOrphanImages(): Promise<{ name: string; size: number }[]> {
   const supabase = getSupabaseBrowser();

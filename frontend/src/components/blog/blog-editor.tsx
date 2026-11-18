@@ -39,7 +39,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { estimateReadingMinutes, plainText, slugify } from "@/lib/blog/utils";
-import { deleteBlogPost, fetchEditorPosts, saveBlogPost, uploadBlogImage } from "@/lib/blog/supabase";
+import { deleteBlogPost, fetchEditorPost, fetchEditorPosts, saveBlogPost, uploadBlogImage } from "@/lib/blog/supabase";
 import { USES_DB } from "@/lib/api/db";
 import { useAuth } from "@/components/providers/auth-provider";
 import { revalidateBlog } from "@/app/blog/actions";
@@ -290,24 +290,72 @@ export function BlogEditor({
   const imageInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
 
-  // Při otevření: `?id=…` otevře uložený článek; bez něj se obnoví jen NEULOŽENÝ rozepsaný koncept
-  // z prohlížeče (bez id). Uložený článek se do „Nového článku“ nikdy nenačte – jinak by se přepsal.
-  const initialized = useRef(false);
+  // Který článek je v editoru právě otevřený – podle toho se rozhoduje, zda načíst jiný.
+  const shownIdRef = useRef<string | undefined>(undefined);
+  const firstLoad = useRef(true);
   useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
+    shownIdRef.current = draft.id;
+  }, [draft.id]);
+
+  // Načtení podle adresy: `?id=…` (tlačítko „Upravit“) otevře uložený článek z databáze, bez `id`
+  // („Napsat článek“) prázdný formulář, případně NEULOŽENÝ rozepsaný koncept z prohlížeče.
+  // Běží při každé navigaci, ne jen při prvním připojení: s `cacheComponents` drží Next.js stránku
+  // editoru v paměti (<Activity>), takže stav i refy přežijí odchod a návrat.
+  const lastProps = useRef<{ id?: string; drafts?: BlogPost[] }>({});
+  useEffect(() => {
+    // Stejná data jako minule = stránka se jen znovu ukázala (zpět v prohlížeči) – nechat rozepsané.
+    if (lastProps.current.drafts === initialDrafts && lastProps.current.id === initialId) return;
+    lastProps.current = { id: initialId, drafts: initialDrafts };
+    setDrafts(initialDrafts);
+    const wanted = initialId ?? "";
+    // Požadovaný článek už je otevřený (např. hned po uložení) – nic nepřepisovat.
+    if (!firstLoad.current && wanted === (shownIdRef.current ?? "")) return;
+    firstLoad.current = false;
+    filesRef.current.clear();
+
+    if (initialId) {
+      const fromLink = initialDrafts.find((p) => p.id === initialId);
+      if (fromLink) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- načtení podle adresy po navigaci
+        setDraft(fromPost(fromLink));
+        setLoaded(true);
+        return;
+      }
+      // článek není v seznamu (např. starší než posledních 100) – dotáhnout přímo z databáze
+      let cancelled = false;
+      setLoaded(false);
+      fetchEditorPost(initialId)
+        .then((post) => {
+          if (cancelled) return;
+          if (post) {
+            setDraft(fromPost(post));
+          } else {
+            toast.error(t("account.editor.notFound"));
+            setDraft({ ...EMPTY, publishDate: today() });
+            setEditorUrl();
+          }
+        })
+        .catch((err: unknown) => {
+          if (!cancelled) toast.error(t("account.editor.failed", { message: err instanceof Error ? err.message : String(err) }));
+        })
+        .finally(() => {
+          if (!cancelled) setLoaded(true);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    let local: Partial<Draft> | null = null;
     try {
-      const fromLink = initialId ? initialDrafts.find((p) => p.id === initialId) : undefined;
       const raw = localStorage.getItem(STORAGE_KEY);
-      const local = raw ? (JSON.parse(raw) as Partial<Draft>) : null;
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- načtení až po hydrataci
-      if (fromLink) setDraft(fromPost(fromLink));
-      else if (local && !local.id) setDraft({ ...EMPTY, ...local });
-      else if (initialId) setEditorUrl();
+      local = raw ? (JSON.parse(raw) as Partial<Draft>) : null;
     } catch {
       /* localStorage nedostupné */
     }
+    setDraft(local && !local.id ? { ...EMPTY, ...local } : { ...EMPTY, publishDate: today() });
     setLoaded(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `t` (jazyk) nemá načtení spouštět znovu
   }, [initialId, initialDrafts]);
 
   /** Znovu načíst seznam článků v panelu (po uložení / smazání). */
