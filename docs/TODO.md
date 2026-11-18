@@ -197,7 +197,12 @@ API klíč mezi Vercelem a Railway.
 - [ ] **3. Analýza `seller`** (`SellerProfileFlow` → `analysis_reports` kind `seller` + upsert
       `seller_intel`) a **analýza `url`** (formulář v CI Studiu) – v `handlers.py` je místo nich
       `not_ready(…)`: běh skončí srozumitelnou chybou místo věčného čekání ve frontě.
-- [ ] **4. Railway** (viz níže) a test end-to-end.
+- [x] **4. Railway** (viz níže) a test end-to-end (18. 11. 2026): projekt `podpalto`, služby
+      `tools` a `worker` běží z větve `dev` (push nasadí jen dotčenou službu). Test: job
+      `collect` s `source_ids: ["peletypremium"]` převzal `railway-worker`, sběr na Railway,
+      export (snímek 1000001, 4 ceny) a přepočet statistik za 12 s. Další naplánovaný sběr
+      1. 12. ve 3:00 (všechny zdroje, ceníky přes Claude API; volume `/data` na Railway
+      začíná prázdný), přehled trhu 2. 12. v 6:00.
 
 #### Přístupy a klíče – co si vyžádat od Lukáše
 
