@@ -27,6 +27,10 @@ class Settings:
     collect_timeout_s: float
     """Timeout of one collection step; a Shoptet shop read page by page takes minutes."""
     output_dir: Path
+    crew_verbose: bool = True
+    """CrewAI console panels (task inputs with whole page texts, agent outputs). Off on Railway
+    (CREW_VERBOSE=false): a price list printed thousands of lines and hit Railway's limit of
+    500 log lines per second, so lines were dropped."""
 
 
 settings = Settings(
@@ -37,4 +41,6 @@ settings = Settings(
     tools_api_timeout_s=float(os.getenv("TOOLS_API_TIMEOUT_S", "30")),
     collect_timeout_s=float(os.getenv("COLLECT_TIMEOUT_S", "900")),
     output_dir=Path(os.getenv("OUTPUT_DIR", "outputs")),
+    crew_verbose=os.getenv("CREW_VERBOSE", "true").strip().lower()
+    not in ("0", "false", "no", "off"),
 )

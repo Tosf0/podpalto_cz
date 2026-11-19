@@ -316,7 +316,9 @@ potřeba změnit i nastavení služby (nebo přejít na `.railway/railway.ts`). 
 pro ruční nastavení přes dashboard. Navíc oproti návodu: `tools` má `PORT=8001` (healthcheck
 jde na `PORT`), start na `0.0.0.0` a `EXPORT_SNAPSHOT_OFFSET=1000000`: databáze snímků na
 Railway čísluje od 1, Supabase pozná exportovaný snímek podle (zdroj, číslo) a lokální první
-import čísla do ~100 už použil.
+import čísla do ~100 už použil. `worker` má `CREW_VERBOSE=false` (19. 11.): podrobný výpis
+CrewAI (celé texty stránek, výstupy agentů) překračoval limit Railway 500 řádků logu za
+sekundu a Railway řádky zahazoval.
 
 1. **Účet:** <https://railway.com> → *Login* → **přes GitHub** (účet, pod kterým je repozitář
    `podpalto_cz`). Pro trvalý běh je potřeba placený plán **Hobby** (cca 5 USD měsíčně včetně

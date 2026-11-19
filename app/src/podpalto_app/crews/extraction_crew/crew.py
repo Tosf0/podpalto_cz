@@ -24,6 +24,7 @@ from crewai.project import CrewBase, agent, crew, task
 
 from podpalto_app.crews.llm import agent_llm
 from podpalto_app.domain import SellerPriceExtractionList
+from podpalto_app.settings import settings
 
 Guardrail = Callable[[Any], tuple[bool, Any]]
 
@@ -44,7 +45,7 @@ class ExtractionCrew:
         return Agent(
             config=config,
             allow_delegation=False,
-            verbose=True,
+            verbose=settings.crew_verbose,
             **agent_llm(config),
         )
 
@@ -80,5 +81,5 @@ class ExtractionCrew:
             agents=self.agents,
             tasks=self.tasks,
             process=Process.sequential,
-            verbose=True,
+            verbose=settings.crew_verbose,
         )
