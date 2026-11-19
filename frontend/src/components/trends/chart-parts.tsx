@@ -85,7 +85,8 @@ export function Segmented<T extends string>({
       role="radiogroup"
       aria-label={label}
       className={cn(
-        "flex max-w-full gap-1 overflow-x-auto rounded-full bg-secondary p-1 [scrollbar-width:none]",
+        // telefon: zalomit (skrytý vodorovný posun schovával poslední volby), od sm v jedné řadě
+        "flex max-w-full flex-wrap gap-1 rounded-2xl bg-secondary p-1 sm:flex-nowrap sm:overflow-x-auto sm:rounded-full sm:[scrollbar-width:none]",
         className,
       )}
     >

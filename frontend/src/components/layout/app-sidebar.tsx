@@ -38,7 +38,7 @@ function PanelIconButton({ label, onClick, children }: { label: string; onClick:
 const widgetButton =
   "flex h-9 items-center justify-center gap-2 rounded-xl text-xs font-medium text-sidebar-foreground/85 transition-colors hover:bg-white/10 hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:outline-none [&_svg]:size-4";
 
-function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarContent({ onNavigate, inSheet = false }: { onNavigate?: () => void; inSheet?: boolean }) {
   const pathname = usePathname();
   const { resolvedTheme, setTheme } = useTheme();
   const mounted = useSyncExternalStore(subscribe, () => true, () => false);
@@ -52,7 +52,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col">
       {/* Hlavička – stejná výška (72 px) jako hlavička pravého panelu */}
-      <div className="flex h-[72px] shrink-0 items-center justify-between gap-2 border-b border-sidebar-border pr-3 pl-5">
+      {/* v mobilním menu vpravo nahoře sedí křížek Sheetu – přepínač motivu se posune vedle něj */}
+      <div className={cn("flex h-[72px] shrink-0 items-center justify-between gap-2 border-b border-sidebar-border pl-5", inSheet ? "pr-14" : "pr-3")}>
         <Logo tone="inverted" compact className="min-w-0" />
         <PanelIconButton
           label={mounted ? (isDark ? t("layout.theme.toLight") : t("layout.theme.toDark")) : t("layout.theme.toggle")}
@@ -254,7 +255,7 @@ export function AppSidebar() {
         <SheetContent side="left" className="w-[300px] border-none bg-sidebar p-0 text-sidebar-foreground">
           <SheetTitle className="sr-only">{t("layout.nav.menu")}</SheetTitle>
           <SheetDescription className="sr-only">{t("layout.nav.menuDescription")}</SheetDescription>
-          <SidebarContent onNavigate={() => setOpen(false)} />
+          <SidebarContent onNavigate={() => setOpen(false)} inSheet />
         </SheetContent>
       </Sheet>
     </>

@@ -336,6 +336,17 @@
 .region-label__value {
   font-weight: 700;
 }
+/* Telefon: celá ČR má ~350 px – jen číslo, jinak se popisky 14 krajů překrývají */
+@media (max-width: 639px) {
+  .region-label__name,
+  .region-label__unit {
+    display: none;
+  }
+  .region-label__pill {
+    padding: 0.05rem 0.35rem;
+    font-size: 9px;
+  }
+}
 
 /* Ovládací prvky Leafletu (atribuce) se posouvají nad skleněný pás průměrných cen. */
 .podpalto-map-wrap .leaflet-bottom {

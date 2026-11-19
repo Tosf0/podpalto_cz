@@ -76,7 +76,9 @@ export function SellerComparison() {
     if (vals.length > 1) bestKwh[cat] = Math.min(...vals);
   }
 
-  const cols = { gridTemplateColumns: `minmax(120px,160px) repeat(${selected.length}, minmax(170px,1fr))` };
+  // Telefon: úzký sloupec popisků (připnutý vlevo) a užší sloupce prodejců, aby byl vidět kus dalšího
+  // prodejce – jinak není poznat, že tabulka jde posunout do strany.
+  const cols = { gridTemplateColumns: `var(--cmp-label) repeat(${selected.length}, var(--cmp-col))` } as React.CSSProperties;
 
   return (
     <div className="space-y-4">
@@ -88,8 +90,11 @@ export function SellerComparison() {
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-soft">
-        <div className="grid min-w-max text-sm sm:min-w-0" style={cols}>
-          <div className="border-b bg-secondary/40 p-3" />
+        <div
+          className="grid min-w-max text-sm [--cmp-col:160px] [--cmp-label:96px] sm:min-w-0 sm:[--cmp-col:minmax(170px,1fr)] sm:[--cmp-label:minmax(120px,160px)]"
+          style={cols}
+        >
+          <div className="sticky left-0 z-[1] border-b bg-muted p-3 shadow-[1px_0_0_var(--border)] sm:static sm:shadow-none" />
           {selected.map((s) => (
             <div key={s.id} className="flex items-start justify-between gap-2 border-b border-l bg-secondary/40 p-3">
               <div className="min-w-0">
@@ -209,7 +214,7 @@ export function SellerComparison() {
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <Fragment>
-      <div className="border-b bg-secondary/20 p-3 text-xs font-medium text-muted-foreground last-of-type:border-b-0">
+      <div className="sticky left-0 z-[1] border-b bg-muted p-3 text-xs font-medium break-words text-muted-foreground shadow-[1px_0_0_var(--border)] last-of-type:border-b-0 sm:static sm:bg-secondary/20 sm:shadow-none">
         {label}
       </div>
       {children}
@@ -218,5 +223,5 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 }
 
 function Cell({ children }: { children: React.ReactNode }) {
-  return <div className="border-b border-l p-3">{children}</div>;
+  return <div className="min-w-0 border-b border-l p-3 break-words">{children}</div>;
 }

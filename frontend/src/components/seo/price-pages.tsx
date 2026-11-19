@@ -91,12 +91,17 @@ function Section({ title, children, className }: { title: string; children: Reac
   );
 }
 
+/**
+ * Tabulka cen. Na telefonu se přes CSS skládá do karet (řádek = karta, hodnota s popiskem
+ * z hlavičky) – stejné HTML pro vyhledávače, jen jiné zobrazení; jinak by se vešly 2 sloupce
+ * a cena tepla by zůstala schovaná vpravo.
+ */
 function Table({ head, rows, caption }: { head: string[]; rows: React.ReactNode[][]; caption?: string }) {
   return (
     <div className="overflow-x-auto rounded-2xl border border-border bg-card">
-      <table className="w-full min-w-[34rem] text-sm">
+      <table className="w-full text-sm sm:min-w-[34rem]">
         {caption && <caption className="px-4 pt-3 text-left text-xs text-muted-foreground">{caption}</caption>}
-        <thead>
+        <thead className="max-sm:sr-only">
           <tr className="border-b border-border text-left text-xs text-muted-foreground">
             {head.map((h, i) => (
               <th key={h} scope="col" className={cn("px-4 py-3 font-medium", i > 0 && "text-right")}>
@@ -107,14 +112,18 @@ function Table({ head, rows, caption }: { head: string[]; rows: React.ReactNode[
         </thead>
         <tbody>
           {rows.map((r, i) => (
-            <tr key={i} className="border-b border-border last:border-0">
+            <tr key={i} className="border-b border-border last:border-0 max-sm:block max-sm:px-4 max-sm:py-3">
               {r.map((cell, j) =>
                 j === 0 ? (
-                  <th key={j} scope="row" className="px-4 py-3 text-left font-medium">
+                  <th key={j} scope="row" className="px-4 py-3 text-left font-medium max-sm:block max-sm:p-0 max-sm:pb-1.5">
                     {cell}
                   </th>
                 ) : (
-                  <td key={j} className="num px-4 py-3 text-right whitespace-nowrap">
+                  <td
+                    key={j}
+                    data-label={head[j]}
+                    className="num px-4 py-3 text-right whitespace-nowrap max-sm:flex max-sm:items-baseline max-sm:justify-between max-sm:gap-3 max-sm:px-0 max-sm:py-0.5 max-sm:before:font-sans max-sm:before:text-xs max-sm:before:whitespace-normal max-sm:before:text-muted-foreground max-sm:before:content-[attr(data-label)]"
+                  >
                     {cell}
                   </td>
                 ),

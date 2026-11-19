@@ -6,7 +6,7 @@ import { SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { usePreferences } from "@/components/providers/preferences-provider";
 import { SIDE_PANEL_WIDTH } from "@/components/layout/app-sidebar";
-import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { SellerMap, type MapFocus } from "@/components/map";
 import { getPublicOverview, getRegionStats, getSellers } from "@/lib/api";
 import { useTeaser } from "@/components/account/register-gate";
@@ -266,9 +266,14 @@ export function HomeView() {
       {!isDesktop && (
         <>
           <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
-            <SheetContent side="bottom" className="h-[85dvh] rounded-t-3xl p-0" showCloseButton={false}>
+            {/* výška přes data-[side=bottom]: – základní h-auto Sheetu má vyšší prioritu než prosté h-[…] */}
+            <SheetContent side="bottom" className="overflow-hidden rounded-t-3xl p-0 data-[side=bottom]:h-[85dvh]" showCloseButton={false}>
               <SheetTitle className="sr-only">{t("home.view.filtersAndResults")}</SheetTitle>
               <SheetDescription className="sr-only">{t("home.view.filtersDescription")}</SheetDescription>
+              {/* úchyt nahoře = zavřít (panel nemá vlastní křížek) */}
+              <SheetClose className="flex h-5 w-full shrink-0 items-center justify-center pt-1.5" aria-label={t("common.actions.close")}>
+                <span className="h-1.5 w-12 rounded-full bg-muted-foreground/30" aria-hidden />
+              </SheetClose>
               {teaser ? (
                 <TeaserMapPanel overview={overviewApi.data} metric={teaserMetric} onMetric={setTeaserMetric} />
               ) : (
@@ -277,7 +282,7 @@ export function HomeView() {
             </SheetContent>
           </Sheet>
           <Sheet open={!!selected} onOpenChange={(v) => !v && setSelectedId(null)}>
-            <SheetContent side="bottom" className="h-[90dvh] overflow-hidden rounded-t-3xl p-0" showCloseButton={false}>
+            <SheetContent side="bottom" className="overflow-hidden rounded-t-3xl p-0 data-[side=bottom]:h-[90dvh]" showCloseButton={false}>
               <SheetTitle className="sr-only">{selected?.seller.name ?? t("home.view.sellerFallback")}</SheetTitle>
               <SheetDescription className="sr-only">{t("home.view.sellerDetail")}</SheetDescription>
               {selected && <SellerPanel match={selected} isBest={selected.seller.id === bestId} onClose={() => setSelectedId(null)} />}

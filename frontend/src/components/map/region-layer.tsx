@@ -41,6 +41,12 @@ function labelText(s: RegionStats, metric: CommodityKey | null): string {
   return `${formatMoneyNumber(s.avgPrices[metric])}${NBSP}${COMMODITY_META[metric].unit}`;
 }
 
+/** Popisek na mapě: hodnota a jednotka zvlášť – na mobilu se ukáže jen číslo (viz .region-label v CSS). */
+function labelParts(s: RegionStats, metric: CommodityKey | null): { value: string; unit: string } {
+  if (!metric) return { value: formatNumber(s.priceIndex), unit: t("map.heat.index") };
+  return { value: formatMoneyNumber(s.avgPrices[metric]), unit: COMMODITY_META[metric].unit };
+}
+
 /* ------------------------------------------------------------------ */
 /* Volitelný choropleth z vlastního GeoJSONu (NEXT_PUBLIC_REGIONS_GEOJSON_URL) */
 /* ------------------------------------------------------------------ */
@@ -163,14 +169,14 @@ function useGeoData(): GeoData | null {
 /** Popisky krajů ukazujeme jen při přehledovém zoomu – při přiblížení mají přednost prodejny. */
 const LABEL_MAX_ZOOM = 9.5;
 
-function labelIcon(name: string, value: string): L.DivIcon {
+function labelIcon(name: string, { value, unit }: { value: string; unit: string }): L.DivIcon {
   return L.divIcon({
     className: "region-label",
     iconSize: [0, 0],
     html:
       `<span class="region-label__pill">` +
       `<span class="region-label__name">${name}</span>` +
-      `<span class="region-label__value num">${value}</span>` +
+      `<span class="region-label__value num">${value}<span class="region-label__unit">${NBSP}${unit}</span></span>` +
       `</span>`,
   });
 }
@@ -245,7 +251,7 @@ function HeatLayer({ stats, metric, dark }: { stats: RegionStats[]; metric: Comm
             <Marker
               key={`${shape.code}-${metric ?? "idx"}`}
               position={[shape.label[1], shape.label[0]]}
-              icon={labelIcon(REGIONS[shape.code].short, labelText(s, metric))}
+              icon={labelIcon(REGIONS[shape.code].short, labelParts(s, metric))}
               interactive={false}
               keyboard={false}
               zIndexOffset={-1000}

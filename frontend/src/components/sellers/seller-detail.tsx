@@ -335,7 +335,49 @@ function PriceList({ seller }: { seller: Seller }) {
       description={t("sellers.detail.priceList.description")}
       icon={<Store />}
     >
-      <div className="overflow-hidden rounded-xl border border-border">
+      {/* Telefon: karty místo tabulky (5 sloupců se do 390 px nevejde – název by se lámal po slovech) */}
+      <ul className="space-y-2 sm:hidden">
+        {seller.products.map((p) => {
+          const active = p.id === selected.id;
+          const change = yearChange(p);
+          return (
+            <li key={p.id}>
+              <button
+                type="button"
+                aria-pressed={active}
+                onClick={() => setSelectedId(p.id)}
+                className={cn(
+                  "w-full rounded-xl border p-3 text-left transition-colors",
+                  active ? "border-primary/40 bg-accent" : "border-border bg-card hover:bg-muted/50",
+                )}
+              >
+                <span className="block font-medium break-words">{p.name}</span>
+                <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                  <FuelBadge category={p.category} size="sm" showIcon={false} />
+                  {productParams(p).join(" · ")}
+                </span>
+                <span className="mt-2.5 flex items-end justify-between gap-3">
+                  <span className="num min-w-0">
+                    <span className="block font-semibold">{formatCzkPerUnit(p.price, p.unit)}</span>
+                    {p.unit !== baseUnitLabel(p.category) && (
+                      <span className="block text-xs text-muted-foreground">
+                        {formatCzkPerUnit(pricePerBaseUnit(p), baseUnitLabel(p.category))}
+                      </span>
+                    )}
+                  </span>
+                  <span className="num shrink-0 text-right text-sm text-muted-foreground">{formatKwhPrice(pricePerKwh(p))}</span>
+                </span>
+                <span className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                  <StockBadge stock={p.stock} />
+                  <span>{formatRelative(p.updatedAt)}</span>
+                  {change !== null && <PriceDelta value={change} />}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="hidden overflow-hidden rounded-xl border border-border sm:block">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/40 hover:bg-muted/40">

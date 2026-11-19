@@ -891,6 +891,8 @@ export function BlogEditor({
                       "flex h-8 items-center justify-center gap-1.5 rounded-full px-3 text-xs font-medium transition-colors",
                       value === "split" && "hidden lg:flex",
                       mode === value ? "bg-card text-foreground shadow-soft" : "text-muted-foreground hover:text-foreground",
+                      // telefon nemá „vedle sebe“ – režim split se tam chová jako „Psát“
+                      mode === "split" && value === "write" && "max-lg:bg-card max-lg:text-foreground max-lg:shadow-soft",
                     )}
                   >
                     <Icon className="size-3.5" aria-hidden /> {t(key)}
@@ -931,7 +933,9 @@ export function BlogEditor({
                   />
                 </div>
               )}
-              {mode !== "write" && <div className={cn("min-w-0", mode === "split" && "lg:max-h-[640px] lg:overflow-y-auto")}>{preview}</div>}
+              {mode !== "write" && (
+                <div className={cn("min-w-0", mode === "split" && "hidden lg:block lg:max-h-[640px] lg:overflow-y-auto")}>{preview}</div>
+              )}
             </div>
             <p className="text-xs text-muted-foreground">
               {t("blog.editor.side.stats", { words: formatNumber(words), minutes })}

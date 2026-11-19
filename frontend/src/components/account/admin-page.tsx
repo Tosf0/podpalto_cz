@@ -43,13 +43,16 @@ export function AdminPage({
         description="Schvalování článků na blogu, ruční kontrola cen a prodejců od agentů, spouštění agentů a nastavení aplikace."
       />
       <Tabs defaultValue={initialTab} className="gap-6">
-        <TabsList>
-          <TabsTrigger value="blog">Blog</TabsTrigger>
-          <TabsTrigger value="data">Data od agentů</TabsTrigger>
-          <TabsTrigger value="prevzeti">Převzetí profilů</TabsTrigger>
-          <TabsTrigger value="agenti">Agenti</TabsTrigger>
-          <TabsTrigger value="nastaveni">Nastavení</TabsTrigger>
-        </TabsList>
+        {/* 5 záložek se na telefon nevejde – vodorovně posuvný pruh */}
+        <div className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] sm:mx-0 sm:px-0">
+          <TabsList className="w-max">
+            <TabsTrigger value="blog">Blog</TabsTrigger>
+            <TabsTrigger value="data">Data od agentů</TabsTrigger>
+            <TabsTrigger value="prevzeti">Převzetí profilů</TabsTrigger>
+            <TabsTrigger value="agenti">Agenti</TabsTrigger>
+            <TabsTrigger value="nastaveni">Nastavení</TabsTrigger>
+          </TabsList>
+        </div>
         <TabsContent value="blog">
           <AdminBlogPanel canDelete />
         </TabsContent>
